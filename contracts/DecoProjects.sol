@@ -17,6 +17,8 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint8 milestonesCount;
         uint8 customerSatisfaction;
         uint8 makerSatisfaction;
+
+        bool agreementsEncrypted;
     }
 
     // enumeration to describe possible project states for easier state changes reporting
