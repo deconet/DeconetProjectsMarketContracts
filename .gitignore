@@ -1,0 +1,9 @@
+# dependencies
+node_modules/*
+!node_modules/zeppelin-solidity
+
+# production
+build
+
+# ctags
+tags
