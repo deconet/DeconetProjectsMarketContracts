@@ -9,9 +9,17 @@ contract DecoMilestones {
     struct Milestone {
         uint8 milestoneNumber;
         uint32 duration;
+
+        // track all adjustments caused by state changes Active <-> Delivered <-> Rejected
+        // actualDuration time gets adjusted by the time that is spent by client 
+        // to provide a feedback when agreed milestone time is not exceeded yet. 
+        // Initial value is the same as duration.
+        uint32 actualDuration; 
+
         uint32 depositAmount;
         uint startTime;
         uint deliveryTime;
+        bool isAccepted;
     }
 
     // Enumeration to describe possible milestone states. 
@@ -36,10 +44,12 @@ contract DecoMilestones {
      * @dev Starts a new milestone for the project and deposit ETH in smart contract`s escrow.
      * @param _agreementHash Project`s unique hash.
      * @param _depositAmount Amount of ETH to deposit for a new milestone.
+     * @param _duration Milestone duration in seconds.
      */
     function startMilestone(
         bytes32 _agreementHash,
-        uint _depositAmount
+        uint _depositAmount,
+        uint32 _duration
     )
         public
         payable;
@@ -60,7 +70,7 @@ contract DecoMilestones {
      * @dev Project owner rejects the current active milestone.
      * @param _agreementHash Project`s unique hash.
      */
-    function rejectLastMilestone(bytes32 _agreementHash) public;
+    function rejectLastDeliverable(bytes32 _agreementHash) public;
  
     /*
      * @dev Either project owner or maker can terminate the project in certain cases 

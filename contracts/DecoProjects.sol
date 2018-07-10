@@ -15,6 +15,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint8 paymentWindow;
         uint8 feedbackWindow;
         uint8 milestonesCount;
+
         uint8 customerSatisfaction;
         uint8 makerSatisfaction;
 
@@ -39,7 +40,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint8 rating
     );
 
-    event SupplementalAgreementAdded(
+    event NewSupplementalAgreement(
         bytes32 agreementHash,
         bytes32 supplementalAgreementHash
     );
@@ -118,7 +119,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
      * @dev Rate the second party on the project.
      * @param _agreementHash Unique id of a project`s agreement.
      * @param _rating Either client's or maker's satisfaction value. 
-              Min value is 0, max is 5.
+              Min value is 0, max is 10.
      */
     function rateProjectSecondParty(uint8 _agreementHash, uint8 _rating) public;
 
