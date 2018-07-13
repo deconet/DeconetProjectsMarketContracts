@@ -51,6 +51,12 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     // maps the main agreement to the array of all made by the team documented changes.
     mapping (bytes32 => bytes32[]) internal projectChangesAgreements;
 
+    // maps all maker's projects hashes to maker's address
+    mapping (address => bytes32[]) public makerProjects;
+
+    // maps all client's projects hashes to client's address 
+    mapping (address => bytes32[]) public clientProjects;
+
     // Modifier to restrict method to be called either by project owner or maker
     modifier eitherClientOrMaker(bytes32 agreementHash) {
         Project memory project = projects[agreementHash];
@@ -58,6 +64,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
             project.client == msg.sender || project.maker == msg.sender,
             "Only project owner or maker can perform this operation."
         );
+        _;
     }
 
     // Modifier to restrict method to be called by project owner
@@ -67,6 +74,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
             project.client == msg.sender,
             "Only project owner can perform this operation."
         );
+        _;
     }
 
     // Modifier to restrict method to be called by project maker
@@ -76,6 +84,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
             project.maker == msg.sender,
             "Only project maker can perform this operation."
         );
+        _;
     }
 
     /*
@@ -100,7 +109,11 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint8 _paymentWindow,
         uint8 _feedbackWindow
     )
-        public;
+        public
+    {
+        makerProjects[_maker].push(_agreementHash);
+        clientProjects[_client].push(_agreementHash);
+    }
 
     
     /*
@@ -144,5 +157,46 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint8 _feedbackWindow
     ) 
         public;
+
+    /*
+     * @dev Returns average CSAT of a given maker`s address
+     * @param _maker Maker`s address to look up.
+     */
+    function makerAverageRating(address _maker) public view returns(uint8) {
+        return calculateAverageScore(_maker, true);
+    }
+
+    /*
+     * @dev Returns average MSAT of a given client`s address.
+     * @param _client Client`s address to look up.
+     */
+    function clientAverageRating(address _client) public view returns(uint8) {
+        return calculateAverageScore(_client, false);
+    }
+
+    /*
+     * @dev Calculates average score of a given address as a maker or a client.
+     * @param _address Address of a target person.
+     * @param _calculateCustomerSatisfactionScore Indicates what score should be calculated.
+              If `true` then CSAT score of this address should be returned,
+              otherwise – calculate and return MSAT score.
+     */
+    function calculateAverageScore(
+        address _address,
+        bool _calculateCustomerSatisfactionScore
+    )
+        internal
+        view
+        returns(uint8) {
+        bytes32[] storage allProjectsHashes = _calculateCustomerSatisfactionScore ? makerProjects[_address] : clientProjects[_address];
+        uint rating = 0;
+        uint index;
+        for (index = 0; index < allProjectsHashes.length; index++) {
+            Project storage project = projects[allProjectsHashes[index]];
+            rating += _calculateCustomerSatisfactionScore ? project.customerSatisfaction : project.makerSatisfaction;
+        }
+        rating = rating / (++index);
+        return uint8(rating);
+    }
 
 }
