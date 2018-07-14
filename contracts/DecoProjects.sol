@@ -87,7 +87,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         _;
     }
 
-    /*
+    /**
      * @dev Creates a new project. All parameters are required.
      * @param _agreementHash Unique id of a project`s agreement.
      * @param _client Address of a project owner.
@@ -116,19 +116,19 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     }
 
     
-    /*
+    /**
      * @dev Terminate the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
     function terminateProject(bytes32 _agreementHash) public;
 
-    /*
+    /**
      * @dev Complete the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
     function completeProject(bytes32 _agreementHash) public;
 
-    /*
+    /**
      * @dev Rate the second party on the project.
      * @param _agreementHash Unique id of a project`s agreement.
      * @param _rating Either client's or maker's satisfaction value. 
@@ -136,7 +136,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
      */
     function rateProjectSecondParty(uint8 _agreementHash, uint8 _rating) public;
 
-    /*
+    /**
      * @dev Save supplement agreement to the existing one. All parameters are required.
      * @param _agreementHash Unique id of a project`s agreement.
      * @param _supplementAgreement Unique id of a supplement agreement.
@@ -158,28 +158,31 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     ) 
         public;
 
-    /*
+    /**
      * @dev Returns average CSAT of a given maker`s address
      * @param _maker Maker`s address to look up.
+     * @return An uint8 calculated score.
      */
-    function makerAverageRating(address _maker) public view returns(uint8) {
+    function makersAverageRating(address _maker) public view returns(uint8) {
         return calculateAverageScore(_maker, true);
     }
 
-    /*
+    /**
      * @dev Returns average MSAT of a given client`s address.
      * @param _client Client`s address to look up.
+     * @return An uint8 calculated score.
      */
-    function clientAverageRating(address _client) public view returns(uint8) {
+    function clientsAverageRating(address _client) public view returns(uint8) {
         return calculateAverageScore(_client, false);
     }
 
-    /*
+    /**
      * @dev Calculates average score of a given address as a maker or a client.
      * @param _address Address of a target person.
      * @param _calculateCustomerSatisfactionScore Indicates what score should be calculated.
               If `true` then CSAT score of this address should be returned,
               otherwise – calculate and return MSAT score.
+     * @return An uint8 calculated score.
      */
     function calculateAverageScore(
         address _address,

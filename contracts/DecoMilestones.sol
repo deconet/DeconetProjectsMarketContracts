@@ -40,7 +40,7 @@ contract DecoMilestones {
         MilestoneState state
     )
 
-    /*
+    /**
      * @dev Starts a new milestone for the project and deposit ETH in smart contract`s escrow.
      * @param _agreementHash Project`s unique hash.
      * @param _depositAmount Amount of ETH to deposit for a new milestone.
@@ -54,38 +54,38 @@ contract DecoMilestones {
         public
         payable;
 
-    /*
+    /**
      * @dev Maker delivers the current active milestone.
      * @param _agreementHash Project`s unique hash.
      */
     function deliverLastMilestone(bytes32 _agreementHash) public;
 
-    /*
+    /**
      * @dev Project owner accepts the current delivered milestone.
      * @param _agreementHash Project`s unique hash.
      */
     function acceptLastMilestone(bytes32 _agreementHash) public;
 
-    /*
+    /**
      * @dev Project owner rejects the current active milestone.
      * @param _agreementHash Project`s unique hash.
      */
     function rejectLastDeliverable(bytes32 _agreementHash) public;
  
-    /*
+    /**
      * @dev Either project owner or maker can terminate the project in certain cases 
      *      and the current active milestone must be marked as terminated for records-keeping.
      * @param _agreementHash Project`s unique hash.
      */
     function terminateLastMilestone(bytes32 _agreementHash) public;
 
-    /*
+    /**
      * @dev Returns true/false depending on if the project can be terminated by client.
      * @param _agreementHash Project`s unique hash.
      */
     function canClientTerminate(bytes32 _agreementHash) public returns(bool);
 
-    /*
+    /**
      * @dev Returns true/false depending on if the project can be terminated by maker.
      * @param _agreementHash Project`s unique hash.
      */
