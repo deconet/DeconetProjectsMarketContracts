@@ -49,7 +49,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     mapping (bytes32 => Project) public projects;
 
     // maps the main agreement to the array of all made by the team documented changes.
-    mapping (bytes32 => bytes32[]) internal projectChangesAgreements;
+    mapping (bytes32 => bytes32[]) public projectChangesAgreements;
 
     // maps all maker's projects hashes to maker's address
     mapping (address => bytes32[]) public makerProjects;
