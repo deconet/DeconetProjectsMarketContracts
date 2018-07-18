@@ -33,12 +33,12 @@ contract DecoMilestones {
 
     // Logged when milestone state changes.
     event MilestoneStateUpdate (
-        bytes32 agreementHash,
+        bytes32 indexed agreementHash,
         address updatedBy,
         uint8 milestoneNumber,
         uint timestamp,
         MilestoneState state
-    )
+    );
 
     /**
      * @dev Starts a new milestone for the project and deposit ETH in smart contract`s escrow.

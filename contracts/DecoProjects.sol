@@ -2,9 +2,13 @@ pragma solidity 0.4.24;
 
 
 import "./DecoBaseProjectsMarketplace.sol";
-
+import "zeppelin-solidity/contracts/math/SafeMath.sol";
+import "zeppelin-solidity/contracts/ECRecovery.sol";
 
 contract DecoProject is DecoBaseProjectsMarketplace {
+    using SafeMath for uint256;
+    using ECRecovery for bytes32;
+
 
     // structure to store project details
     struct Project {
@@ -27,7 +31,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
 
     // Logged when project state changes.
     event ProjectStateUpdate (
-        bytes32 agreementHash,
+        bytes32 indexed agreementHash,
         address updatedBy,
         uint timestamp,
         ProjectState state
@@ -35,13 +39,13 @@ contract DecoProject is DecoBaseProjectsMarketplace {
 
     // Logged when either party rate the other party after the project completion.
     event ProjectRated (
-        bytes32 agreementHash,
+        bytes32 indexed agreementHash,
         address ratedBy,
         uint8 rating
     );
 
     event NewSupplementalAgreement(
-        bytes32 agreementHash,
+        bytes32 indexed agreementHash,
         bytes32 supplementalAgreementHash
     );
 
@@ -111,8 +115,13 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     )
         public
     {
+        require(msg.sender == _client, "Only client can start the project.");
+        // TODO validate maker's signature.
+
         makerProjects[_maker].push(_agreementHash);
         clientProjects[_client].push(_agreementHash);
+        uint nowTimestamp = now;
+        projects.push(Project(msg.sender, _maker, nowTimestamp, 0, _paymentWindow, _feedbackWindow, _milestonesCount));
     }
 
     
@@ -159,7 +168,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         public;
 
     /**
-     * @dev Returns average CSAT of a given maker`s address
+     * @dev Returns average CSAT of the given maker`s address
      * @param _maker Maker`s address to look up.
      * @return An uint8 calculated score.
      */
@@ -168,7 +177,7 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Returns average MSAT of a given client`s address.
+     * @dev Returns average MSAT of the given client`s address.
      * @param _client Client`s address to look up.
      * @return An uint8 calculated score.
      */
@@ -196,9 +205,11 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint index;
         for (index = 0; index < allProjectsHashes.length; index++) {
             Project storage project = projects[allProjectsHashes[index]];
-            rating += _calculateCustomerSatisfactionScore ? project.customerSatisfaction : project.makerSatisfaction;
+            uint8 score = _calculateCustomerSatisfactionScore ? project.customerSatisfaction : project.makerSatisfaction;
+            rating.add(score);
         }
-        rating = rating / (++index);
+        rating = rating.div(index);
+        index.add(1);
         return uint8(rating);
     }
 
