@@ -5,15 +5,16 @@ import "./DecoBaseProjectsMarketplace.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/ECRecovery.sol";
 
-contract DecoProject is DecoBaseProjectsMarketplace {
+
+contract DecoProjects is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
     using ECRecovery for bytes32;
-
 
     // structure to store project details
     struct Project {
         address client;
         address maker;
+        address arbiter;
         uint startDate;
         uint endDate;
         uint8 paymentWindow;
@@ -92,9 +93,10 @@ contract DecoProject is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Creates a new project. All parameters are required.
+     * @dev Creates a new milestones based project with pre-selected maker. All parameters are required.
      * @param _agreementHash Unique id of a project`s agreement.
      * @param _client Address of a project owner.
+     * @param _arbiter A referee to settle all escalated disputes between parties.
      * @param _maker Address of a maker signed up for a project.
      * @param _makersSignature Digital signature of a maker to proof the makers signed the agreement.
      * @param _milestonesCount Count of planned milestones for the project.
@@ -103,25 +105,45 @@ contract DecoProject is DecoBaseProjectsMarketplace {
      * @param _feedbackWindow Time in days project`s owner has to provide feedback for the last milestone.
      *                        If the time is exceeded then maker can terminate project and get paid for awaited
      *                        milestone.
+     * @param _agreementEncrypted A boolean flag indicating whether or not the agreement is encrypted.
      */
     function startProject(
         bytes32 _agreementHash,
         address _client,
+        address _arbiter,
         address _maker,
-        bytes32 _makersSignature,
+        bytes _makersSignature,
         uint8 _milestonesCount,
         uint8 _paymentWindow,
-        uint8 _feedbackWindow
+        uint8 _feedbackWindow,
+        bool _agreementEncrypted
     )
         public
     {
-        require(msg.sender == _client, "Only client can start the project.");
-        // TODO validate maker's signature.
+
+        require(msg.sender == _client);
+        bytes32 hash = _agreementHash.toEthSignedMessageHash();
+        address signatureAddress = hash.recover(_makersSignature);
+        require(signatureAddress == _maker);
+        require(_milestonesCount >= 1 && _milestonesCount <= 24);
 
         makerProjects[_maker].push(_agreementHash);
         clientProjects[_client].push(_agreementHash);
+        
         uint nowTimestamp = now;
-        projects.push(Project(msg.sender, _maker, nowTimestamp, 0, _paymentWindow, _feedbackWindow, _milestonesCount));
+        projects[_agreementHash] = Project(
+            msg.sender,
+            _maker,
+            _arbiter,
+            nowTimestamp,
+            0, // end date is unknown yet
+            _paymentWindow,
+            _feedbackWindow,
+            _milestonesCount,
+            0, // CSAT is 0 to indicate that it isn't set by maker yet
+            0, // MSAT is 0 to indicate that it isn't set by client yet
+            _agreementEncrypted
+        );
     }
 
     
@@ -129,13 +151,17 @@ contract DecoProject is DecoBaseProjectsMarketplace {
      * @dev Terminate the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
-    function terminateProject(bytes32 _agreementHash) public;
+    function terminateProject(bytes32 _agreementHash) public {
+
+    }
 
     /**
      * @dev Complete the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
-    function completeProject(bytes32 _agreementHash) public;
+    function completeProject(bytes32 _agreementHash) public {
+
+    }
 
     /**
      * @dev Rate the second party on the project.
@@ -143,12 +169,14 @@ contract DecoProject is DecoBaseProjectsMarketplace {
      * @param _rating Either client's or maker's satisfaction value. 
               Min value is 0, max is 10.
      */
-    function rateProjectSecondParty(uint8 _agreementHash, uint8 _rating) public;
+    function rateProjectSecondParty(uint8 _agreementHash, uint8 _rating) public {
+
+    }
 
     /**
      * @dev Save supplement agreement to the existing one. All parameters are required.
      * @param _agreementHash Unique id of a project`s agreement.
-     * @param _supplementAgreement Unique id of a supplement agreement.
+     * @param _supplementalAgreementHash Unique id of a supplement agreement.
      * @param _makersSignature Digital signature of a maker to proof the makers signed the agreement.
      * @param _milestonesCount Count of planned milestones for the project.
      * @param _paymentWindow Count of days project`s owner has to deposit funds for the next milestone.
@@ -165,7 +193,10 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         uint8 _paymentWindow,
         uint8 _feedbackWindow
     ) 
-        public;
+        public 
+    {
+
+    }
 
     /**
      * @dev Returns average CSAT of the given maker`s address
@@ -213,4 +244,11 @@ contract DecoProject is DecoBaseProjectsMarketplace {
         return uint8(rating);
     }
 
+    function getClientProjects(address _client) public view returns(bytes32[]) {
+        return clientProjects[_client];
+    }
+
+    function getMakerProjects(address _maker) public view returns(bytes32[]) {
+        return makerProjects[_maker];
+    }
 }

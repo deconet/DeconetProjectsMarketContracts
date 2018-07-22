@@ -27,7 +27,7 @@
     "truffle-hdwallet-provider": "0.0.3",
     "uuid": "^3.2.1",
     "web3": "^1.0.0-beta.29",
-    "zeppelin-solidity": "1.8.0"
+    "zeppelin-solidity": "1.10.0"
   },
   "devDependencies": {
     "babel-jest": "^23.2.0",

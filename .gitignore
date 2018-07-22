@@ -7,3 +7,10 @@ build
 
 # ctags
 tags
+
+# macOS trash
+.DS_Store
+
+# logs
+*.logs
+*.log
