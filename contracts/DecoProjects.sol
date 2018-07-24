@@ -12,6 +12,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // structure to store project details
     struct Project {
+        string agreementId;
         address client;
         address maker;
         address arbiter;
@@ -32,7 +33,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Logged when project state changes.
     event ProjectStateUpdate (
-        bytes32 indexed agreementHash,
+        bytes32 agreementHash,
         address updatedBy,
         uint timestamp,
         ProjectState state
@@ -40,21 +41,21 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Logged when either party rate the other party after the project completion.
     event ProjectRated (
-        bytes32 indexed agreementHash,
+        bytes32 agreementHash,
         address ratedBy,
         uint8 rating
     );
 
     event NewSupplementalAgreement(
-        bytes32 indexed agreementHash,
-        bytes32 supplementalAgreementHash
+        bytes32 agreementHash,
+        bytes supplementalAgreementHash
     );
 
     // maps agreement unique hash to the project details
     mapping (bytes32 => Project) public projects;
 
     // maps the main agreement to the array of all made by the team documented changes.
-    mapping (bytes32 => bytes32[]) public projectChangesAgreements;
+    mapping (bytes32 => string[]) public projectChangesAgreements;
 
     // maps all maker's projects hashes to maker's address
     mapping (address => bytes32[]) public makerProjects;
@@ -94,7 +95,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Creates a new milestones based project with pre-selected maker. All parameters are required.
-     * @param _agreementHash Unique id of a project`s agreement.
+     * @param _agreementId Unique id of a project`s agreement.
      * @param _client Address of a project owner.
      * @param _arbiter A referee to settle all escalated disputes between parties.
      * @param _maker Address of a maker signed up for a project.
@@ -108,7 +109,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _agreementEncrypted A boolean flag indicating whether or not the agreement is encrypted.
      */
     function startProject(
-        bytes32 _agreementHash,
+        string _agreementId,
         address _client,
         address _arbiter,
         address _maker,
@@ -120,18 +121,23 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     )
         public
     {
-
-        require(msg.sender == _client);
-        bytes32 hash = _agreementHash.toEthSignedMessageHash();
-        address signatureAddress = hash.recover(_makersSignature);
-        require(signatureAddress == _maker);
+        require(msg.sender == _client, "Only the client can kick of the project.");
+        bytes32 hash = keccak256(_agreementId);
+        address signatureAddress = hash.toEthSignedMessageHash().recover(_makersSignature);
+        require(
+            signatureAddress == _maker,
+            "Maker should sign the hash of immutable agreement doc."
+        );
         require(_milestonesCount >= 1 && _milestonesCount <= 24);
+        Project storage project = projects[hash];
+        require(project.client == address(0x0));
 
-        makerProjects[_maker].push(_agreementHash);
-        clientProjects[_client].push(_agreementHash);
-        
+        makerProjects[_maker].push(hash);
+        clientProjects[_client].push(hash);
+
         uint nowTimestamp = now;
-        projects[_agreementHash] = Project(
+        projects[hash] = Project(
+            _agreementId,
             msg.sender,
             _maker,
             _arbiter,
@@ -144,14 +150,14 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             0, // MSAT is 0 to indicate that it isn't set by client yet
             _agreementEncrypted
         );
+        emit ProjectStateUpdate(hash, msg.sender, nowTimestamp, ProjectState.Active);
     }
 
-    
     /**
      * @dev Terminate the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
-    function terminateProject(bytes32 _agreementHash) public {
+    function terminateProject(bytes32 _agreementHash) public eitherClientOrMaker(_agreementHash) {
 
     }
 
@@ -169,7 +175,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _rating Either client's or maker's satisfaction value. 
               Min value is 0, max is 10.
      */
-    function rateProjectSecondParty(uint8 _agreementHash, uint8 _rating) public {
+    function rateProjectSecondParty(bytes32 _agreementHash, uint8 _rating) public {
 
     }
 
@@ -186,14 +192,14 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      *                        milestone.
      */
     function saveSupplementalAgreement(
-        bytes32 _agreementHash, 
-        bytes32 _supplementalAgreementHash,
+        bytes32 _agreementHash,
+        string _supplementalAgreementHash,
         bytes32 _makersSignature,
         uint8 _milestonesCount,
         uint8 _paymentWindow,
         uint8 _feedbackWindow
     ) 
-        public 
+        public
     {
 
     }
@@ -217,6 +223,24 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
+     * @dev Returns hashes of all client`s projects
+     * @param _client An address to look up.
+     * @return An array of bytes32 hashes.
+     */
+    function getClientProjects(address _client) public view returns(bytes32[]) {
+        return clientProjects[_client];
+    }
+
+    /**
+     * @dev Returns hashes of all maker`s projects
+     * @param _maker An address to look up.
+     * @return An array of bytes32 hashes.
+     */
+    function getMakerProjects(address _maker) public view returns(bytes32[]) {
+        return makerProjects[_maker];
+    }
+
+    /**
      * @dev Calculates average score of a given address as a maker or a client.
      * @param _address Address of a target person.
      * @param _calculateCustomerSatisfactionScore Indicates what score should be calculated.
@@ -230,25 +254,22 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     )
         internal
         view
-        returns(uint8) {
-        bytes32[] storage allProjectsHashes = _calculateCustomerSatisfactionScore ? makerProjects[_address] : clientProjects[_address];
+        returns(uint8) 
+    {
+        bytes32[] storage allProjectsHashes = _calculateCustomerSatisfactionScore ?
+            makerProjects[_address] :
+            clientProjects[_address];
         uint rating = 0;
         uint index;
         for (index = 0; index < allProjectsHashes.length; index++) {
             Project storage project = projects[allProjectsHashes[index]];
-            uint8 score = _calculateCustomerSatisfactionScore ? project.customerSatisfaction : project.makerSatisfaction;
+            uint8 score = _calculateCustomerSatisfactionScore ?
+                project.customerSatisfaction :
+                project.makerSatisfaction;
             rating.add(score);
         }
         rating = rating.div(index);
         index.add(1);
         return uint8(rating);
-    }
-
-    function getClientProjects(address _client) public view returns(bytes32[]) {
-        return clientProjects[_client];
-    }
-
-    function getMakerProjects(address _maker) public view returns(bytes32[]) {
-        return makerProjects[_maker];
     }
 }

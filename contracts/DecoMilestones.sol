@@ -90,6 +90,4 @@ contract DecoMilestones {
      * @param _agreementHash Project`s unique hash.
      */
     function canMakerTerminate(bytes32 _agreementHash) public returns(bool);
-
-
 }

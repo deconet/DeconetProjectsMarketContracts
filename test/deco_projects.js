@@ -3,20 +3,22 @@ var DecoProjects = artifacts.require("./DecoProjects.sol")
 
 class Project {
   constructor(contractStructArray) {
-    this.client = contractStructArray[0]
-    this.maker = contractStructArray[1]
-    this.arbiter = contractStructArray[2]
-    this.startDate = contractStructArray[3]
-    this.endDate = contractStructArray[4]
-    this.paymentWindow = contractStructArray[5]
-    this.feedbackWindow = contractStructArray[6]
-    this.milestonesCount = contractStructArray[7]
-    this.customerSatisfaction = contractStructArray[8]
-    this.makerSatisfaction = contractStructArray[9]
-    this.agreementsEncrypted = contractStructArray[10]
+    this.agreementId = contractStructArray[0]
+    this.client = contractStructArray[1]
+    this.maker = contractStructArray[2]
+    this.arbiter = contractStructArray[3]
+    this.startDate = contractStructArray[4]
+    this.endDate = contractStructArray[5]
+    this.paymentWindow = contractStructArray[6]
+    this.feedbackWindow = contractStructArray[7]
+    this.milestonesCount = contractStructArray[8]
+    this.customerSatisfaction = contractStructArray[9]
+    this.makerSatisfaction = contractStructArray[10]
+    this.agreementsEncrypted = contractStructArray[11]
   }
 
   assertProjectWithParams(
+    agreementId,
     client,
     maker,
     arbiter,
@@ -29,6 +31,7 @@ class Project {
     makerSatisfaction,
     agreementsEncrypted
   ) {
+    assert.equal(this.agreementId, agreementId)
     assert.equal(this.client, client)
     assert.equal(this.maker, maker)
     assert.equal(this.arbiter, arbiter)
@@ -43,6 +46,7 @@ class Project {
   }
 
   assertWithCreationParams(
+    agreementId,
     client,
     maker,
     arbiter,
@@ -52,6 +56,7 @@ class Project {
     agreementsEncrypted
   ) {
     this.assertProjectWithParams(
+      agreementId,
       client,
       maker,
       arbiter,
@@ -66,9 +71,10 @@ class Project {
     )
   }
 
-  static createValidProjectInstance(accounts) {
+  static createValidProjectInstance(accounts, agreementId) {
     return new Project(
       [
+        agreementId === undefined ? 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM' : agreementId,
         accounts[0],
         accounts[1],
         accounts[2],
@@ -88,198 +94,362 @@ class Project {
 contract("DecoProjects", (accounts) => {
   it("should start the project with maker address and matching signature.", async () => {
     const decoProjects = await DecoProjects.deployed()
-    const testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM"))
-    let clientAccount = accounts[0]
-    let arbiterAccount = accounts[1]
-    let makerAccount = accounts[2]
-    const makerSignature = web3.eth.sign(makerAccount, testAgreementHash)
-    const milestonesCount = new BigNumber('3')
-    const paymentWindow = new BigNumber('3')
-    const feedbackWindow = new BigNumber('3')
+    let mock = Project.createValidProjectInstance(
+      accounts,
+      'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM'
+    )
+    const testAgreementHash = web3.sha3(mock.agreementId)
+    const makerSignature = web3.eth.sign(mock.maker, testAgreementHash)
     await decoProjects.startProject(
-      testAgreementHash,
-      clientAccount,
-      arbiterAccount,
-      makerAccount,
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
       makerSignature,
-      milestonesCount.toNumber(),
-      paymentWindow.toNumber(),
-      feedbackWindow.toNumber(),
-      false,
-      { from: clientAccount, gasPrice: 1 }
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
     )
     let projectArray = await decoProjects.projects.call(testAgreementHash)
     expect(projectArray[0]).to.not.be.undefined
     let project = new Project(projectArray)
     project.assertWithCreationParams(
-      clientAccount,
-      makerAccount,
-      arbiterAccount,
-      paymentWindow,
-      feedbackWindow,
-      milestonesCount,
-      false
+      mock.agreementId,
+      mock.client,
+      mock.maker,
+      mock.arbiter,
+      mock.paymentWindow,
+      mock.feedbackWindow,
+      mock.milestonesCount,
+      mock.agreementsEncrypted
     )
   })
 
   it("should fail project creation if makers signature isn't valid.", async () => {
     let decoProjects = await DecoProjects.deployed()
-    let projectMock = Project.createValidProjectInstance(accounts)
-    let testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM1"))
-    let signature = web3.eth.sign(projectMock.client, testAgreementHash)
-    try {
-      await decoProjects.startProject(
-        testAgreementHash,
-        projectMock.client,
-        projectMock.arbiter,
-        projectMock.maker,
-        signature,
-        projectMock.milestonesCount.toNumber(),
-        projectMock.paymentWindow.toNumber(),
-        projectMock.feedbackWindow.toNumber(),
-        projectMock.agreementsEncrypted,
-        { from: projectMock.client, gasPrice: 1 }
-      )
-      assert.fail('Should have failed above.')
-    } catch (err) {
+    let mock = Project.createValidProjectInstance(accounts,'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM1')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.client, testAgreementHash)
+    await decoProjects.startProject(
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    ).catch((err) => {
       assert.isOk(err, 'Exception should be thrown for the transaction.')
-    }
+    }).then((txn) => {
+      if(txn) {
+        assert.fail('Should have failed above.')
+      }
+    })
   })
 
   it("should fail project creation if msg.sender is different from 'client' param.", async () => {
     let decoProjects = await DecoProjects.deployed()
-    let projectMock = Project.createValidProjectInstance(accounts)
-    let testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM2"))
-    let signature = web3.eth.sign(projectMock.maker, testAgreementHash)
-    try {
-      await decoProjects.startProject (
-        testAgreementHash,
-        projectMock.client,
-        projectMock.arbiter,
-        projectMock.maker,
-        signature,
-        projectMock.milestonesCount.toNumber(),
-        projectMock.paymentWindow.toNumber(),
-        projectMock.feedbackWindow.toNumber(),
-        projectMock.agreementsEncrypted,
-        { from: accounts[7], gasPrice: 1 }
-      )
-      assert.fail('Should have failed above.')
-    } catch (err) {
+    let mock = Project.createValidProjectInstance(accounts,'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM2')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.maker, testAgreementHash)
+    await decoProjects.startProject (
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: accounts[7], gasPrice: 1 }
+    ).catch((err) => {
       assert.isOk(err, 'Exception should be thrown for the transaction.')
-    }
+    }).then((txn) => {
+      if(txn) {
+        assert.fail('Should have failed above.')
+      }
+    })
   })
 
   it("should validate milestones count to be within the range 1-24.", async () => {
     let decoProjects = await DecoProjects.deployed()
-    let projectMock = Project.createValidProjectInstance(accounts)
-    let testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM3"))
-    let signature = web3.eth.sign(projectMock.maker, testAgreementHash)
+    let mock = Project.createValidProjectInstance(accounts,'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM3')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.maker, testAgreementHash)
 
     await decoProjects.startProject (
-      testAgreementHash,
-      projectMock.client,
-      projectMock.arbiter,
-      projectMock.maker,
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
       signature,
-      projectMock.milestonesCount.toNumber(),
-      projectMock.paymentWindow.toNumber(),
-      projectMock.feedbackWindow.toNumber(),
-      projectMock.agreementsEncrypted,
-      { from: projectMock.client, gasPrice: 1 }
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
     )
     let projectArray = await decoProjects.projects.call(testAgreementHash)
-    expect(projectArray[0]).to.not.be.undefined
+    expect(projectArray[0]).to.not.be.empty
     let project = new Project(projectArray)
-    expect(project.milestonesCount.eq(projectMock.milestonesCount)).to.be.true
+    expect(project.milestonesCount.eq(mock.milestonesCount)).to.be.true
 
-    testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM4"))
-    try {
-      await decoProjects.startProject (
-        testAgreementHash,
-        projectMock.client,
-        projectMock.arbiter,
-        projectMock.maker,
-        signature,
-        0, // milestones number value is out of the range
-        projectMock.paymentWindow.toNumber(),
-        projectMock.feedbackWindow.toNumber(),
-        projectMock.agreementsEncrypted,
-        { from: projectMock.client, gasPrice: 1 }
-      )
-      assert.fail('Should have failed above.')
-    } catch (err) {
+    mock.agreementId = 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM4'
+    signature = web3.sha3(mock.agreementId)
+    await decoProjects.startProject (
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature,
+      0, // milestones number value is out of the range
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    ).catch((err) => {
       assert.isOk(err, 'Exception should be thrown for that transaction.')
-    }
+    }).then((txn) => {
+      if(txn) {
+        assert.fail('Should have failed above.')
+      }
+    })
 
-    testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM5"))
-    try {
-      await decoProjects.startProject (
-        testAgreementHash,
-        projectMock.client,
-        projectMock.arbiter,
-        projectMock.maker,
-        signature,
-        25, // milestones number value is out of the range
-        projectMock.paymentWindow.toNumber(),
-        projectMock.feedbackWindow.toNumber(),
-        projectMock.agreementsEncrypted,
-        { from: projectMock.client, gasPrice: 1 }
-      )
-      assert.fail('Should have failed above.')
-    } catch (err) {
+
+    mock.agreementId = 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM5'
+    signature = web3.sha3(mock.agreementId)
+    await decoProjects.startProject (
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature,
+      25, // milestones number value is out of the range
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    ).catch((err) => {
       assert.isOk(err, 'Exception should be thrown for that transaction.')
-    }
+    }).then((txn) => {
+      if(txn) {
+        assert.fail('Should have failed above.')
+      }
+    })
   })
 
   it("should set start date to be approximately equal to now", async () => {
     let decoProjects = await DecoProjects.deployed()
-    let projectMock = Project.createValidProjectInstance(accounts)
-    let testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM6"))
-    let signature = web3.eth.sign(projectMock.maker, testAgreementHash)
+    let mock = Project.createValidProjectInstance(accounts, 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM6')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.maker, testAgreementHash)
 
     let txn = await decoProjects.startProject (
-      testAgreementHash,
-      projectMock.client,
-      projectMock.arbiter,
-      projectMock.maker,
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
       signature,
-      projectMock.milestonesCount.toNumber(),
-      projectMock.paymentWindow.toNumber(),
-      projectMock.feedbackWindow.toNumber(),
-      projectMock.agreementsEncrypted,
-      { from: projectMock.client, gasPrice: 1 }
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
     )
     let blockNumInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     let projectArray = await decoProjects.projects.call(testAgreementHash)
-    expect(projectArray[0]).to.not.be.undefined
+    expect(projectArray[0]).to.not.be.empty
     let project = new Project(projectArray)
     let blockTimestamp = new BigNumber(blockNumInfo.timestamp)
     expect(project.startDate.eq(blockTimestamp)).to.be.true
   })
 
+  it("should fail to start a project with an existing agreement hash", async () => {
+    let decoProjects = await DecoProjects.deployed()
+    let mock = Project.createValidProjectInstance(accounts, 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM7')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.maker, testAgreementHash)
+
+    let startProject = async () => {
+      return decoProjects.startProject(
+        mock.agreementId,
+        mock.client,
+        mock.arbiter,
+        mock.maker,
+        signature,
+        mock.milestonesCount.toNumber(),
+        mock.paymentWindow.toNumber(),
+        mock.feedbackWindow.toNumber(),
+        mock.agreementsEncrypted,
+        { from: mock.client, gasPrice: 1}
+      )
+    }
+
+    await startProject()
+    await startProject()
+      .catch((err) => {
+      assert.isOk(err, 'Exception should be thrown for that transaction.')
+    }).then((txn) => {
+      if(txn) {
+        assert.fail('Should have failed above.')
+      }
+    })
+  })
+
   it("should add new project to the lists of client`s and maker`s projects.", async () => {
     let decoProjects = await DecoProjects.deployed()
-    let projectMock = Project.createValidProjectInstance(accounts)
-    let testAgreementHash = web3.sha3(web3.fromUtf8("QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM7"))
-    let signature = web3.eth.sign(projectMock.maker, testAgreementHash)
+    let mock = Project.createValidProjectInstance(accounts, 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM8')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.maker, testAgreementHash)
 
     await decoProjects.startProject(
-      testAgreementHash,
-      projectMock.client,
-      projectMock.arbiter,
-      projectMock.maker,
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
       signature,
-      projectMock.milestonesCount.toNumber(),
-      projectMock.paymentWindow.toNumber(),
-      projectMock.feedbackWindow.toNumber(),
-      projectMock.agreementsEncrypted,
-      {from: projectMock.client, gasPrice: 1 }
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      {from: mock.client, gasPrice: 1 }
     )
-    let clientProjects = await decoProjects.getClientProjects.call(projectMock.client)
-    let makerProjects = await decoProjects.getMakerProjects.call(projectMock.maker)
+    let clientProjects = await decoProjects.getClientProjects.call(mock.client)
+    let makerProjects = await decoProjects.getMakerProjects.call(mock.maker)
 
     expect(clientProjects).to.include(testAgreementHash)
     expect(makerProjects).to.include(testAgreementHash)
+  })
+
+  it("should correctly return maker's and client's projects", async () => {
+    let decoProjects = await DecoProjects.deployed()
+    let mock = Project.createValidProjectInstance(accounts, 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM9')
+    let makersProjectsBefore = await decoProjects.getMakerProjects.call(mock.maker)
+    let clientsProjectsBefore = await decoProjects.getClientProjects.call(mock.client)
+
+    let testAgreementHash1= web3.sha3(mock.agreementId)
+    let signature1 = web3.eth.sign(mock.maker, testAgreementHash1)
+
+    await decoProjects.startProject(
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature1,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      {from: mock.client, gasPrice: 1 }
+    )
+    mock.agreementId = 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM10'
+    let testAgreementHash2 = web3.sha3(mock.agreementId)
+    let signature2 = web3.eth.sign(mock.maker, testAgreementHash2)
+
+    await decoProjects.startProject(
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature2,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      {from: mock.client, gasPrice: 1 }
+    )
+    mock.agreementId = 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM11'
+    let testAgreementHash3 = web3.sha3(mock.agreementId)
+    let signature3 = web3.eth.sign(mock.maker, testAgreementHash3)
+
+    await decoProjects.startProject(
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature3,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      {from: mock.client, gasPrice: 1 }
+    )
+
+    let makersProjects = await decoProjects.getMakerProjects.call(mock.maker)
+    let clientsProjects = await decoProjects.getClientProjects.call(mock.client)
+
+    expect(makersProjects).to.have.length(makersProjectsBefore.length + 3)
+    expect(clientsProjects).to.have.length(clientsProjectsBefore.length + 3)
+
+    expect(makersProjects).to.include.members(
+      [testAgreementHash1, testAgreementHash2, testAgreementHash3]
+    )
+
+    expect(clientsProjects).to.include.members(
+      [testAgreementHash1, testAgreementHash2, testAgreementHash3]
+    )
+  })
+
+  it("should emit the event upon creation of a new project.", async () => {
+    let decoProjects = await DecoProjects.deployed()
+    let mock = Project.createValidProjectInstance(accounts, 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM12')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    let signature = web3.eth.sign(mock.maker, testAgreementHash)
+
+    let txn = await decoProjects.startProject(
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    )
+
+    let blockNumInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+    expect(txn.logs).to.have.length(1)
+    expect(txn.logs[0].event).to.be.equal('ProjectStateUpdate')
+    expect(txn.logs[0].args.agreementHash).to.be.equal(testAgreementHash)
+    expect(txn.logs[0].args.updatedBy).to.be.equal(mock.client)
+    expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockNumInfo.timestamp)
+    expect(txn.logs[0].args.state.toNumber()).to.be.equal(0)
+  })
+
+  it("shouldn't emit the event when creation of a new project fails.", async () => {
+    let decoProjects = await DecoProjects.deployed()
+    let mock = Project.createValidProjectInstance(accounts, 'QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM13')
+    let testAgreementHash = web3.sha3(mock.agreementId)
+    // A signature below is created by not a maker
+    let signature = web3.eth.sign(accounts[4], testAgreementHash)
+
+    await decoProjects.startProject(
+      mock.agreementId,
+      mock.client,
+      mock.arbiter,
+      mock.maker,
+      signature,
+      mock.milestonesCount.toNumber(),
+      mock.paymentWindow.toNumber(),
+      mock.feedbackWindow.toNumber(),
+      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    ).catch(async (err) => {
+      let projectArray = await decoProjects.projects.call(testAgreementHash)
+      expect(projectArray[0]).to.be.empty
+      expect(err.receipt.logs).to.have.length(0)
+    }).then((txn) => {
+      if(txn) {
+        assert.fail('Should have failed above.')
+      }
+    })
   })
 })

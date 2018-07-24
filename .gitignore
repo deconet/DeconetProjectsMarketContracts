@@ -7,6 +7,7 @@ build
 
 # ctags
 tags
+tags.*
 
 # macOS trash
 .DS_Store
