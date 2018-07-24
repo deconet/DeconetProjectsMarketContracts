@@ -46,6 +46,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint8 rating
     );
 
+    // Logged when a new supplemental agreement is added.
     event NewSupplementalAgreement(
         bytes32 agreementHash,
         bytes supplementalAgreementHash
@@ -63,6 +64,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // maps all client's projects hashes to client's address 
     mapping (address => bytes32[]) public clientProjects;
 
+    address public milestonesContractAddress;
+
     // Modifier to restrict method to be called either by project owner or maker
     modifier eitherClientOrMaker(bytes32 agreementHash) {
         Project memory project = projects[agreementHash];
@@ -74,7 +77,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     // Modifier to restrict method to be called by project owner
-    modifier onlyOwner(bytes32 agreementHash) {
+    modifier onlyClient(bytes32 agreementHash) {
         Project memory project = projects[agreementHash];
         require(
             project.client == msg.sender,
@@ -122,13 +125,21 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         public
     {
         require(msg.sender == _client, "Only the client can kick of the project.");
+        require(_client != _maker, 'Client can`t be a maker on her own project.');
+        require(
+            _arbiter != _maker && _arbiter != _client,
+            'Arbiter must not be a client nor a maker.'
+        );
+
         bytes32 hash = keccak256(_agreementId);
         address signatureAddress = hash.toEthSignedMessageHash().recover(_makersSignature);
         require(
             signatureAddress == _maker,
             "Maker should sign the hash of immutable agreement doc."
         );
+
         require(_milestonesCount >= 1 && _milestonesCount <= 24);
+
         Project storage project = projects[hash];
         require(project.client == address(0x0));
 
@@ -202,6 +213,16 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         public
     {
 
+    }
+
+    /**
+     * @dev Updates the address of the Milestones contract.
+     * @param _newAddress An address of the new instance of Milestones contract.
+     */
+    function setMilestonesContractAddress(address _newAddress) public onlyOwner {
+        require(_newAddress != address(0x0));
+        require(_newAddress != milestonesContractAddress);
+        milestonesContractAddress = _newAddress;
     }
 
     /**

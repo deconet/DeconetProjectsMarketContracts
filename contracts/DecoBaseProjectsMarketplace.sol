@@ -1,5 +1,7 @@
 pragma solidity 0.4.24;
 
-contract DecoBaseProjectsMarketplace {
+import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
+
+contract DecoBaseProjectsMarketplace is Ownable {
 }
