@@ -90,4 +90,10 @@ contract DecoMilestones {
      * @param _agreementHash Project`s unique hash.
      */
     function canMakerTerminate(bytes32 _agreementHash) public returns(bool);
+
+    /**
+     * @dev Set the new address of deployed project contract.
+     * @param _newAddress An address of the new contract.
+     */
+    function setProjectContractAddress(address _newAddress) public;
 }

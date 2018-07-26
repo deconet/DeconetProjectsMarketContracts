@@ -4,6 +4,7 @@ pragma solidity 0.4.24;
 import "./DecoBaseProjectsMarketplace.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/ECRecovery.sol";
+import "./DecoMilestones.sol";
 
 
 contract DecoProjects is DecoBaseProjectsMarketplace {
@@ -96,6 +97,19 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
+    // Modifier to restrict method to be called by milestones contract and be originated
+    // from the client address.
+    modifier onlyMilestonesContractAndClientAsOrigin(bytes32 agreementHash) {
+        require(
+            msg.sender == milestonesContractAddress,
+            "Only milestones contract can perform this operation."
+        );
+        Project memory project = projects[agreementHash];
+        address transactionOrigin = tx.origin;
+        require(transactionOrigin == project.client);
+        _;
+    }
+
     /**
      * @dev Creates a new milestones based project with pre-selected maker. All parameters are required.
      * @param _agreementId Unique id of a project`s agreement.
@@ -125,10 +139,10 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         public
     {
         require(msg.sender == _client, "Only the client can kick of the project.");
-        require(_client != _maker, 'Client can`t be a maker on her own project.');
+        require(_client != _maker, "Client can`t be a maker on her own project.");
         require(
             _arbiter != _maker && _arbiter != _client,
-            'Arbiter must not be a client nor a maker.'
+            "Arbiter must not be a client nor a maker."
         );
 
         bytes32 hash = keccak256(_agreementId);
@@ -169,15 +183,34 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _agreementHash Unique id of a project`s agreement.
      */
     function terminateProject(bytes32 _agreementHash) public eitherClientOrMaker(_agreementHash) {
+        Project storage project = projects[_agreementHash];
+        require(project.client != address(0x0));
+        DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
+        if (project.client == msg.sender) {
+            require(milestonesContract.canClientTerminate(_agreementHash));
+        } else {
+            require(milestonesContract.canMakerTerminate(_agreementHash));
+        }
+        milestonesContract.terminateLastMilestone(_agreementHash);
 
+        uint nowTimestamp = now;
+        project.endDate = nowTimestamp;
+        emit ProjectStateUpdate(_agreementHash, msg.sender, nowTimestamp, ProjectState.Terminated);
     }
 
     /**
      * @dev Complete the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
-    function completeProject(bytes32 _agreementHash) public {
-
+    function completeProject(
+        bytes32 _agreementHash
+    )
+        public
+        onlyMilestonesContractAndClientAsOrigin(_agreementHash)
+    {
+        uint nowTimestamp = now;
+        projects[_agreementHash].endDate = nowTimestamp;
+        emit ProjectStateUpdate(_agreementHash, msg.sender, nowTimestamp, ProjectState.Completed);
     }
 
     /**
