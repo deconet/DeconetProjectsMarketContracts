@@ -80,6 +80,17 @@ contract DecoMilestones {
     function terminateLastMilestone(bytes32 _agreementHash) public;
 
     /**
+     * @dev Returns the last project milestone completion status and number.
+     * @param _agreementHash Project's unique hash.
+     * @return isAccepted A boolean flag for acceptance state, and milestoneNumber for the last milestone.
+     */
+    function isLastMilestoneAccepted(
+        bytes32 _agreementHash
+    )
+        public
+        returns(bool isAccepted, uint8 milestoneNumber);
+
+    /**
      * @dev Returns true/false depending on if the project can be terminated by client.
      * @param _agreementHash Project`s unique hash.
      */

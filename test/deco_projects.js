@@ -96,27 +96,40 @@ class Project {
   }
 }
 
-contract("DecoProjects", (accounts) => {
-  it("should start the project with maker address and matching signature.", async () => {
-    const decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(
-      accounts,
-      "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM"
-    )
-    const testAgreementHash = web3.sha3(mock.agreementId)
-    const makerSignature = web3.eth.sign(mock.maker, testAgreementHash)
-    await decoProjects.startProject(
+contract("DecoProjects", async (accounts) => {
+  let projectId = 0
+  let decoProjects = undefined
+  let testAgreementHash = ""
+  let mock = undefined
+  let signature = undefined
+
+  const StartProject = async (signature, sender) => {
+    return await decoProjects.startProject(
       mock.agreementId,
       mock.client,
       mock.arbiter,
       mock.maker,
-      makerSignature,
+      signature,
       mock.milestonesCount.toNumber(),
       mock.paymentWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
       mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
+      { from: sender, gasPrice: 1 }
     )
+  }
+
+  beforeEach(async () => {
+    decoProjects = await DecoProjects.deployed()
+    mock = Project.createValidProjectInstance(
+      accounts,
+      `${projectId++}`
+    )
+    testAgreementHash = web3.sha3(mock.agreementId)
+    signature = web3.eth.sign(mock.maker, testAgreementHash)
+  })
+
+  it("should start the project with maker address and matching signature.", async () => {
+    await StartProject(signature, mock.client)
     let projectArray = await decoProjects.projects.call(testAgreementHash)
     expect(projectArray[0]).to.not.be.undefined
     let project = new Project(projectArray)
@@ -133,22 +146,9 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should fail project creation if makers signature isn't valid.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts,"QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM1")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.client, testAgreementHash)
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    ).catch((err) => {
+    signature = web3.eth.sign(mock.client, testAgreementHash)
+
+    await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for the transaction.")
     }).then((txn) => {
       if(txn) {
@@ -157,23 +157,8 @@ contract("DecoProjects", (accounts) => {
     })
   })
 
-  it("should fail project creation if msg.sender is different from 'client' param.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts,"QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM2")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-    await decoProjects.startProject (
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: accounts[7], gasPrice: 1 }
-    ).catch((err) => {
+  it("should fail project creation if msg.sender is different from 'client' account.", async () => {
+    await StartProject(signature, accounts[3]).catch((err) => {
       assert.isOk(err, "Exception should be thrown for the transaction.")
     }).then((txn) => {
       if(txn) {
@@ -185,61 +170,33 @@ contract("DecoProjects", (accounts) => {
   it(
     "should fail project creation if project's client is a maker or arbiter is a client or a maker.",
     async () => {
-      let decoProjects = await DecoProjects.deployed()
-      let mock = Project.createValidProjectInstance(accounts,"1QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM2")
-      let testAgreementHash = web3.sha3(mock.agreementId)
-      let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-      await decoProjects.startProject (
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.client,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      ).catch((err) => {
+      let arbiter = mock.arbiter
+      let client = mock.client
+      let maker = mock.maker
+      mock.maker = client
+      signature = web3.eth.sign(mock.maker, testAgreementHash)
+      await StartProject(signature, mock.client).catch((err) => {
         assert.isOk(err, "Exception should be thrown for the transaction.")
+        mock.maker = maker
+        signature = web3.eth.sign(mock.maker, testAgreementHash)
       }).then((txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
         }
       })
 
-      await decoProjects.startProject (
-        mock.agreementId,
-        mock.client,
-        mock.client,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      ).catch((err) => {
+      mock.arbiter = client
+      await StartProject(signature, mock.client).catch((err) => {
         assert.isOk(err, "Exception should be thrown for the transaction.")
+        mock.arbiter = arbiter
       }).then((txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
         }
       })
 
-      await decoProjects.startProject (
-        mock.agreementId,
-        mock.client,
-        mock.maker,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      ).catch((err) => {
+      mock.arbiter = maker
+      await StartProject(signature, mock.client).catch((err) => {
         assert.isOk(err, "Exception should be thrown for the transaction.")
       }).then((txn) => {
         if(txn) {
@@ -249,42 +206,17 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should validate milestones count to be within the range 1-24.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts,"QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM3")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-    await decoProjects.startProject (
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    )
+    await StartProject(signature, mock.client)
     let projectArray = await decoProjects.projects.call(testAgreementHash)
     expect(projectArray[0]).to.not.be.empty
     let project = new Project(projectArray)
     expect(project.milestonesCount.eq(mock.milestonesCount)).to.be.true
 
-    mock.agreementId = "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM4"
-    signature = web3.sha3(mock.agreementId)
-    await decoProjects.startProject (
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      0, // milestones number value is out of the range
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    ).catch((err) => {
+    mock.agreementId = `${projectId++}`
+    mock.milestonesCount = new BigNumber("0")
+    testAgreementHash = web3.sha3(mock.agreementId)
+    signature = web3.eth.sign(mock.maker, testAgreementHash)
+    await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
       if(txn) {
@@ -292,21 +224,11 @@ contract("DecoProjects", (accounts) => {
       }
     })
 
-
-    mock.agreementId = "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM5"
-    signature = web3.sha3(mock.agreementId)
-    await decoProjects.startProject (
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      25, // milestones number value is out of the range
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    ).catch((err) => {
+    mock.agreementId = `${projectId++}`
+    mock.milestonesCount = new BigNumber("25")
+    testAgreementHash = web3.sha3(mock.agreementId)
+    signature = web3.eth.sign(mock.maker, testAgreementHash)
+    await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
       if(txn) {
@@ -315,24 +237,8 @@ contract("DecoProjects", (accounts) => {
     })
   })
 
-  it("should set start date to be approximately equal to now", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM6")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-    let txn = await decoProjects.startProject (
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    )
+  it("should set start date to be equal to the last block timestamp.", async () => {
+    let txn = await StartProject(signature, mock.client)
     let blockNumInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     let projectArray = await decoProjects.projects.call(testAgreementHash)
     expect(projectArray[0]).to.not.be.empty
@@ -342,29 +248,8 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should fail to start a project with an existing agreement hash", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM7")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-    let startProject = async () => {
-      return decoProjects.startProject(
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1}
-      )
-    }
-
-    await startProject()
-    await startProject()
-      .catch((err) => {
+    await StartProject(signature, mock.client)
+    await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
       if(txn) {
@@ -374,23 +259,7 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should add new project to the lists of client`s and maker`s projects.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM8")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      {from: mock.client, gasPrice: 1 }
-    )
+    await StartProject(signature, mock.client)
     let clientProjects = await decoProjects.getClientProjects.call(mock.client)
     let makerProjects = await decoProjects.getMakerProjects.call(mock.maker)
 
@@ -399,58 +268,22 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should correctly return maker's and client's projects", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM9")
     let makersProjectsBefore = await decoProjects.getMakerProjects.call(mock.maker)
     let clientsProjectsBefore = await decoProjects.getClientProjects.call(mock.client)
 
     let testAgreementHash1= web3.sha3(mock.agreementId)
     let signature1 = web3.eth.sign(mock.maker, testAgreementHash1)
+    await StartProject(signature1, mock.client)
 
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature1,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      {from: mock.client, gasPrice: 1 }
-    )
-    mock.agreementId = "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM10"
+    mock.agreementId = `${projectId++}`
     let testAgreementHash2 = web3.sha3(mock.agreementId)
     let signature2 = web3.eth.sign(mock.maker, testAgreementHash2)
+    await StartProject(signature2, mock.client)
 
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature2,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      {from: mock.client, gasPrice: 1 }
-    )
-    mock.agreementId = "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM11"
+    mock.agreementId = `${projectId++}`
     let testAgreementHash3 = web3.sha3(mock.agreementId)
     let signature3 = web3.eth.sign(mock.maker, testAgreementHash3)
-
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature3,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      {from: mock.client, gasPrice: 1 }
-    )
+    await StartProject(signature3, mock.client)
 
     let makersProjects = await decoProjects.getMakerProjects.call(mock.maker)
     let clientsProjects = await decoProjects.getClientProjects.call(mock.client)
@@ -468,24 +301,7 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should emit the event upon creation of a new project.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM12")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-    let txn = await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    )
-
+    let txn = await StartProject(signature, mock.client)
     let blockNumInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(txn.logs).to.have.length(1)
     expect(txn.logs[0].event).to.be.equal("ProjectStateUpdate")
@@ -496,24 +312,10 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("shouldn't emit the event when creation of a new project fails.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM13")
-    let testAgreementHash = web3.sha3(mock.agreementId)
     // A signature below is created by not a maker, should cause an exception in contract.
-    let signature = web3.eth.sign(accounts[4], testAgreementHash)
-
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    ).catch(async (err) => {
+    signature = web3.eth.sign(accounts[4], testAgreementHash)
+    await StartProject(signature, mock.client).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       expect(projectArray[0]).to.be.empty
       expect(err.receipt.logs).to.have.length(0)
@@ -527,30 +329,10 @@ contract("DecoProjects", (accounts) => {
   it(
     "should let project's client to terminate the project if the last milestone state is valid.",
     async () => {
-      let decoProjects = await DecoProjects.deployed()
-      let mock = Project.createValidProjectInstance(
-        accounts,
-        "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM14"
-      )
-      let testAgreementHash = web3.sha3(mock.agreementId)
-      let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
       let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
       await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
 
-      await decoProjects.startProject(
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      )
-
+      await StartProject(signature, mock.client)
       await milestonesContractMock.setIfClientCanTerminate(true)
 
       let txn = await decoProjects.terminateProject(
@@ -568,29 +350,10 @@ contract("DecoProjects", (accounts) => {
   it(
     "shouldn't let project's client to terminate the project if the last milestone state isn't valid.",
     async () => {
-      let decoProjects = await DecoProjects.deployed()
-      let mock = Project.createValidProjectInstance(
-        accounts,
-        "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM15"
-      )
-      let testAgreementHash = web3.sha3(mock.agreementId)
-      let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
       let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
       await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
 
-      await decoProjects.startProject(
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      )
+      await StartProject(signature, mock.client)
 
       await milestonesContractMock.setIfClientCanTerminate(false)
 
@@ -598,6 +361,7 @@ contract("DecoProjects", (accounts) => {
         testAgreementHash,
         { from: mock.client, gasPrice: 1 }
       ).catch(async (err) => {
+        assert.isOk(err, "Exception should be thrown for that transaction.")
         let projectArray = await decoProjects.projects.call(testAgreementHash)
         expect(projectArray[0]).to.not.be.empty
         let project = new Project(projectArray)
@@ -612,29 +376,10 @@ contract("DecoProjects", (accounts) => {
   it(
     "should let project's maker to terminate the project if the last milestone state is valid.",
     async () => {
-      let decoProjects = await DecoProjects.deployed()
-      let mock = Project.createValidProjectInstance(
-        accounts,
-        "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM16"
-      )
-      let testAgreementHash = web3.sha3(mock.agreementId)
-      let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
       let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
       await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
 
-      await decoProjects.startProject(
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      )
+      await StartProject(signature, mock.client)
 
       await milestonesContractMock.setIfMakerCanTerminate(true)
 
@@ -653,29 +398,10 @@ contract("DecoProjects", (accounts) => {
   it(
     "shouldn't let project's client to terminate the project if the last milestone state isn't valid.",
     async () => {
-      let decoProjects = await DecoProjects.deployed()
-      let mock = Project.createValidProjectInstance(
-        accounts,
-        "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM17"
-      )
-      let testAgreementHash = web3.sha3(mock.agreementId)
-      let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
       let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
       await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
 
-      await decoProjects.startProject(
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.maker,
-        signature,
-        mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
-        { from: mock.client, gasPrice: 1 }
-      )
+      await StartProject(signature, mock.client)
 
       await milestonesContractMock.setIfMakerCanTerminate(false)
 
@@ -683,6 +409,7 @@ contract("DecoProjects", (accounts) => {
         testAgreementHash,
         { from: mock.maker, gasPrice: 1 }
       ).catch(async (err) => {
+        assert.isOk(err, "Exception should be thrown for that transaction.")
         let projectArray = await decoProjects.projects.call(testAgreementHash)
         expect(projectArray[0]).to.not.be.empty
         let project = new Project(projectArray)
@@ -694,29 +421,10 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should fail to terminate if sender is not a client nor a maker.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(
-      accounts,
-      "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM18"
-    )
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
     let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
     await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
 
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    )
+    await StartProject(signature, mock.client)
 
     await milestonesContractMock.setIfMakerCanTerminate(true)
     await milestonesContractMock.setIfClientCanTerminate(true)
@@ -725,6 +433,7 @@ contract("DecoProjects", (accounts) => {
       testAgreementHash,
       { from: accounts[4], gasPrice: 1 }
     ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       expect(projectArray[0]).to.not.be.empty
       expect(err.receipt.logs).to.have.length(0)
@@ -736,29 +445,10 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should emit event when either client or maker terminates a project.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(
-      accounts,
-      "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM19"
-    )
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
     let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
     await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
 
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    )
+    await StartProject(signature, mock.client)
 
     await milestonesContractMock.setIfMakerCanTerminate(true)
     await milestonesContractMock.setIfClientCanTerminate(true)
@@ -776,6 +466,11 @@ contract("DecoProjects", (accounts) => {
     expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
     expect(txn.logs[0].args.state.toNumber()).to.be.equal(2)
 
+    mock.agreementId = `${projectId++}`
+    testAgreementHash = web3.sha3(mock.agreementId)
+    signature = web3.eth.sign(mock.maker, testAgreementHash)
+    await StartProject(signature, mock.client)
+
     txn = await decoProjects.terminateProject(
       testAgreementHash,
       { from: mock.client, gasPrice: 1 }
@@ -791,31 +486,13 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("shouldn't emit the event when termination of a project fails.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(
-      accounts,
-      "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM20"
-    )
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
-      mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
-      { from: mock.client, gasPrice: 1 }
-    )
+    await StartProject(signature, mock.client)
 
     await decoProjects.terminateProject(
       testAgreementHash,
       { from: accounts[3], gasPrice: 1 }
     ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       expect(projectArray[0]).to.not.be.empty
       expect(err.receipt.logs).to.have.length(0)
@@ -827,11 +504,6 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("should fail termination if there is no such project.", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(accounts, "INVALID_PROJECT_ID")
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
     let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
     await decoProjects.setMilestonesContractAddress(
       milestonesContractMock.address,
@@ -845,8 +517,40 @@ contract("DecoProjects", (accounts) => {
       testAgreementHash,
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       expect(projectArray[0]).to.be.empty
+      expect(err.receipt.logs).to.have.length(0)
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+  })
+
+  it("should fail to terminate already completed or terminated project.", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(
+      milestonesContractMock.address,
+      { from: mock.client, gasPrice: 1 }
+    )
+
+    await StartProject(signature, mock.client)
+
+    let txn = await decoProjects.terminateProject(
+      testAgreementHash,
+      { from: mock.client, gasPrice: 1 }
+    )
+    let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+    await decoProjects.terminateProject(
+      testAgreementHash,
+      { from: mock.client, gasPrice: 1 }
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+      let projectArray = await decoProjects.projects.call(testAgreementHash)
+      expect(projectArray[0]).to.not.be.empty
+      let project = new Project(projectArray)
+      expect(project.endDate.toNumber()).to.be.equal(blockInfo.timestamp)
       expect(err.receipt.logs).to.have.length(0)
     }).then((txn) => {
       if(txn) {
@@ -858,14 +562,6 @@ contract("DecoProjects", (accounts) => {
   it(
     "should let the client to complete the project upon acceptance of the last milestone.",
     async () => {
-      let decoProjects = await DecoProjects.deployed()
-      let mock = Project.createValidProjectInstance(
-        accounts,
-        "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM21"
-      )
-      let testAgreementHash = web3.sha3(mock.agreementId)
-      let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
       let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
       await decoProjects.setMilestonesContractAddress(
         milestonesContractMock.address,
@@ -875,19 +571,16 @@ contract("DecoProjects", (accounts) => {
         decoProjects.address,
         { from: mock.client, gasPrice: 1 }
       )
-
-      await decoProjects.startProject(
-        mock.agreementId,
-        mock.client,
-        mock.arbiter,
-        mock.maker,
-        signature,
+      await milestonesContractMock.setLastMilestoneNumber(
         mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
-        mock.feedbackWindow.toNumber(),
-        mock.agreementsEncrypted,
         { from: mock.client, gasPrice: 1 }
       )
+      await milestonesContractMock.setIsLastMilestoneAccepted(
+        true,
+        { from: mock.client, gasPrice: 1 }
+      )
+
+      await StartProject(signature, mock.client)
 
       let txn = await milestonesContractMock.acceptLastMilestone(
         testAgreementHash,
@@ -901,14 +594,6 @@ contract("DecoProjects", (accounts) => {
   })
 
   it("shouldn't allow anybody else beside the client to complete the project", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(
-      accounts,
-      "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM22"
-    )
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
-
     let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
     await decoProjects.setMilestonesContractAddress(
       milestonesContractMock.address,
@@ -918,37 +603,63 @@ contract("DecoProjects", (accounts) => {
       decoProjects.address,
       { from: mock.client, gasPrice: 1 }
     )
-
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
+    await milestonesContractMock.setLastMilestoneNumber(
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setIsLastMilestoneAccepted(
+      true,
       { from: mock.client, gasPrice: 1 }
     )
 
-    await milestonesContractMock.acceptLastMilestone(
-      testAgreementHash,
-      { from: mock.maker, gasPrice: 1 }
-    ).catch(async (err) => {
-      let projectArray = await decoProjects.projects.call(testAgreementHash)
-      let project = new Project(projectArray)
-      expect(project.endDate.toNumber()).to.be.equal(0)
-    }).then((txn) => {
-      if(txn) {
-        assert.fail("Should have failed above.")
-      }
-    })
+    await StartProject(signature, mock.client)
 
-    await milestonesContractMock.acceptLastMilestone(
+    let checkCondition = async (sender) => {
+      await milestonesContractMock.acceptLastMilestone(
+        testAgreementHash,
+        { from: sender, gasPrice: 1 }
+      ).catch(async (err) => {
+        assert.isOk(err, "Exception should be thrown for that transaction.")
+        let projectArray = await decoProjects.projects.call(testAgreementHash)
+        let project = new Project(projectArray)
+        expect(project.endDate.toNumber()).to.be.equal(0)
+      }).then((txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+    }
+    await checkCondition(mock.maker)
+    await checkCondition(mock.arbiter)
+    await checkCondition(accounts[5])
+  })
+
+  it("should fail to complete if it is called not from the milestones contract", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(
+      milestonesContractMock.address,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setProjectContractAddress(
+      decoProjects.address,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setLastMilestoneNumber(
+      mock.milestonesCount.toNumber(),
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setIsLastMilestoneAccepted(
+      true,
+      { from: mock.client, gasPrice: 1 }
+    )
+
+    await StartProject(signature, mock.client)
+
+    await decoProjects.completeProject(
       testAgreementHash,
-      { from: mock.arbiter, gasPrice: 1 }
+      { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       let project = new Project(projectArray)
       expect(project.endDate.toNumber()).to.be.equal(0)
@@ -959,15 +670,41 @@ contract("DecoProjects", (accounts) => {
     })
   })
 
-  it("should fail to complete if it is called not from the milestones contract", async () => {
-    let decoProjects = await DecoProjects.deployed()
-    let mock = Project.createValidProjectInstance(
-      accounts,
-      "QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM23"
-    )
-    let testAgreementHash = web3.sha3(mock.agreementId)
-    let signature = web3.eth.sign(mock.maker, testAgreementHash)
+  it(
+    "should fail to complete if the last completed milestone is not the last project milestone",
+    async () => {
+      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+      await decoProjects.setMilestonesContractAddress(
+        milestonesContractMock.address,
+        { from: mock.client, gasPrice: 1 }
+      )
+      await milestonesContractMock.setProjectContractAddress(
+        decoProjects.address,
+        { from: mock.client, gasPrice: 1 }
+      )
+      await milestonesContractMock.setLastMilestoneNumber(
+        mock.milestonesCount.toNumber() - 1,
+        { from: mock.client, gasPrice: 1 }
+      )
 
+      await StartProject(signature, mock.client)
+
+      await milestonesContractMock.acceptLastMilestone(
+        testAgreementHash,
+        { from: mock.client, gasPrice: 1 }
+      ).catch(async (err) => {
+        assert.isOk(err, "Exception should be thrown for that transaction.")
+        let projectArray = await decoProjects.projects.call(testAgreementHash)
+        let project = new Project(projectArray)
+        expect(project.endDate.toNumber()).to.be.equal(0)
+      }).then((txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+  })
+
+  it("should fail to complete if the last milestone is not accepted.", async () => {
     let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
     await decoProjects.setMilestonesContractAddress(
       milestonesContractMock.address,
@@ -977,24 +714,22 @@ contract("DecoProjects", (accounts) => {
       decoProjects.address,
       { from: mock.client, gasPrice: 1 }
     )
-
-    await decoProjects.startProject(
-      mock.agreementId,
-      mock.client,
-      mock.arbiter,
-      mock.maker,
-      signature,
+    await milestonesContractMock.setLastMilestoneNumber(
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
-      mock.agreementsEncrypted,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setIsLastMilestoneAccepted(
+      false,
       { from: mock.client, gasPrice: 1 }
     )
 
-    await decoProjects.completeProject(
+    await StartProject(signature, mock.client)
+
+    await milestonesContractMock.acceptLastMilestone(
       testAgreementHash,
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       let project = new Project(projectArray)
       expect(project.endDate.toNumber()).to.be.equal(0)
@@ -1003,5 +738,221 @@ contract("DecoProjects", (accounts) => {
         assert.fail("Should have failed above.")
       }
     })
+  })
+
+  it("should fail to complete the project if it is already completed or terminated.", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(
+      milestonesContractMock.address,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setProjectContractAddress(
+      decoProjects.address,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setLastMilestoneNumber(
+      mock.milestonesCount.toNumber(),
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setIsLastMilestoneAccepted(
+      true,
+      { from: mock.client, gasPrice: 1 }
+    )
+
+    await StartProject(signature, mock.client)
+
+    let txn = await milestonesContractMock.acceptLastMilestone(
+      testAgreementHash,
+      { from: mock.client, gasPrice: 1 }
+    )
+    let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+    await milestonesContractMock.acceptLastMilestone(
+      testAgreementHash,
+      { from: mock.client, gasPrice: 1 }
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+      let projectArray = await decoProjects.projects.call(testAgreementHash)
+      let project = new Project(projectArray)
+      expect(project.endDate.toNumber()).to.be.equal(blockInfo.timestamp)
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+  })
+
+  it("should allow client and maker to rate each other on a completed project, and not allow that for anyboady else.", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+
+    await StartProject(signature, mock.client)
+
+    await milestonesContractMock.setIfMakerCanTerminate(true)
+
+    let txn = await decoProjects.terminateProject(
+      testAgreementHash,
+      { from: mock.maker, gasPrice: 1 }
+    )
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      3,
+      { from: mock.client, gasPrice: 1}
+    )
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      5,
+      { from: mock.maker, gasPrice: 1}
+    )
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.be.not.empty
+    let project = new Project(projectArray) 
+    expect(project.makerSatisfaction.toNumber()).to.be.equal(5)
+    expect(project.customerSatisfaction.toNumber()).to.be.equal(3)
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      4,
+      { from: mock.arbiter, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+  })
+
+  it("should fail giving a score to another party if a project is not completed.", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+
+    await StartProject(signature, mock.client)
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      3,
+      { from: mock.client, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      5,
+      { from: mock.maker, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.be.not.empty
+    let project = new Project(projectArray) 
+    expect(project.makerSatisfaction.toNumber()).to.be.equal(0)
+    expect(project.customerSatisfaction.toNumber()).to.be.equal(0)
+  })
+
+  it("should fail giving a score to another party if raiting is out of rang from 1 to 10.", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+
+    await StartProject(signature, mock.client)
+    await milestonesContractMock.setIfMakerCanTerminate(true)
+
+    let txn = await decoProjects.terminateProject(
+      testAgreementHash,
+      { from: mock.maker, gasPrice: 1 }
+    )
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      0,
+      { from: mock.client, gasPrice: 1 }
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      11,
+      { from: mock.maker, gasPrice: 1 }
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.be.not.empty
+    let project = new Project(projectArray) 
+    expect(project.makerSatisfaction.toNumber()).to.be.equal(0)
+    expect(project.customerSatisfaction.toNumber()).to.be.equal(0)
+  })
+
+  it("should fail giving a score to another party if raiting is already set", async () => {
+    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+
+    await StartProject(signature, mock.client)
+    await milestonesContractMock.setIfMakerCanTerminate(true)
+
+    let txn = await decoProjects.terminateProject(
+      testAgreementHash,
+      { from: mock.maker, gasPrice: 1 }
+    )
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      1,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      3,
+      { from: mock.client, gasPrice: 1 }
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      10,
+      { from: mock.maker, gasPrice: 1 }
+    )
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      9,
+      { from: mock.maker, gasPrice: 1 }
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.be.not.empty
+    let project = new Project(projectArray) 
+    expect(project.makerSatisfaction.toNumber()).to.be.equal(10)
+    expect(project.customerSatisfaction.toNumber()).to.be.equal(1)
   })
 })

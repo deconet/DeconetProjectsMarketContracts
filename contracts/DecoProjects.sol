@@ -185,6 +185,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     function terminateProject(bytes32 _agreementHash) public eitherClientOrMaker(_agreementHash) {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0));
+        require(project.endDate == 0);
         DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
         if (project.client == msg.sender) {
             require(milestonesContract.canClientTerminate(_agreementHash));
@@ -208,8 +209,18 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         public
         onlyMilestonesContractAndClientAsOrigin(_agreementHash)
     {
+        Project storage project = projects[_agreementHash];
+        require(project.endDate == 0);
         uint nowTimestamp = now;
         projects[_agreementHash].endDate = nowTimestamp;
+        DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
+        bool isLastMilestoneAccepted;
+        uint8 milestoneNumber;
+        (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
+            _agreementHash
+        );
+        require(milestoneNumber == projects[_agreementHash].milestonesCount);
+        require(isLastMilestoneAccepted);
         emit ProjectStateUpdate(_agreementHash, msg.sender, nowTimestamp, ProjectState.Completed);
     }
 
@@ -217,10 +228,25 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @dev Rate the second party on the project.
      * @param _agreementHash Unique id of a project`s agreement.
      * @param _rating Either client's or maker's satisfaction value. 
-              Min value is 0, max is 10.
+              Min value is 1, max is 10.
      */
-    function rateProjectSecondParty(bytes32 _agreementHash, uint8 _rating) public {
-
+    function rateProjectSecondParty(
+        bytes32 _agreementHash,
+        uint8 _rating
+    )
+        public
+        eitherClientOrMaker(_agreementHash)
+    {
+        require(_rating >= 1 && _rating <= 10);
+        Project storage project = projects[_agreementHash];
+        require(project.endDate != 0);
+        if (msg.sender == project.client) {
+            require(project.customerSatisfaction == 0);
+            project.customerSatisfaction = _rating;
+        } else {
+            require(project.makerSatisfaction == 0);
+            project.makerSatisfaction = _rating;
+        }
     }
 
     /**

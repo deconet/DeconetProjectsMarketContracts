@@ -8,6 +8,8 @@ contract DecoMilestonesMock is DecoMilestones {
 
     bool internal canClientTerminateConfig = true;
     bool internal canMakerTerminateConfig = true;
+    bool internal isLastMilestoneAcceptedConfig = true;
+    uint8 internal lastMilestoneNumberConfig = 10;
 
     function setIfClientCanTerminate(bool config) public {
         canClientTerminateConfig = config;
@@ -15,6 +17,14 @@ contract DecoMilestonesMock is DecoMilestones {
 
     function setIfMakerCanTerminate(bool config) public {
         canMakerTerminateConfig = config;
+    }
+
+    function setIsLastMilestoneAccepted(bool config) public {
+        isLastMilestoneAcceptedConfig = config;
+    }
+
+    function setLastMilestoneNumber(uint8 config) public {
+        lastMilestoneNumberConfig = config;
     }
 
     function canClientTerminate(bytes32 _agreementHash) public returns(bool) {
@@ -49,6 +59,15 @@ contract DecoMilestonesMock is DecoMilestones {
     }
 
     function rejectLastDeliverable(bytes32 _agreementHash) public {
+    }
+
+    function isLastMilestoneAccepted(
+        bytes32 _agreementHash
+    )
+        public
+        returns(bool isAccepted, uint8 milestoneNumber)
+    {
+        return (isLastMilestoneAcceptedConfig, lastMilestoneNumberConfig);
     }
 
     function setProjectContractAddress(address _newAddress) public {
