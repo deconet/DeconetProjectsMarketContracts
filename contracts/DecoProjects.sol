@@ -1,9 +1,9 @@
 pragma solidity 0.4.24;
 
 
-import "./DecoBaseProjectsMarketplace.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/ECRecovery.sol";
+import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoMilestones.sol";
 
 
@@ -11,7 +11,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
     using ECRecovery for bytes32;
 
-    // structure to store project details
+    // struct for project details
     struct Project {
         string agreementId;
         address client;
@@ -29,12 +29,13 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         bool agreementsEncrypted;
     }
 
-    // enumeration to describe possible project states for easier state changes reporting
+    // enumeration to describe possible project states for easier state changes reporting.
     enum ProjectState { Active, Completed, Terminated }
 
+    // enumeration to describe possible satisfaction score types.
     enum ScoreType { CustomerSatisfaction, MakerSatisfaction }
 
-    // Logged when project state changes.
+    // Logged when a project state changes.
     event ProjectStateUpdate (
         bytes32 indexed agreementHash,
         address updatedBy,
@@ -42,7 +43,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         ProjectState state
     );
 
-    // Logged when either party rate the other party after the project completion.
+    // Logged when either party sets satisfaction score after the completion of a project.
     event ProjectRated (
         bytes32 indexed agreementHash,
         address ratedBy,
@@ -57,21 +58,22 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint timestamp
     );
 
-    // maps agreement unique hash to the project details
+    // maps the agreement`s unique hash to the project details.
     mapping (bytes32 => Project) public projects;
 
-    // maps the main agreement to the array of all made by the team documented changes.
-    mapping (bytes32 => string[]) public projectChangesAgreements;
+    // maps the project`s agreement hash to the array of all made by the team documented changes.
+    mapping (bytes32 => string[]) public projectChangesDocumentsIds;
 
-    // maps all maker's projects hashes to maker's address
+    // maps hashes of all maker's projects to the maker's address.
     mapping (address => bytes32[]) public makerProjects;
 
-    // maps all client's projects hashes to client's address 
+    // maps hashes of all client's projects to the client's address.
     mapping (address => bytes32[]) public clientProjects;
 
+    // stores the address of the `DecoMilestones` contract.
     address public milestonesContractAddress;
 
-    // Modifier to restrict method to be called either by project owner or maker
+    // Modifier to restrict method to be called either by project`s owner or maker
     modifier eitherClientOrMaker(bytes32 _agreementHash) {
         Project memory project = projects[_agreementHash];
         require(
@@ -81,8 +83,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
-    // Modifier to restrict method to be called by project owner
-    modifier onlyClient(bytes32 _agreementHash) {
+    // Modifier to restrict method to be called by project`s owner
+    modifier onlyProjectOwner(bytes32 _agreementHash) {
         Project memory project = projects[_agreementHash];
         require(
             project.client == msg.sender,
@@ -91,7 +93,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
-    // Modifier to restrict method to be called by project maker
+    // Modifier to restrict method to be called by project`s maker
     modifier onlyMaker(bytes32 _agreementHash) {
         Project memory project = projects[_agreementHash];
         require(
@@ -101,8 +103,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
-    // Modifier to restrict method to be called by milestones contract and be originated
-    // from the client address.
+    // Modifier to restrict method to be called by the milestones contract and be originated from the client`s address.
     modifier onlyMilestonesContractAndClientAsOrigin(bytes32 _agreementHash) {
         require(
             msg.sender == milestonesContractAddress,
@@ -115,19 +116,19 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Creates a new milestones based project with pre-selected maker. All parameters are required.
-     * @param _agreementId Unique id of a project`s agreement.
-     * @param _client Address of a project owner.
-     * @param _arbiter A referee to settle all escalated disputes between parties.
-     * @param _maker Address of a maker signed up for a project.
-     * @param _makersSignature Digital signature of a maker to proof the makers signed the agreement.
-     * @param _milestonesCount Count of planned milestones for the project.
-     * @param _paymentWindow Count of days project`s owner has to deposit funds for the next milestone.
-     *        If this time exceeded then maker can terminate project.
-     * @param _feedbackWindow Time in days project`s owner has to provide feedback for the last milestone.
-     *                        If the time is exceeded then maker can terminate project and get paid for awaited
+     * @dev Creates a new milestone-based project with pre-selected maker and owner. All parameters are required.
+     * @param _agreementId A `string` unique id of the agreement document for that project.
+     * @param _client An `address` of the project owner.
+     * @param _arbiter An `address` of the referee to settle all escalated disputes between parties.
+     * @param _maker An `address` of the project`s maker.
+     * @param _makersSignature A `bytes` digital signature of the maker to proof the agreement acceptance.
+     * @param _milestonesCount An `uint8` count of planned milestones for the project.
+     * @param _paymentWindow An `uint8` count of days project`s owner has to deposit funds for the next milestone.
+     *        If this time is exceeded then the maker can terminate the project.
+     * @param _feedbackWindow An `uint8` time in days project`s owner has to provide feedback for the last milestone.
+     *                        If that time is exceeded then maker can terminate the project and get paid for awaited
      *                        milestone.
-     * @param _agreementEncrypted A boolean flag indicating whether or not the agreement is encrypted.
+     * @param _agreementEncrypted A `bool` flag indicating whether or not the agreement is encrypted.
      */
     function startProject(
         string _agreementId,
@@ -183,7 +184,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Terminate the project.
-     * @param _agreementHash Unique id of a project`s agreement.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
      */
     function terminateProject(
         bytes32 _agreementHash
@@ -208,7 +209,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Complete the project.
-     * @param _agreementHash Unique id of a project`s agreement.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
      */
     function completeProject(
         bytes32 _agreementHash
@@ -233,8 +234,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Rate the second party on the project.
-     * @param _agreementHash Unique id of a project`s agreement.
-     * @param _rating Either client's or maker's satisfaction value. 
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @param _rating An `uint8` satisfaction score of either client or maker.
               Min value is 1, max is 10.
      */
     function rateProjectSecondParty(
@@ -259,16 +260,17 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Save supplement agreement to the existing one. All parameters are required.
-     * @param _agreementHash Unique id of a project`s agreement.
-     * @param _supplementalAgreementHash Unique id of a supplement agreement.
-     * @param _makersSignature Digital signature of a maker to proof the makers signed the agreement.
-     * @param _milestonesCount Count of planned milestones for the project.
-     * @param _paymentWindow Count of days project`s owner has to deposit funds for the next milestone.
-     *        If this time exceeded then maker can terminate project.
-     * @param _feedbackWindow Time in days project`s owner has to provide feedback for the last milestone.
-     *                        If the time is exceeded then maker can terminate project and get paid for awaited
-     *                        milestone.
+     * @dev Save supplement agreement id linked to the existing project agreement. All parameters are required.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @param _supplementalAgreementHash A `string` unique id of a supplemental agreement doc.
+     * @param _makersSignature A `bytes` digital signature of the maker to proof the acceptance of
+     *                         the new supplemental agreement.
+     * @param _milestonesCount An `uint8` number of planned milestones for the project.
+     * @param _paymentWindow An `uint8` number of days project`s owner has to deposit funds for the next milestone.
+     *        If this time is exceeded then maker can terminate the project.
+     * @param _feedbackWindow An `uint8` number of days project`s owner has to provide feedback for the last milestone.
+     *                        If the time is exceeded then maker can terminate the project and get paid for
+     *                        the awaited milestone.
      */
     function saveSupplementalAgreement(
         bytes32 _agreementHash,
@@ -279,7 +281,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint8 _feedbackWindow
     )
         public
-        onlyClient(_agreementHash)
+        onlyProjectOwner(_agreementHash)
     {
         bytes32 hash = keccak256(_supplementalAgreementHash);
         address signatureAddress = hash.toEthSignedMessageHash().recover(_makersSignature);
@@ -297,7 +299,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         );
         require(milestoneNumber < projects[_agreementHash].milestonesCount);
         require(isLastMilestoneAccepted);
-        projectChangesAgreements[_agreementHash].push(_supplementalAgreementHash);
+        projectChangesDocumentsIds[_agreementHash].push(_supplementalAgreementHash);
         project.milestonesCount = _milestonesCount;
         project.paymentWindow = _paymentWindow;
         project.feedbackWindow = _feedbackWindow;
@@ -305,8 +307,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Updates the address of the Milestones contract.
-     * @param _newAddress An address of the new instance of Milestones contract.
+     * @dev Updates the address of the DecoMilestones contract.
+     * @param _newAddress An `address` of the new contract instance.
      */
     function setMilestonesContractAddress(address _newAddress) public onlyOwner {
         require(_newAddress != address(0x0));
@@ -316,8 +318,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Calculates sum and number of CSAT scores of ended & rated projects for the given maker`s address.
-     * @param _maker Maker`s address to look up.
-     * @return An uint sum of all scores and an uint number of projects counted in sum.
+     * @param _maker An `address` of the maker to look up.
+     * @return An `uint` sum of all scores and an `uint` number of projects counted in sum.
      */
     function makersAverageRating(address _maker) public view returns(uint, uint) {
         return calculateScore(_maker, ScoreType.CustomerSatisfaction);
@@ -325,8 +327,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Calculates sum and number of MSAT scores of ended & rated projects for the given client`s address.
-     * @param _client Client`s address to look up.
-     * @return An uint sum of all scores and an uint number of projects counted in sum.
+     * @param _client An `address` of the client to look up.
+     * @return An `uint` sum of all scores and an `uint` number of projects counted in sum.
      */
     function clientsAverageRating(address _client) public view returns(uint, uint) {
         return calculateScore(_client, ScoreType.MakerSatisfaction);
@@ -334,31 +336,30 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Returns hashes of all client`s projects
-     * @param _client An address to look up.
-     * @return An array of bytes32 hashes.
+     * @param _client An `address` to look up.
+     * @return `bytes32[]` of projects hashes.
      */
     function getClientProjects(address _client) public view returns(bytes32[]) {
         return clientProjects[_client];
     }
 
     /**
-     * @dev Returns hashes of all maker`s projects
-     * @param _maker An address to look up.
-     * @return An array of bytes32 hashes.
+      @dev Returns hashes of all maker`s projects
+     * @param _maker An `address` to look up.
+     * @return `bytes32[]` of projects hashes.
      */
     function getMakerProjects(address _maker) public view returns(bytes32[]) {
         return makerProjects[_maker];
     }
 
     /**
-     * @dev Calculates average score of a given address as a maker or a client.
-     * @param _address Address of a target person.
-     * @param _scoreType Indicates what score type should be calculated.
-     *        `CustomerSatisfaction` type means that CSAT score for this address
-     *        as a maker should be calculated.
-     *        `MakerSatisfaction` type means that MSAT score for this address
-     *        as a client should be calculated.
-     * @return An uint sum of all scores and an uint number of projects counted in sum.
+     * @dev Calculates the sum of scores and the number of ended and rated projects for the given client's or
+     *      maker`s address.
+     * @param _address An `address` to look up.
+     * @param _scoreType A `ScoreType` indicating what score should be calculated.
+     *        `CustomerSatisfaction` type means that CSAT score for the given address as a maker should be calculated.
+     *        `MakerSatisfaction` type means that MSAT score for the given address as a client should be calculated.
+     * @return An `uint` sum of all scores and an `uint` number of projects counted in sum.
      */
     function calculateScore(
         address _address,
@@ -387,10 +388,10 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Returns all projects for the given address depending on desired score type.
-     * @param _address An address to look up.
-     * @param _scoreType A score type to identify projects source.
-     * @return bytes32[] An array of projects hashes either from `clientProjects` or `makerProjects`.
+     * @dev Returns all projects for the given address depending on the provided score type.
+     * @param _address An `address` to look up.
+     * @param _scoreType A `ScoreType` to identify projects source.
+     * @return `bytes32[]` of projects hashes either from `clientProjects` or `makerProjects` storage arrays.
      */
     function getProjectsByScoreType(address _address, ScoreType _scoreType) internal view returns(bytes32[]) {
         if (_scoreType == ScoreType.CustomerSatisfaction) {
@@ -404,9 +405,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Returns project score by the given type.
-     * @param _agreementHash A hash of the project.
-     * @param _scoreType A score type to identify what score is requested.
-     * @return An uint8 score of the given project and of the given type.
+     * @param _agreementHash A `bytes32` hash of a project`s agreement id.
+     * @param _scoreType A `ScoreType` to identify what score is requested.
+     * @return An `uint8` score of the given project and of the given type.
      */
     function getProjectScoreByType(bytes32 _agreementHash, ScoreType _scoreType) internal view returns(uint8) {
         if (_scoreType == ScoreType.CustomerSatisfaction) {
