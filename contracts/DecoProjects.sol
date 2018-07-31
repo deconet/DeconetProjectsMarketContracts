@@ -32,9 +32,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // enumeration to describe possible project states for easier state changes reporting
     enum ProjectState { Active, Completed, Terminated }
 
+    enum ScoreType { CustomerSatisfaction, MakerSatisfaction }
+
     // Logged when project state changes.
     event ProjectStateUpdate (
-        bytes32 agreementHash,
+        bytes32 indexed agreementHash,
         address updatedBy,
         uint timestamp,
         ProjectState state
@@ -42,15 +44,17 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Logged when either party rate the other party after the project completion.
     event ProjectRated (
-        bytes32 agreementHash,
+        bytes32 indexed agreementHash,
         address ratedBy,
-        uint8 rating
+        uint8 rating,
+        uint timestamp
     );
 
     // Logged when a new supplemental agreement is added.
     event NewSupplementalAgreement(
-        bytes32 agreementHash,
-        bytes supplementalAgreementHash
+        bytes32 indexed agreementHash,
+        string supplementalAgreementHash,
+        uint timestamp
     );
 
     // maps agreement unique hash to the project details
@@ -68,8 +72,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     address public milestonesContractAddress;
 
     // Modifier to restrict method to be called either by project owner or maker
-    modifier eitherClientOrMaker(bytes32 agreementHash) {
-        Project memory project = projects[agreementHash];
+    modifier eitherClientOrMaker(bytes32 _agreementHash) {
+        Project memory project = projects[_agreementHash];
         require(
             project.client == msg.sender || project.maker == msg.sender,
             "Only project owner or maker can perform this operation."
@@ -78,8 +82,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     // Modifier to restrict method to be called by project owner
-    modifier onlyClient(bytes32 agreementHash) {
-        Project memory project = projects[agreementHash];
+    modifier onlyClient(bytes32 _agreementHash) {
+        Project memory project = projects[_agreementHash];
         require(
             project.client == msg.sender,
             "Only project owner can perform this operation."
@@ -88,8 +92,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     // Modifier to restrict method to be called by project maker
-    modifier onlyMaker(bytes32 agreementHash) {
-        Project memory project = projects[agreementHash];
+    modifier onlyMaker(bytes32 _agreementHash) {
+        Project memory project = projects[_agreementHash];
         require(
             project.maker == msg.sender,
             "Only project maker can perform this operation."
@@ -99,12 +103,12 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Modifier to restrict method to be called by milestones contract and be originated
     // from the client address.
-    modifier onlyMilestonesContractAndClientAsOrigin(bytes32 agreementHash) {
+    modifier onlyMilestonesContractAndClientAsOrigin(bytes32 _agreementHash) {
         require(
             msg.sender == milestonesContractAddress,
             "Only milestones contract can perform this operation."
         );
-        Project memory project = projects[agreementHash];
+        Project memory project = projects[_agreementHash];
         address transactionOrigin = tx.origin;
         require(transactionOrigin == project.client);
         _;
@@ -160,13 +164,12 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         makerProjects[_maker].push(hash);
         clientProjects[_client].push(hash);
 
-        uint nowTimestamp = now;
         projects[hash] = Project(
             _agreementId,
             msg.sender,
             _maker,
             _arbiter,
-            nowTimestamp,
+            now,
             0, // end date is unknown yet
             _paymentWindow,
             _feedbackWindow,
@@ -175,16 +178,21 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             0, // MSAT is 0 to indicate that it isn't set by client yet
             _agreementEncrypted
         );
-        emit ProjectStateUpdate(hash, msg.sender, nowTimestamp, ProjectState.Active);
+        emit ProjectStateUpdate(hash, msg.sender, now, ProjectState.Active);
     }
 
     /**
      * @dev Terminate the project.
      * @param _agreementHash Unique id of a project`s agreement.
      */
-    function terminateProject(bytes32 _agreementHash) public eitherClientOrMaker(_agreementHash) {
+    function terminateProject(
+        bytes32 _agreementHash
+    )
+        public
+        eitherClientOrMaker(_agreementHash)
+    {
         Project storage project = projects[_agreementHash];
-        require(project.client != address(0x0));
+        require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0);
         DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
         if (project.client == msg.sender) {
@@ -194,9 +202,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         }
         milestonesContract.terminateLastMilestone(_agreementHash);
 
-        uint nowTimestamp = now;
-        project.endDate = nowTimestamp;
-        emit ProjectStateUpdate(_agreementHash, msg.sender, nowTimestamp, ProjectState.Terminated);
+        project.endDate = now;
+        emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Terminated);
     }
 
     /**
@@ -210,9 +217,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         onlyMilestonesContractAndClientAsOrigin(_agreementHash)
     {
         Project storage project = projects[_agreementHash];
+        require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0);
-        uint nowTimestamp = now;
-        projects[_agreementHash].endDate = nowTimestamp;
+        projects[_agreementHash].endDate = now;
         DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
         bool isLastMilestoneAccepted;
         uint8 milestoneNumber;
@@ -221,7 +228,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         );
         require(milestoneNumber == projects[_agreementHash].milestonesCount);
         require(isLastMilestoneAccepted);
-        emit ProjectStateUpdate(_agreementHash, msg.sender, nowTimestamp, ProjectState.Completed);
+        emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Completed);
     }
 
     /**
@@ -239,6 +246,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     {
         require(_rating >= 1 && _rating <= 10);
         Project storage project = projects[_agreementHash];
+        require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate != 0);
         if (msg.sender == project.client) {
             require(project.customerSatisfaction == 0);
@@ -247,6 +255,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             require(project.makerSatisfaction == 0);
             project.makerSatisfaction = _rating;
         }
+        emit ProjectRated(_agreementHash, msg.sender, _rating, now);
     }
 
     /**
@@ -264,14 +273,35 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     function saveSupplementalAgreement(
         bytes32 _agreementHash,
         string _supplementalAgreementHash,
-        bytes32 _makersSignature,
+        bytes _makersSignature,
         uint8 _milestonesCount,
         uint8 _paymentWindow,
         uint8 _feedbackWindow
-    ) 
+    )
         public
+        onlyClient(_agreementHash)
     {
-
+        bytes32 hash = keccak256(_supplementalAgreementHash);
+        address signatureAddress = hash.toEthSignedMessageHash().recover(_makersSignature);
+        Project storage project = projects[_agreementHash];
+        require(
+            signatureAddress == project.maker,
+            "Maker should sign the hash of immutable agreement doc."
+        );
+        require(project.client != address(0x0), "Only allowed for existing projects.");
+        DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
+        bool isLastMilestoneAccepted;
+        uint8 milestoneNumber;
+        (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
+            _agreementHash
+        );
+        require(milestoneNumber < projects[_agreementHash].milestonesCount);
+        require(isLastMilestoneAccepted);
+        projectChangesAgreements[_agreementHash].push(_supplementalAgreementHash);
+        project.milestonesCount = _milestonesCount;
+        project.paymentWindow = _paymentWindow;
+        project.feedbackWindow = _feedbackWindow;
+        emit NewSupplementalAgreement(_agreementHash, _supplementalAgreementHash, now);
     }
 
     /**
@@ -285,21 +315,21 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Returns average CSAT of the given maker`s address
+     * @dev Calculates sum and number of CSAT scores of ended & rated projects for the given maker`s address.
      * @param _maker Maker`s address to look up.
-     * @return An uint8 calculated score.
+     * @return An uint sum of all scores and an uint number of projects counted in sum.
      */
-    function makersAverageRating(address _maker) public view returns(uint8) {
-        return calculateAverageScore(_maker, true);
+    function makersAverageRating(address _maker) public view returns(uint, uint) {
+        return calculateScore(_maker, ScoreType.CustomerSatisfaction);
     }
 
     /**
-     * @dev Returns average MSAT of the given client`s address.
+     * @dev Calculates sum and number of MSAT scores of ended & rated projects for the given client`s address.
      * @param _client Client`s address to look up.
-     * @return An uint8 calculated score.
+     * @return An uint sum of all scores and an uint number of projects counted in sum.
      */
-    function clientsAverageRating(address _client) public view returns(uint8) {
-        return calculateAverageScore(_client, false);
+    function clientsAverageRating(address _client) public view returns(uint, uint) {
+        return calculateScore(_client, ScoreType.MakerSatisfaction);
     }
 
     /**
@@ -323,33 +353,68 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     /**
      * @dev Calculates average score of a given address as a maker or a client.
      * @param _address Address of a target person.
-     * @param _calculateCustomerSatisfactionScore Indicates what score should be calculated.
-              If `true` then CSAT score of this address should be returned,
-              otherwise – calculate and return MSAT score.
-     * @return An uint8 calculated score.
+     * @param _scoreType Indicates what score type should be calculated.
+     *        `CustomerSatisfaction` type means that CSAT score for this address
+     *        as a maker should be calculated.
+     *        `MakerSatisfaction` type means that MSAT score for this address
+     *        as a client should be calculated.
+     * @return An uint sum of all scores and an uint number of projects counted in sum.
      */
-    function calculateAverageScore(
+    function calculateScore(
         address _address,
-        bool _calculateCustomerSatisfactionScore
+        ScoreType _scoreType
     )
         internal
         view
-        returns(uint8) 
+        returns(uint, uint)
     {
-        bytes32[] storage allProjectsHashes = _calculateCustomerSatisfactionScore ?
-            makerProjects[_address] :
-            clientProjects[_address];
+        bytes32[] memory allProjectsHashes = getProjectsByScoreType(_address, _scoreType);
         uint rating = 0;
-        uint index;
-        for (index = 0; index < allProjectsHashes.length; index++) {
-            Project storage project = projects[allProjectsHashes[index]];
-            uint8 score = _calculateCustomerSatisfactionScore ?
-                project.customerSatisfaction :
-                project.makerSatisfaction;
-            rating.add(score);
+        uint endedProjectsCount = 0;
+        for (uint index = 0; index < allProjectsHashes.length; index++) {
+            bytes32 agreementHash = allProjectsHashes[index];
+            if (projects[agreementHash].endDate == 0) {
+                continue;
+            }
+            uint8 score = getProjectScoreByType(agreementHash, _scoreType);
+            if (score == 0) {
+                continue;
+            }
+            endedProjectsCount++;
+            rating = rating.add(score);
         }
-        rating = rating.div(index);
-        index.add(1);
-        return uint8(rating);
+        return (rating, endedProjectsCount);
+    }
+
+    /**
+     * @dev Returns all projects for the given address depending on desired score type.
+     * @param _address An address to look up.
+     * @param _scoreType A score type to identify projects source.
+     * @return bytes32[] An array of projects hashes either from `clientProjects` or `makerProjects`.
+     */
+    function getProjectsByScoreType(address _address, ScoreType _scoreType) internal view returns(bytes32[]) {
+        if (_scoreType == ScoreType.CustomerSatisfaction) {
+            return makerProjects[_address];
+        } else if (_scoreType == ScoreType.MakerSatisfaction) {
+            return clientProjects[_address];
+        } else {
+            return new bytes32[](0);
+        }
+    }
+
+    /**
+     * @dev Returns project score by the given type.
+     * @param _agreementHash A hash of the project.
+     * @param _scoreType A score type to identify what score is requested.
+     * @return An uint8 score of the given project and of the given type.
+     */
+    function getProjectScoreByType(bytes32 _agreementHash, ScoreType _scoreType) internal view returns(uint8) {
+        if (_scoreType == ScoreType.CustomerSatisfaction) {
+            return projects[_agreementHash].customerSatisfaction;
+        } else if (_scoreType == ScoreType.MakerSatisfaction) {
+            return projects[_agreementHash].makerSatisfaction;
+        } else {
+            return 0;
+        }
     }
 }
