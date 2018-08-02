@@ -103,6 +103,8 @@ contract("DecoProjects", async (accounts) => {
   let mock = undefined
   let signature = undefined
 
+  let notExistingAgreementId = "NOT EXISTING AGREEMENT ID"
+
   const StartProject = async (signature, sender) => {
     return await decoProjects.startProject(
       mock.agreementId,
@@ -1362,7 +1364,8 @@ contract("DecoProjects", async (accounts) => {
     expect(newProject.paymentWindow.toNumber()).to.be.equal(mock.paymentWindow.toNumber())
     expect(newProject.feedbackWindow.toNumber()).to.be.equal(mock.feedbackWindow.toNumber())
 
-    let supplementalAgreementId = await decoProjects.projectChangesAgreements.call(testAgreementHash, 0)
+    let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
+    console.log(supplementalAgreementId)
     expect(supplementalAgreementId).to.be.equal(supplementalAgreementDocId)
   })
 
@@ -1400,8 +1403,9 @@ contract("DecoProjects", async (accounts) => {
         mock.agreementsEncrypted
       )
 
-      let supplementalAgreementId = await decoProjects.projectChangesAgreements.call(testAgreementHash, 0)
+      let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
       expect(supplementalAgreementId).to.be.not.equal(supplementalAgreementDocId)
+      expect(supplementalAgreementId).to.be.empty
     }).then((txn) => {
       if(txn) {
         assert.fail("Should have failed above.")
@@ -1441,8 +1445,9 @@ contract("DecoProjects", async (accounts) => {
         mock.milestonesCount.minus(1),
         mock.agreementsEncrypted
       )
-      let supplementalAgreementId = await decoProjects.projectChangesAgreements.call(testAgreementHash, 0)
+      let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
       expect(supplementalAgreementId).to.not.be.equal(supplementalAgreementDocId)
+      expect(supplementalAgreementId).to.be.empty
     }).then((txn) => {
       if(txn) {
         assert.fail("Should have failed above.")
@@ -1460,7 +1465,7 @@ contract("DecoProjects", async (accounts) => {
     await decoProjects.saveSupplementalAgreement(
       testAgreementHash,
       supplementalAgreementDocId,
-      signature, // original signature from the project creation process, should be unique for the new agreement.
+      signature,
       mock.milestonesCount.toNumber(),
       mock.paymentWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
@@ -1556,7 +1561,7 @@ contract("DecoProjects", async (accounts) => {
       expect(newProject.paymentWindow.toNumber()).to.be.equal(mock.paymentWindow.toNumber())
       expect(newProject.feedbackWindow.toNumber()).to.be.equal(mock.feedbackWindow.toNumber())
 
-      let supplementalAgreementId = await decoProjects.projectChangesAgreements.call(testAgreementHash, 0)
+      let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
       expect(supplementalAgreementId).to.be.equal(supplementalAgreementDocId)
   })
 
@@ -1599,12 +1604,35 @@ contract("DecoProjects", async (accounts) => {
         { from: mock.client, gasPrice: 1 }
       ).catch(async (err) => {
         assert.isOk(err, "Exception should be thrown for the transaction.")
-        let supplementalAgreementId = await decoProjects.projectChangesAgreements.call(testAgreementHash, 0)
+        let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
         expect(supplementalAgreementId).to.not.be.equal(supplementalAgreementDocId)
+        expect(supplementalAgreementId).to.be.empty
       }).then((txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
         }
       })
+  })
+
+  it("should correctly return project existence status.", async () => {
+    let projectExists = await decoProjects.checkIfProjectExists(testAgreementHash)
+    expect(projectExists).to.be.false
+    await StartProject(signature, mock.client)
+    projectExists = await decoProjects.checkIfProjectExists(testAgreementHash)
+    expect(projectExists).to.be.true
+    testAgreementHash = web3.sha3(notExistingAgreementId)
+    projectExists = await decoProjects.checkIfProjectExists(testAgreementHash)
+    expect(projectExists).to.be.false
+  })
+
+  it("should correctly get milestones count out of the existing project instance.", async () => {
+    let milestonesCount = await decoProjects.getProjectMilestonesCount(testAgreementHash)
+    expect(milestonesCount.toNumber()).to.be.equal(0)
+    await StartProject(signature, mock.client)
+    milestonesCount = await decoProjects.getProjectMilestonesCount(testAgreementHash)
+    expect(milestonesCount.toNumber()).to.be.equal(mock.milestonesCount.toNumber())
+    testAgreementHash = web3.sha3(notExistingAgreementId)
+    milestonesCount = await decoProjects.getProjectMilestonesCount(testAgreementHash)
+    expect(milestonesCount.toNumber()).to.be.equal(0)
   })
 })

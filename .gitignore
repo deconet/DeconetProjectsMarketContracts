@@ -5,6 +5,10 @@ node_modules/*
 # production
 build
 
+# coverage reports
+coverage
+coverage.json
+
 # ctags
 tags
 tags.*

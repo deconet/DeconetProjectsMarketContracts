@@ -353,7 +353,49 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Calculates the sum of scores and the number of ended and rated projects for the given client's or
+     * @dev Checks if a project with the given hash exists.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return A `bool` stating for the project`s existence.
+    */
+    function checkIfProjectExists(bytes32 _agreementHash) public view returns(bool) {
+        return projects[_agreementHash].client != address(0x0);
+    }
+
+    /**
+     * @dev Returns preconfigured count of milestones for a project with the given hash.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint8` count of milestones set upon the project creation.
+    */
+    function getProjectMilestonesCount(bytes32 _agreementHash) public view returns(uint8) {
+        return projects[_agreementHash].milestonesCount;
+    }
+
+    /**
+     * @dev Returns count of already added agreements for a project with the given hash.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint` count of project`s supplemental agreements.
+    */
+    function getSupplementalAgreementsCount(bytes32 _agreementHash) public view returns(uint) {
+        return projectChangesDocumentsIds[_agreementHash].length;
+    }
+
+    /**
+     * @dev Returns id of a supplemental agreement for a project with the given hash and at the given  position.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @param _position An `uint` offset in supplemental agreements array.
+     * @return A `string` id of the agreement.
+    */
+    function getSupplementalAgreementId(bytes32 _agreementHash, uint _position) public view returns(string) {
+        string[] storage additionalAgreements = projectChangesDocumentsIds[_agreementHash];
+        if (additionalAgreements.length > 0) {
+            return additionalAgreements[_position];
+        } else {
+            return "";
+        }
+    }
+
+    /**
+     * @dev Calculates the sum of scores and the number of ended and rated projects for the given client`s or
      *      maker`s address.
      * @param _address An `address` to look up.
      * @param _scoreType A `ScoreType` indicating what score should be calculated.
