@@ -97,3 +97,9 @@ mapping (address => bytes32[]) public clientProjects
 # Analysis result for Ownable
 
 No issues found.
+Build directory not found. Make sure that you start the analysis from the project root, and that 'truffle compile' has executed successfully.
+Build directory not found. Make sure that you start the analysis from the project root, and that 'truffle compile' has executed successfully.
+Build directory not found. Make sure that you start the analysis from the project root, and that 'truffle compile' has executed successfully.
+Build directory not found. Make sure that you start the analysis from the project root, and that 'truffle compile' has executed successfully.
+Build directory not found. Make sure that you start the analysis from the project root, and that 'truffle compile' has executed successfully.
+Build directory not found. Make sure that you start the analysis from the project root, and that 'truffle compile' has executed successfully.
