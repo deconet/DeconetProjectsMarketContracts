@@ -10,6 +10,38 @@ contract DecoMilestonesMock is DecoMilestones {
     bool internal canMakerTerminateConfig = true;
     bool internal isLastMilestoneAcceptedConfig = true;
     uint8 internal lastMilestoneNumberConfig = 10;
+    address internal projectOwnerAddress = address(0x0);
+
+    function terminateLastMilestone(bytes32 _agreementHash) external {
+    }
+
+    function startMilestone(
+        bytes32 _agreementHash,
+        uint _depositAmount,
+        uint32 _duration
+    )
+        external
+        payable
+    {
+    }
+
+    function deliverLastMilestone(bytes32 _agreementHash) external {
+    }
+
+    function acceptLastMilestone(bytes32 _agreementHash) external {
+        require(msg.sender == projectOwnerAddress);
+        if (projectMilestones[_agreementHash].length == 0) {
+            DecoProjects projectsContract = DecoProjects(projectContractAddress);
+            projectsContract.completeProject(_agreementHash);
+        }
+    }
+
+    function rejectLastDeliverable(bytes32 _agreementHash) external {
+    }
+
+    function setProjectContractAddress(address _newAddress) external {
+        projectContractAddress = _newAddress;
+    }
 
     function setIfClientCanTerminate(bool config) public {
         canClientTerminateConfig = config;
@@ -27,38 +59,16 @@ contract DecoMilestonesMock is DecoMilestones {
         lastMilestoneNumberConfig = config;
     }
 
+    function setProjectOwnerAddress(address _newAddress) public {
+        projectOwnerAddress = _newAddress;
+    }
+
     function canClientTerminate(bytes32 _agreementHash) public returns(bool) {
         return canClientTerminateConfig;
     }
 
     function canMakerTerminate(bytes32 _agreementHash) public returns(bool) {
         return canMakerTerminateConfig;
-    }
-
-    function terminateLastMilestone(bytes32 _agreementHash) public {
-    }
-
-    function startMilestone(
-        bytes32 _agreementHash,
-        uint _depositAmount,
-        uint32 _duration
-    )
-        public
-        payable
-    {
-    }
-
-    function deliverLastMilestone(bytes32 _agreementHash) public {
-    }
-
-    function acceptLastMilestone(bytes32 _agreementHash) public {
-        if (projectMilestones[_agreementHash].length == 0) {
-            DecoProjects projectsContract = DecoProjects(projectContractAddress);
-            projectsContract.completeProject(_agreementHash);
-        }
-    }
-
-    function rejectLastDeliverable(bytes32 _agreementHash) public {
     }
 
     function isLastMilestoneAccepted(
@@ -68,9 +78,5 @@ contract DecoMilestonesMock is DecoMilestones {
         returns(bool isAccepted, uint8 milestoneNumber)
     {
         return (isLastMilestoneAcceptedConfig, lastMilestoneNumberConfig);
-    }
-
-    function setProjectContractAddress(address _newAddress) public {
-        projectContractAddress = _newAddress;
     }
 }

@@ -63,7 +63,7 @@ contract("DecoMilestones", async (accounts) => {
 
   beforeEach(async () => {
     decoMilestones = await DecoMilestones.deployed()
-    testAgreementHash = web3.sha3(`QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtVM${projectId++}`)
+    testAgreementHash = web3.sha3(`QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtWN${projectId++}`)
     mock = Milestone.createValidMilestoneInstance(1)
     client = accounts[0]
   })

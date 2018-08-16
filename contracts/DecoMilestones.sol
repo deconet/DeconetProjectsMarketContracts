@@ -1,11 +1,11 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
 
 import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoProjects.sol";
 
 
-contract DecoMilestones {
+contract DecoMilestones is DecoBaseProjectsMarketplace {
 
     // struct to describe Milestone
     struct Milestone {
@@ -53,7 +53,7 @@ contract DecoMilestones {
         uint _depositAmount,
         uint32 _duration
     )
-        public
+        external
         payable
     {
         require(_depositAmount == msg.value);
@@ -86,21 +86,21 @@ contract DecoMilestones {
      * @dev Maker delivers the current active milestone.
      * @param _agreementHash Project`s unique hash.
      */
-    function deliverLastMilestone(bytes32 _agreementHash) public {
+    function deliverLastMilestone(bytes32 _agreementHash) external {
     }
 
     /**
      * @dev Project owner accepts the current delivered milestone.
      * @param _agreementHash Project`s unique hash.
      */
-    function acceptLastMilestone(bytes32 _agreementHash) public {
+    function acceptLastMilestone(bytes32 _agreementHash) external {
     }
 
     /**
      * @dev Project owner rejects the current active milestone.
      * @param _agreementHash Project`s unique hash.
      */
-    function rejectLastDeliverable(bytes32 _agreementHash) public {
+    function rejectLastDeliverable(bytes32 _agreementHash) external {
     }
 
     /**
@@ -108,7 +108,7 @@ contract DecoMilestones {
      *      and the current active milestone must be marked as terminated for records-keeping.
      * @param _agreementHash Project`s unique hash.
      */
-    function terminateLastMilestone(bytes32 _agreementHash) public {
+    function terminateLastMilestone(bytes32 _agreementHash) external {
     }
 
     /**
@@ -142,7 +142,7 @@ contract DecoMilestones {
      * @dev Set the new address of deployed project contract.
      * @param _newAddress An address of the new contract.
      */
-    function setProjectContractAddress(address _newAddress) public {
+    function setProjectContractAddress(address _newAddress) external {
         projectContractAddress = _newAddress;
     }
 

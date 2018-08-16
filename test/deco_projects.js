@@ -581,6 +581,10 @@ contract("DecoProjects", async (accounts) => {
         true,
         { from: mock.client, gasPrice: 1 }
       )
+      await milestonesContractMock.setProjectOwnerAddress(
+        mock.client,
+        { from: mock.client, gasPrice: 1 }
+      )
 
       await StartProject(signature, mock.client)
 
@@ -615,6 +619,10 @@ contract("DecoProjects", async (accounts) => {
         true,
         { from: mock.client, gasPrice: 1 }
       )
+      await milestonesContractMock.setProjectOwnerAddress(
+        mock.client,
+        { from: mock.client, gasPrice: 1 }
+      )
 
       let txn = await milestonesContractMock.acceptLastMilestone(
         testAgreementHash,
@@ -646,6 +654,10 @@ contract("DecoProjects", async (accounts) => {
     )
     await milestonesContractMock.setIsLastMilestoneAccepted(
       true,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setProjectOwnerAddress(
+      mock.client,
       { from: mock.client, gasPrice: 1 }
     )
 
@@ -689,6 +701,10 @@ contract("DecoProjects", async (accounts) => {
       true,
       { from: mock.client, gasPrice: 1 }
     )
+    await milestonesContractMock.setProjectOwnerAddress(
+      mock.client,
+      { from: mock.client, gasPrice: 1 }
+    )
 
     await StartProject(signature, mock.client)
 
@@ -721,6 +737,10 @@ contract("DecoProjects", async (accounts) => {
       )
       await milestonesContractMock.setLastMilestoneNumber(
         mock.milestonesCount.toNumber() - 1,
+        { from: mock.client, gasPrice: 1 }
+      )
+      await milestonesContractMock.setProjectOwnerAddress(
+        mock.client,
         { from: mock.client, gasPrice: 1 }
       )
 
@@ -759,6 +779,10 @@ contract("DecoProjects", async (accounts) => {
       false,
       { from: mock.client, gasPrice: 1 }
     )
+    await milestonesContractMock.setProjectOwnerAddress(
+      mock.client,
+      { from: mock.client, gasPrice: 1 }
+    )
 
     await StartProject(signature, mock.client)
 
@@ -793,6 +817,10 @@ contract("DecoProjects", async (accounts) => {
     )
     await milestonesContractMock.setIsLastMilestoneAccepted(
       true,
+      { from: mock.client, gasPrice: 1 }
+    )
+    await milestonesContractMock.setProjectOwnerAddress(
+      mock.client,
       { from: mock.client, gasPrice: 1 }
     )
 
@@ -1365,7 +1393,6 @@ contract("DecoProjects", async (accounts) => {
     expect(newProject.feedbackWindow.toNumber()).to.be.equal(mock.feedbackWindow.toNumber())
 
     let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
-    console.log(supplementalAgreementId)
     expect(supplementalAgreementId).to.be.equal(supplementalAgreementDocId)
   })
 

@@ -85,9 +85,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Modifier to restrict method to be called by project`s owner
     modifier onlyProjectOwner(bytes32 _agreementHash) {
-        Project memory project = projects[_agreementHash];
         require(
-            project.client == msg.sender,
+            projects[_agreementHash].client == msg.sender,
             "Only project owner can perform this operation."
         );
         _;
@@ -103,15 +102,13 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
-    // Modifier to restrict method to be called by the milestones contract and be originated from the client`s address.
-    modifier onlyMilestonesContractAndClientAsOrigin(bytes32 _agreementHash) {
+    // Modifier to restrict method to be called by the milestones contract.
+    modifier onlyMilestonesContract(bytes32 _agreementHash) {
         require(
             msg.sender == milestonesContractAddress,
             "Only milestones contract can perform this operation."
         );
         Project memory project = projects[_agreementHash];
-        address transactionOrigin = tx.origin;
-        require(transactionOrigin == project.client);
         _;
     }
 
@@ -141,7 +138,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint8 _feedbackWindow,
         bool _agreementEncrypted
     )
-        public
+        external
     {
         require(msg.sender == _client, "Only the client can kick of the project.");
         require(_client != _maker, "Client can`t be a maker on her own project.");
@@ -189,7 +186,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     function terminateProject(
         bytes32 _agreementHash
     )
-        public
+        external
         eitherClientOrMaker(_agreementHash)
     {
         Project storage project = projects[_agreementHash];
@@ -214,8 +211,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     function completeProject(
         bytes32 _agreementHash
     )
-        public
-        onlyMilestonesContractAndClientAsOrigin(_agreementHash)
+        external
+        onlyMilestonesContract(_agreementHash)
     {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
@@ -242,7 +239,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         bytes32 _agreementHash,
         uint8 _rating
     )
-        public
+        external
         eitherClientOrMaker(_agreementHash)
     {
         require(_rating >= 1 && _rating <= 10);
@@ -280,14 +277,13 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint8 _paymentWindow,
         uint8 _feedbackWindow
     )
-        public
+        external
         onlyProjectOwner(_agreementHash)
     {
         bytes32 hash = keccak256(_supplementalAgreementHash);
-        address signatureAddress = hash.toEthSignedMessageHash().recover(_makersSignature);
         Project storage project = projects[_agreementHash];
         require(
-            signatureAddress == project.maker,
+            hash.toEthSignedMessageHash().recover(_makersSignature) == project.maker,
             "Maker should sign the hash of immutable agreement doc."
         );
         require(project.client != address(0x0), "Only allowed for existing projects.");
@@ -310,7 +306,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @dev Updates the address of the DecoMilestones contract.
      * @param _newAddress An `address` of the new contract instance.
      */
-    function setMilestonesContractAddress(address _newAddress) public onlyOwner {
+    function setMilestonesContractAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0x0));
         require(_newAddress != milestonesContractAddress);
         milestonesContractAddress = _newAddress;
