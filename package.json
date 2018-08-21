@@ -28,15 +28,10 @@
     "truffle-hdwallet-provider": "0.0.6",
     "uuid": "^3.2.1",
     "web3": "^1.0.0-beta.34",
-    "zeppelin-solidity": "1.10.0"
+    "zeppelin-solidity": "1.10.0",
+    "@optionality.io/clone-factory": "^0.1.6"
   },
   "devDependencies": {
-    "babel-jest": "^23.2.0",
-    "babel-preset-env": "^1.7.0",
-    "babel-preset-react": "^6.24.1",
-    "jest": "^23.2.0",
-    "react-test-renderer": "^16.4.1",
-    "react-testing-library": "^4.1.0",
     "solidity-coverage": "^0.5.5"
   }
 }
