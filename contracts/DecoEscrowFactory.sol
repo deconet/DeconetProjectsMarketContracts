@@ -28,7 +28,6 @@ contract DecoEscrowFactory is Ownable, CloneFactory {
     function setLibraryAddress(address _libraryAddress) external onlyOwner {
         require(libraryAddress != _libraryAddress);
         require(_libraryAddress != address(0x0));
-        require(_libraryAddress != address(this));
 
         libraryAddress = _libraryAddress;
     }
