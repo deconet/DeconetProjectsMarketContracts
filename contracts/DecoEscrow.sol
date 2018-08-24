@@ -5,6 +5,10 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract DecoEscrow is Ownable {
+
+    // Indicates if the current clone has been initialized.
+    bool internal isInitialized;
+
     // Mapping addresses to authorization status for executing funds distribution operations.
     mapping(address => bool) public fundsDistributionAuthorization;
 
@@ -71,6 +75,20 @@ contract DecoEscrow is Ownable {
     }
 
     /**
+     * @dev Initialize the Escrow clone with default values.
+     * @param _newOwner An address of a new escrow owner.
+     * @param _authorizedAddresses An array of addresses that will be added to authorized for funds
+     *  distribution addresses list.
+     */
+    function initialize(address _newOwner, address[] _authorizedAddresses) external {
+        require(!isInitialized);
+        for(uint i = 0; i < _authorizedAddresses.length; i++) {
+            fundsDistributionAuthorization[_authorizedAddresses[i]] = true;
+        }
+        _transferOwnership(_newOwner);
+    }
+
+    /**
      * @dev Start transfering the given amount of the ERC20 tokens available by provided address.
      * @param _tokenAddress ERC20 token contract address.
      * @param _amount Amount to transfer from sender`s address.
@@ -79,14 +97,14 @@ contract DecoEscrow is Ownable {
     }
 
     /**
-     * @dev Withdraw the given amount of ETH to sender's address if allowance or contract balance is sufficient.
+     * @dev Withdraw the given amount of ETH to sender`s address if allowance or contract balance is sufficient.
      * @param _amount Amount to withdraw.
      */
     function withdraw(uint _amount) external {
     }
 
     /**
-     * @dev Withdraw the given amount of ERC20 token to sender's address if allowance or contract balance is sufficient.
+     * @dev Withdraw the given amount of ERC20 token to sender`s address if allowance or contract balance is sufficient.
      * @param _tokenAddress ERC20 token address.
      * @param _amount Amount to withdraw.
      */
@@ -94,7 +112,7 @@ contract DecoEscrow is Ownable {
     }
 
     /**
-     * @dev Distribute funds between contract's balance, blocked reserve, and allowances for some external addresses.
+     * @dev Distribute funds between contract`s balance, blocked reserve, and allowances for some external addresses.
      *  Deposit may be returned back to the contract address, i.e. to the escrow owner.
      *  Or deposit may flow to the allowance for addresses as a result of an evidence given by authorized party about fullfilled obligations.
      *  Or funds may be partially distributed between the owner and the target addresses.
@@ -111,7 +129,7 @@ contract DecoEscrow is Ownable {
     }
 
     /**
-     * @dev Distribute ERC20 token funds between contract's balance, blocked reserve, and allowances for some external addresses.
+     * @dev Distribute ERC20 token funds between contract`s balance, blocked reserve, and allowances for some external addresses.
      *  Deposit may be returned back to the contract address, i.e. to the escrow owner.
      *  Or deposit may flow to the allowance for addresses as a result of an evidence given by authorized party about fullfilled obligations.
      *  Or funds may be partially distributed between the owner and the target addresses.
