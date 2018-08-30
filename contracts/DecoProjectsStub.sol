@@ -1,9 +1,9 @@
-pragma solidity ^0.4.24;
-
+pragma solidity 0.4.24;
 
 import "./DecoProjects.sol";
 
-contract DecoProjectsMock is DecoProjects {
+
+contract DecoProjectsStub is DecoProjects {
     bool public checkIfProjectExistsConfig = true;
     uint8 public projectMilestonesCountConfig = 10;
 

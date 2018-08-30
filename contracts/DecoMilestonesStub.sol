@@ -4,7 +4,7 @@ import "./DecoMilestones.sol";
 import "./DecoProjects.sol";
 
 
-contract DecoMilestonesMock is DecoMilestones {
+contract DecoMilestonesStub is DecoMilestones {
 
     bool internal canClientTerminateConfig = true;
     bool internal canMakerTerminateConfig = true;

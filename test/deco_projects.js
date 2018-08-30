@@ -1,9 +1,9 @@
 var BigNumber = require("bignumber.js")
 var DecoProjects = artifacts.require("./DecoProjects.sol")
-var DecoMilestonesMock = artifacts.require("./DecoMilestonesMock.sol")
+var DecoMilestonesStub = artifacts.require("./DecoMilestonesStub.sol")
 
-const DeployMilestonesContractMock = async (ownerAddress) => {
-  return DecoMilestonesMock.new({from: ownerAddress, gasPrice: 1})
+const DeployMilestonesContractStub = async (ownerAddress) => {
+  return DecoMilestonesStub.new({from: ownerAddress, gasPrice: 1})
 }
 
 class Project {
@@ -331,11 +331,11 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should let project's client to terminate the project if the last milestone state is valid.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-      await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+      await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
       await StartProject(signature, mock.client)
-      await milestonesContractMock.setIfClientCanTerminate(true)
+      await milestonesContractStub.setIfClientCanTerminate(true)
 
       let txn = await decoProjects.terminateProject(
         testAgreementHash,
@@ -352,12 +352,12 @@ contract("DecoProjects", async (accounts) => {
   it(
     "shouldn't let project's client to terminate the project if the last milestone state isn't valid.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-      await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+      await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
       await StartProject(signature, mock.client)
 
-      await milestonesContractMock.setIfClientCanTerminate(false)
+      await milestonesContractStub.setIfClientCanTerminate(false)
 
       await decoProjects.terminateProject(
         testAgreementHash,
@@ -378,12 +378,12 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should let project's maker to terminate the project if the last milestone state is valid.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-      await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+      await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
       await StartProject(signature, mock.client)
 
-      await milestonesContractMock.setIfMakerCanTerminate(true)
+      await milestonesContractStub.setIfMakerCanTerminate(true)
 
       let txn = await decoProjects.terminateProject(
         testAgreementHash,
@@ -400,12 +400,12 @@ contract("DecoProjects", async (accounts) => {
   it(
     "shouldn't let project's maker to terminate the project if the last milestone state isn't valid.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-      await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+      await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
       await StartProject(signature, mock.client)
 
-      await milestonesContractMock.setIfMakerCanTerminate(false)
+      await milestonesContractStub.setIfMakerCanTerminate(false)
 
       await decoProjects.terminateProject(
         testAgreementHash,
@@ -423,13 +423,13 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail to terminate if sender is not a client nor a maker.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
 
-    await milestonesContractMock.setIfMakerCanTerminate(true)
-    await milestonesContractMock.setIfClientCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfClientCanTerminate(true)
 
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -447,13 +447,13 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should emit event when either client or maker terminates a project.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
 
-    await milestonesContractMock.setIfMakerCanTerminate(true)
-    await milestonesContractMock.setIfClientCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfClientCanTerminate(true)
 
     let txn = await decoProjects.terminateProject(
       testAgreementHash,
@@ -506,9 +506,9 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail termination if there is no such project.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
 
@@ -531,9 +531,9 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail to terminate already completed or terminated project.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
 
@@ -564,31 +564,31 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should let the client to complete the project upon acceptance of the last milestone.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
       await decoProjects.setMilestonesContractAddress(
-        milestonesContractMock.address,
+        milestonesContractStub.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectContractAddress(
+      await milestonesContractStub.setProjectContractAddress(
         decoProjects.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setLastMilestoneNumber(
+      await milestonesContractStub.setLastMilestoneNumber(
         mock.milestonesCount.toNumber(),
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setIsLastMilestoneAccepted(
+      await milestonesContractStub.setIsLastMilestoneAccepted(
         true,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectOwnerAddress(
+      await milestonesContractStub.setProjectOwnerAddress(
         mock.client,
         { from: mock.client, gasPrice: 1 }
       )
 
       await StartProject(signature, mock.client)
 
-      let txn = await milestonesContractMock.acceptLastMilestone(
+      let txn = await milestonesContractStub.acceptLastMilestone(
         testAgreementHash,
         { from: mock.client, gasPrice: 1 }
       )
@@ -602,29 +602,29 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should fail completion of the project if there is no such project.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
       await decoProjects.setMilestonesContractAddress(
-        milestonesContractMock.address,
+        milestonesContractStub.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectContractAddress(
+      await milestonesContractStub.setProjectContractAddress(
         decoProjects.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setLastMilestoneNumber(
+      await milestonesContractStub.setLastMilestoneNumber(
         mock.milestonesCount.toNumber(),
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setIsLastMilestoneAccepted(
+      await milestonesContractStub.setIsLastMilestoneAccepted(
         true,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectOwnerAddress(
+      await milestonesContractStub.setProjectOwnerAddress(
         mock.client,
         { from: mock.client, gasPrice: 1 }
       )
 
-      let txn = await milestonesContractMock.acceptLastMilestone(
+      let txn = await milestonesContractStub.acceptLastMilestone(
         testAgreementHash,
         { from: mock.client, gasPrice: 1 }
       ).catch(async (err) => {
@@ -639,24 +639,24 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("shouldn't allow anybody else beside the client to complete the project", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectContractAddress(
+    await milestonesContractStub.setProjectContractAddress(
       decoProjects.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setLastMilestoneNumber(
+    await milestonesContractStub.setLastMilestoneNumber(
       mock.milestonesCount.toNumber(),
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setIsLastMilestoneAccepted(
+    await milestonesContractStub.setIsLastMilestoneAccepted(
       true,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectOwnerAddress(
+    await milestonesContractStub.setProjectOwnerAddress(
       mock.client,
       { from: mock.client, gasPrice: 1 }
     )
@@ -664,7 +664,7 @@ contract("DecoProjects", async (accounts) => {
     await StartProject(signature, mock.client)
 
     let checkCondition = async (sender) => {
-      await milestonesContractMock.acceptLastMilestone(
+      await milestonesContractStub.acceptLastMilestone(
         testAgreementHash,
         { from: sender, gasPrice: 1 }
       ).catch(async (err) => {
@@ -684,24 +684,24 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail to complete if it is called not from the milestones contract", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectContractAddress(
+    await milestonesContractStub.setProjectContractAddress(
       decoProjects.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setLastMilestoneNumber(
+    await milestonesContractStub.setLastMilestoneNumber(
       mock.milestonesCount.toNumber(),
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setIsLastMilestoneAccepted(
+    await milestonesContractStub.setIsLastMilestoneAccepted(
       true,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectOwnerAddress(
+    await milestonesContractStub.setProjectOwnerAddress(
       mock.client,
       { from: mock.client, gasPrice: 1 }
     )
@@ -726,27 +726,27 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should fail to complete if the last completed milestone is not the last project milestone",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
       await decoProjects.setMilestonesContractAddress(
-        milestonesContractMock.address,
+        milestonesContractStub.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectContractAddress(
+      await milestonesContractStub.setProjectContractAddress(
         decoProjects.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setLastMilestoneNumber(
+      await milestonesContractStub.setLastMilestoneNumber(
         mock.milestonesCount.toNumber() - 1,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectOwnerAddress(
+      await milestonesContractStub.setProjectOwnerAddress(
         mock.client,
         { from: mock.client, gasPrice: 1 }
       )
 
       await StartProject(signature, mock.client)
 
-      await milestonesContractMock.acceptLastMilestone(
+      await milestonesContractStub.acceptLastMilestone(
         testAgreementHash,
         { from: mock.client, gasPrice: 1 }
       ).catch(async (err) => {
@@ -762,31 +762,31 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail to complete if the last milestone is not accepted.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectContractAddress(
+    await milestonesContractStub.setProjectContractAddress(
       decoProjects.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setLastMilestoneNumber(
+    await milestonesContractStub.setLastMilestoneNumber(
       mock.milestonesCount.toNumber(),
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setIsLastMilestoneAccepted(
+    await milestonesContractStub.setIsLastMilestoneAccepted(
       false,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectOwnerAddress(
+    await milestonesContractStub.setProjectOwnerAddress(
       mock.client,
       { from: mock.client, gasPrice: 1 }
     )
 
     await StartProject(signature, mock.client)
 
-    await milestonesContractMock.acceptLastMilestone(
+    await milestonesContractStub.acceptLastMilestone(
       testAgreementHash,
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
@@ -802,36 +802,36 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail to complete the project if it is already completed or terminated.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectContractAddress(
+    await milestonesContractStub.setProjectContractAddress(
       decoProjects.address,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setLastMilestoneNumber(
+    await milestonesContractStub.setLastMilestoneNumber(
       mock.milestonesCount.toNumber(),
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setIsLastMilestoneAccepted(
+    await milestonesContractStub.setIsLastMilestoneAccepted(
       true,
       { from: mock.client, gasPrice: 1 }
     )
-    await milestonesContractMock.setProjectOwnerAddress(
+    await milestonesContractStub.setProjectOwnerAddress(
       mock.client,
       { from: mock.client, gasPrice: 1 }
     )
 
     await StartProject(signature, mock.client)
 
-    let txn = await milestonesContractMock.acceptLastMilestone(
+    let txn = await milestonesContractStub.acceptLastMilestone(
       testAgreementHash,
       { from: mock.client, gasPrice: 1 }
     )
     let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
-    await milestonesContractMock.acceptLastMilestone(
+    await milestonesContractStub.acceptLastMilestone(
       testAgreementHash,
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
@@ -847,12 +847,12 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should allow client and maker to rate each other on a completed project, and not allow that for anyboady else.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
 
-    await milestonesContractMock.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
 
     let txn = await decoProjects.terminateProject(
       testAgreementHash,
@@ -889,8 +889,8 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail giving a score to another party if a project is not completed.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
 
@@ -926,11 +926,11 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail giving a score to another party if raiting is out of the range from 1 to 10.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
-    await milestonesContractMock.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
 
     let txn = await decoProjects.terminateProject(
       testAgreementHash,
@@ -969,11 +969,11 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail giving a score to another party if raiting is already set", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
-    await milestonesContractMock.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
 
     let txn = await decoProjects.terminateProject(
       testAgreementHash,
@@ -1022,11 +1022,11 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should emit the event upon rating is set", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
-    await milestonesContractMock.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
 
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1049,11 +1049,11 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail emitting the event if setting a score fails.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     await StartProject(signature, mock.client)
-    await milestonesContractMock.setIfMakerCanTerminate(true)
+    await milestonesContractStub.setIfMakerCanTerminate(true)
 
     let rating = 1
     let txn = await decoProjects.rateProjectSecondParty(
@@ -1071,8 +1071,8 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail setting a score if there is no such project.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
-    await decoProjects.setMilestonesContractAddress(milestonesContractMock.address)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
+    await decoProjects.setMilestonesContractAddress(milestonesContractStub.address)
 
     let rating = 1
     await decoProjects.rateProjectSecondParty(
@@ -1104,18 +1104,18 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should let setting milestones contract address by the contract owner.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
 
     let address = await decoProjects.milestonesContractAddress.call()
 
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
 
     let newAddress = await decoProjects.milestonesContractAddress.call()
     expect(address).to.be.not.equal(newAddress)
-    expect(newAddress).to.be.equal(milestonesContractMock.address)
+    expect(newAddress).to.be.equal(milestonesContractStub.address)
   })
 
   it("should fail setting 0x0 milestones contract address.", async () => {
@@ -1136,17 +1136,17 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail setting the same milestones contract address.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
 
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     )
 
     let address = await decoProjects.milestonesContractAddress.call()
 
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
@@ -1160,10 +1160,10 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail setting the milestones contract address by not the owner.", async () => {
-    let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+    let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
 
     await decoProjects.setMilestonesContractAddress(
-      milestonesContractMock.address,
+      milestonesContractStub.address,
       { from: mock.maker, gasPrice: 1 }
     ).catch(async (err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
@@ -1545,20 +1545,20 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should add a supplemental agreement for the existing project if the last milestone is accepted.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
       await decoProjects.setMilestonesContractAddress(
-        milestonesContractMock.address,
+        milestonesContractStub.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectContractAddress(
+      await milestonesContractStub.setProjectContractAddress(
         decoProjects.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setLastMilestoneNumber(
+      await milestonesContractStub.setLastMilestoneNumber(
         mock.milestonesCount.minus(1).toNumber(),
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setIsLastMilestoneAccepted(
+      await milestonesContractStub.setIsLastMilestoneAccepted(
         true,
         { from: mock.client, gasPrice: 1 }
       )
@@ -1595,20 +1595,20 @@ contract("DecoProjects", async (accounts) => {
   it(
     "should fail adding a supplemental agreement for the existing project if the last milestone is active.",
     async () => {
-      let milestonesContractMock = await DeployMilestonesContractMock(mock.client)
+      let milestonesContractStub = await DeployMilestonesContractStub(mock.client)
       await decoProjects.setMilestonesContractAddress(
-        milestonesContractMock.address,
+        milestonesContractStub.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setProjectContractAddress(
+      await milestonesContractStub.setProjectContractAddress(
         decoProjects.address,
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setLastMilestoneNumber(
+      await milestonesContractStub.setLastMilestoneNumber(
         mock.milestonesCount.minus(1).toNumber(),
         { from: mock.client, gasPrice: 1 }
       )
-      await milestonesContractMock.setIsLastMilestoneAccepted(
+      await milestonesContractStub.setIsLastMilestoneAccepted(
         false,
         { from: mock.client, gasPrice: 1 }
       )

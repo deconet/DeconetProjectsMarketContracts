@@ -1,9 +1,9 @@
 var BigNumber = require("bignumber.js")
 var DecoMilestones = artifacts.require("./DecoMilestones.sol")
-var DecoProjectsMock = artifacts.require("./DecoProjectsMock.sol")
+var DecoProjectsStub = artifacts.require("./DecoProjectsStub.sol")
 
-const DeployProjectsMockContract = async (ownerAddress) => {
-  return DecoProjectsMock.new({ from: ownerAddress, gasPrice: 1 })
+const DeployProjectsStubContract = async (ownerAddress) => {
+  return DecoProjectsStub.new({ from: ownerAddress, gasPrice: 1 })
 }
 
 class Milestone {
@@ -69,13 +69,13 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should start a new milestone for the existing project.", async () => {
-    let projectsContractMock = await DeployProjectsMockContract(client)
+    let projectsContractStub = await DeployProjectsStubContract(client)
     await decoMilestones.setProjectContractAddress(
-      projectsContractMock.address,
+      projectsContractStub.address,
       { from: client, gasPrice: 1}
     )
-    await projectsContractMock.setIsProjectExistingConfig(true)
-    await projectsContractMock.setProjectMilestonesCountConfig(10)
+    await projectsContractStub.setIsProjectExistingConfig(true)
+    await projectsContractStub.setProjectMilestonesCountConfig(10)
 
     let txn = await decoMilestones.startMilestone(
       testAgreementHash,
@@ -103,13 +103,13 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail starting a new milestone for the existing project if sent ether value is less then needed.",
     async () => {
-      let projectsContractMock = await DeployProjectsMockContract(accounts[0])
+      let projectsContractStub = await DeployProjectsStubContract(accounts[0])
       await decoMilestones.setProjectContractAddress(
-        projectsContractMock.address,
+        projectsContractStub.address,
         { from: client, gasPrice: 1 }
       )
-      await projectsContractMock.setIsProjectExistingConfig(true)
-      await projectsContractMock.setProjectMilestonesCountConfig(10)
+      await projectsContractStub.setIsProjectExistingConfig(true)
+      await projectsContractStub.setProjectMilestonesCountConfig(10)
 
       await decoMilestones.startMilestone(
         testAgreementHash,
