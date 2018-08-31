@@ -21,7 +21,7 @@ contract DecoEscrow is Ownable {
 
     // Mapping of available for withdrawal funds by the address.
     // Accounted amounts are excluded from the `escrowBalance`.
-    mapping (address => uint) public withdrawAllowancesForAddress;
+    mapping (address => uint) public withdrawalAllowanceForAddress;
 
     // Stores the list of all ERC20 tokens have ever been deposited in this Escrow instance.
     address[] public depositedTokensAddresses;
@@ -45,8 +45,8 @@ contract DecoEscrow is Ownable {
 
     // Logged when either ETH or ERC20 tokens were sent out of this contract balance.
     event OutgoingPayment (
-        address from,
-        uint depositAmount,
+        address to,
+        uint amount,
         PaymentType paymentType,
         address tokenAddress
     );
@@ -96,7 +96,7 @@ contract DecoEscrow is Ownable {
     function depositErc20(address _tokenAddress, uint _amount) external {
         require(_tokenAddress != address(0x0));
         StandardToken token = StandardToken(_tokenAddress);
-        token.transferFrom(msg.sender, address(this), _amount);
+        require(token.transferFrom(msg.sender, address(this), _amount));
         escrowTokensBalance[_tokenAddress] = escrowTokensBalance[_tokenAddress].add(_amount);
         emit IncomingPayment(msg.sender, _amount, PaymentType.Erc20, _tokenAddress);
     }
@@ -106,6 +106,15 @@ contract DecoEscrow is Ownable {
      * @param _amount Amount to withdraw.
      */
     function withdraw(uint _amount) external {
+        require(_amount <= address(this).balance);
+        if(msg.sender == owner) {
+            escrowBalance = escrowBalance.sub(_amount);
+        } else {
+            uint withdrawalAllowance = withdrawalAllowanceForAddress[msg.sender];
+            withdrawalAllowanceForAddress[msg.sender] = withdrawalAllowance.sub(_amount);
+        }
+        require(msg.sender.call.value(_amount)());
+        emit OutgoingPayment(msg.sender, _amount, PaymentType.Ether, address(0x0));
     }
 
     /**
@@ -153,6 +162,32 @@ contract DecoEscrow is Ownable {
         external
         onlyAuthorized
     {
+    }
+
+    /**
+     * @dev Check if there is enough available ETH on the contract address.
+     * @param _requiredAmount Wei amount required.
+     * @return A boolean value indicating if there is enough deposited funds on the contract address.
+     */
+    function checkIfEnoughFunds(uint _requiredAmount) external view returns(bool) {
+        return escrowBalance >= _requiredAmount;
+    }
+
+    /**
+     * @dev Check if there is enough available token on the contract address.
+     * @param _tokenAddress An address of targeted ERC20 token.
+     * @param _requiredAmount Wei amount required.
+     * @return A boolean value indicating if there is enough deposited funds on the contract address.
+     */
+    function checkIfEnoughTokenFunds(
+        address _tokenAddress,
+        uint _requiredAmount
+    )
+        external
+        view
+        returns(bool)
+    {
+        return escrowTokensBalance[_tokenAddress] >= _requiredAmount;
     }
 
     /**
