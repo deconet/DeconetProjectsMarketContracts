@@ -1,16 +1,28 @@
 pragma solidity 0.4.24;
 
 import "./DecoEscrow.sol";
+import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 
 
 contract DecoEscrowMock is DecoEscrow {
     function setEscrowBalanceValueToAlmostMaximum() public {
-        escrowBalance = (~uint(0)).sub(1000000);
+        balance = (~uint(0)).sub(1000000);
     }
 
     function setEthWithdrawalAllowance(uint _amount) public {
         if (msg.sender == owner) return;
         withdrawalAllowanceForAddress[msg.sender] = _amount;
-        escrowBalance = escrowBalance.sub(_amount);
+        balance = balance.sub(_amount);
+    }
+
+    function setTokensBalanceValueToAlmostMaximum(address _tokenAddress) public {
+        StandardToken token = StandardToken(_tokenAddress);
+        tokensBalance[_tokenAddress] = token.totalSupply().sub(1000);
+    }
+
+    function setTokensWithdrawalAllowance(address _tokenAddress, uint _amount) public {
+        if (msg.sender == owner) return;
+        tokensWithdrawalAllowanceForAddress[msg.sender][_tokenAddress] = _amount;
+        tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].sub(_amount);
     }
 }
