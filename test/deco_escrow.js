@@ -59,8 +59,19 @@ class Erc20Token {
 
 contract("DecoEscrow", async (accounts) => {
 
-  const DeployTestToken = async () => {
-    return DecoTestToken.new({from: accounts[0], gasPrice: 1})
+  const DeployTestTokenAndApproveAllowance = async (deployFrom, approveFrom, approveTo, amountOfTokensToApprove) => {
+    let decoTestToken = await Erc20Token.create(deployFrom)
+    if(deployFrom !== approveFrom) {
+      await decoTestToken.transfer(deployFrom, approveFrom, amountOfTokensToApprove)
+    }
+    await decoTestToken.approveAllowance(approveFrom, approveTo, amountOfTokensToApprove)
+    return decoTestToken
+  }
+
+  const DeployEscrowAndInit = async (deployFrom, newOwner, authorizedAddress) => {
+    let escrow = await DecoEscrow.new({from: deployFrom, gasPrice: 1})
+    await escrow.initialize(newOwner, authorizedAddress, {from: deployFrom, gasPrice: 1})
+    return escrow
   }
 
   it(
@@ -178,8 +189,7 @@ contract("DecoEscrow", async (accounts) => {
   )
 
   it("should fail the second initialization attempt.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
-    await decoEscrow.initialize(accounts[1], accounts[3], {from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
     await decoEscrow.initialize(accounts[4], accounts[6], {from: accounts[1], gasPrice: 1})
       .catch(async (err) => {
         assert.isOk(err, "Expected to fail here.")
@@ -198,8 +208,8 @@ contract("DecoEscrow", async (accounts) => {
     "should manage to deposit ERC20 token with correctly preconfigured allowance by sending party to contract address.",
     async () => {
       let decoTestToken = await Erc20Token.create(accounts[0])
-      let decoEscrow = await DecoEscrow.deployed()
-      let depositErc20TokenAndCheckState = async (sender, amountToSend) => {
+        let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
+        let depositErc20TokenAndCheckState = async (sender, amountToSend) => {
         let initialRealContractTokensBalance = await decoTestToken.balanceOf(decoEscrow.address)
         let initialAccountedTokensBalance = await decoEscrow.tokensBalance.call(decoTestToken.address)
         await decoTestToken.approveAllowance(
@@ -501,12 +511,7 @@ contract("DecoEscrow", async (accounts) => {
     "should allow withdrawal of ERC20 tokens with sufficient allowance or available tokens balance.",
     async () => {
       let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-      await decoTestToken.approveAllowance(
-        accounts[0],
-        decoEscrowMock.address,
-        10000
-      )
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrowMock.address, 10000)
       await decoEscrowMock.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(9999).toString(),
@@ -575,12 +580,7 @@ contract("DecoEscrow", async (accounts) => {
     "should fail withdrawal of ERC20 tokens if token's withdrawal allowance for an address or contract's balance of tokens are insufficient.",
     async () => {
       let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-      await decoTestToken.approveAllowance(
-        accounts[0],
-        decoEscrowMock.address,
-        10000
-      )
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrowMock.address, 10000)
       await decoEscrowMock.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(9999).toString(),
@@ -648,12 +648,7 @@ contract("DecoEscrow", async (accounts) => {
     "should fail withdrawal of ERC20 tokens if requested amount is greater than contract's tokens balance in ERC20 token contract.",
     async () => {
       let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-      await decoTestToken.approveAllowance(
-        accounts[0],
-        decoEscrowMock.address,
-        10
-      )
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrowMock.address, 10)
       await decoEscrowMock.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(9).toString(),
@@ -717,12 +712,7 @@ contract("DecoEscrow", async (accounts) => {
     "should emit the event about outgoing ERC20 tokens payment.",
     async () => {
       let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-      await decoTestToken.approveAllowance(
-        accounts[0],
-        decoEscrowMock.address,
-        10000
-      )
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrowMock.address, 10000)
       await decoEscrowMock.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(9999).toString(),
@@ -763,9 +753,8 @@ contract("DecoEscrow", async (accounts) => {
   )
 
   it("should block funds correctly if called from authorized address.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
     await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
-    await decoEscrow.initialize(accounts[1], accounts[2], {from: accounts[0], gasPrice: 1})
 
     let blockAndCheckState = async (sender, amountToBlock) => {
       let initialBlockedFundsAmount = await decoEscrow.blockedBalance.call()
@@ -802,9 +791,8 @@ contract("DecoEscrow", async (accounts) => {
   })
 
   it("should fail blocking funds if called from unauthorized address.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
     await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
-    await decoEscrow.initialize(accounts[1], accounts[3], {from: accounts[0], gasPrice: 1})
 
     let blockAndCheckState = async (sender, amountToBlock) => {
       let initialBlockedFundsAmount = await decoEscrow.blockedBalance.call()
@@ -841,9 +829,8 @@ contract("DecoEscrow", async (accounts) => {
   })
 
   it("should fail blocking if there are not enough funds.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
     await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
-    await decoEscrow.initialize(accounts[1], accounts[2], {from: accounts[0], gasPrice: 1})
 
     let blockAndCheckState = async (sender, amountToBlock) => {
       let initialBlockedFundsAmount = await decoEscrow.blockedBalance.call()
@@ -880,9 +867,8 @@ contract("DecoEscrow", async (accounts) => {
   })
 
   it("should unblock funds if called from authorized address and there is enough blocked ether.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
     await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
-    await decoEscrow.initialize(accounts[1], accounts[3], {from: accounts[0], gasPrice: 1})
     await decoEscrow.blockFunds(web3.toWei(10), {from: accounts[3], gasPrice: 1})
 
     let unblockAndCheckState = async (sender, amountToUnblock) => {
@@ -920,9 +906,8 @@ contract("DecoEscrow", async (accounts) => {
   })
 
   it("should fail unblocking if called from unauthorized address.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
     await decoEscrow.sendTransaction({from: accounts[0], gasPrice: 1, value: web3.toWei(1)})
-    await decoEscrow.initialize(accounts[1], accounts[2], {from: accounts[0], gasPrice: 1})
     await decoEscrow.blockFunds(web3.toWei(1), {from: accounts[2], gasPrice: 1})
     let unblockAndCheckState = async (sender) => {
       let initialBalance = await decoEscrow.balance.call()
@@ -956,9 +941,8 @@ contract("DecoEscrow", async (accounts) => {
   })
 
   it("should fail unblocking if amount for being unblocked is greater than blocked in escrow.", async () => {
-    let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
     await decoEscrow.sendTransaction({from: accounts[0], gasPrice: 1, value: web3.toWei(1)})
-    await decoEscrow.initialize(accounts[1], accounts[3], {from: accounts[0], gasPrice: 1})
     let initialContractBalance = await decoEscrow.balance.call()
     await decoEscrow.blockFunds(initialContractBalance.toString(), {from: accounts[3], gasPrice: 1})
     let unblockAndCheckState = async (sender, amount) => {
@@ -995,11 +979,8 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should block token funds when called from authorized address and there is sufficient contract balance.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
-      await decoEscrow.initialize(accounts[1], accounts[2], {from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-
-      await decoTestToken.approveAllowance(accounts[0], decoEscrow.address, web3.toWei(10000))
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       await decoEscrow.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(10000).toString(),
@@ -1062,11 +1043,8 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should fail blocking token funds when called from unauthorized address or tokens balance is insufficient.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
-      await decoEscrow.initialize(accounts[1], accounts[3], {from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-
-      await decoTestToken.approveAllowance(accounts[0], decoEscrow.address, web3.toWei(10000))
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       await decoEscrow.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(10000).toString(),
@@ -1128,11 +1106,8 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should unblock token funds when called from authorized address and there is sufficient blocked balance.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
-      await decoEscrow.initialize(accounts[1], accounts[2], {from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-
-      await decoTestToken.approveAllowance(accounts[0], decoEscrow.address, web3.toWei(10000))
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       await decoEscrow.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(10000).toString(),
@@ -1201,11 +1176,8 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should fail unblocking token funds when called from unauthorized address or blocked tokens balance is insufficient.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
-      await decoEscrow.initialize(accounts[1], accounts[3], {from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
-
-      await decoTestToken.approveAllowance(accounts[0], decoEscrow.address, web3.toWei(10000))
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       await decoEscrow.depositErc20(
         decoTestToken.address,
         decoTestToken.tokensValueAsBigNumber(10000).toString(),
@@ -1272,9 +1244,8 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should distribute funds correctly if blocked balance is sufficient and if called from authorized address",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
       let authorizedAddress = accounts[4]
-      await decoEscrow.initialize(accounts[1], authorizedAddress, {from: accounts[0], gasPrice: 1})
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
       let startingBalance = new BigNumber(web3.toWei(20))
       await decoEscrow.sendTransaction({from: accounts[11], value: startingBalance.toString(), gasPrice: 1})
       await decoEscrow.blockFunds(startingBalance.toString(), {from: authorizedAddress, gasPrice: 1})
@@ -1334,9 +1305,8 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should fail distributing funds if called from unauthorized address or blocked balance is insufficient.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
       let authorizedAddress = accounts[3]
-      await decoEscrow.initialize(accounts[1], authorizedAddress, {from: accounts[0], gasPrice: 1})
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
       let startingBalance = new BigNumber(web3.toWei(2))
       await decoEscrow.sendTransaction({from: accounts[11], value: startingBalance.toString(), gasPrice: 1})
       await decoEscrow.blockFunds(startingBalance.toString(), {from: authorizedAddress, gasPrice: 1})
@@ -1387,12 +1357,10 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should distribute token funds when called from authorized address and there is sufficient blocked balance.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
       let authorizedAddress = accounts[3]
-      await decoEscrow.initialize(accounts[1], authorizedAddress, {from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       let initialTokensBalance = decoTestToken.tokensValueAsBigNumber(10000)
-      await decoTestToken.approveAllowance(accounts[0], decoEscrow.address, initialTokensBalance.toString())
       await decoEscrow.depositErc20(
         decoTestToken.address,
         initialTokensBalance.toString(),
@@ -1467,12 +1435,10 @@ contract("DecoEscrow", async (accounts) => {
   it(
     "should fail distributing token funds when called from unauthorized address or there is insufficient blocked balance.",
     async () => {
-      let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
       let authorizedAddress = accounts[19]
-      await decoEscrow.initialize(accounts[1], authorizedAddress, {from: accounts[0], gasPrice: 1})
-      let decoTestToken = await Erc20Token.create(accounts[0])
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
+      let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       let initialTokensBalance = decoTestToken.tokensValueAsBigNumber(10000)
-      await decoTestToken.approveAllowance(accounts[0], decoEscrow.address, initialTokensBalance.toString())
       await decoEscrow.depositErc20(
         decoTestToken.address,
         initialTokensBalance.toString(),
