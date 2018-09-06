@@ -12,8 +12,8 @@ contract DecoEscrow is Ownable {
     // Indicates if the current clone has been initialized.
     bool internal isInitialized;
 
-    // Mapping addresses to authorization status for executing funds distribution operations.
-    mapping(address => bool) public fundsDistributionAuthorization;
+    // Authorized party for executing funds distribution operations.
+    address public authorizedAddress;
 
     // State variable to track available ETH Escrow owner balance.
     // Anything that is not blocked or distributed in favor of any party can be withdrawn by the owner.
@@ -33,25 +33,21 @@ contract DecoEscrow is Ownable {
     mapping(address => mapping(address => uint)) public tokensWithdrawalAllowanceForAddress;
 
     // ETH amount blocked in Escrow.
+    // `balance` excludes this amount.
     uint public blockedBalance;
 
     // Mapping of the amount of ERC20 tokens to the the token address that are blocked in Escrow.
+    // A token value in `tokensBalance` excludes stored here amount.
     mapping(address => uint) public blockedTokensBalance;
 
-    // Logged when new incoming payment appears.
-    event IncomingPayment (
-        address from,
-        uint depositAmount,
-        PaymentType paymentType,
-        address tokenAddress
-    );
-
-    // Logged when either ETH or ERC20 tokens were sent out of this contract balance.
-    event OutgoingPayment (
-        address to,
+    // Logged when an operation with funds occurred.
+    event FundsOperation (
+        address sender,
+        address target,
+        address tokenAddress,
         uint amount,
         PaymentType paymentType,
-        address tokenAddress
+        OperationType operationType
     );
 
     // Logged when the given address authorization to distribute Escrow funds changed.
@@ -60,21 +56,15 @@ contract DecoEscrow is Ownable {
         bool isAuthorized
     );
 
-    event FundsBlockedOrUnblocked (
-        address from,
-        address tokenAddress,
-        uint amount,
-        PaymentType paymentType,
-        bool fundsUnblocked
-    );
-
-
     // Accepted types of payments.
     enum PaymentType { Ether, Erc20 }
 
+    // Possible operations with funds.
+    enum OperationType { Receive, Send, Block, Unblock, Distribute }
+
     // Restrict function call to be originated from an address that was authorized to distribute funds.
     modifier onlyAuthorized() {
-        require(fundsDistributionAuthorization[msg.sender]);
+        require(authorizedAddress == msg.sender);
         _;
     }
 
@@ -88,17 +78,13 @@ contract DecoEscrow is Ownable {
     /**
      * @dev Initialize the Escrow clone with default values.
      * @param _newOwner An address of a new escrow owner.
-     * @param _authorizedAddresses An array of addresses that will be added to authorized for funds
-     *  distribution addresses list.
+     * @param _authorizedAddress An address that will be stored as authorized.
      */
-    function initialize(address _newOwner, address[] _authorizedAddresses) external onlyOwner {
+    function initialize(address _newOwner, address _authorizedAddress) external {
         require(!isInitialized);
         isInitialized = true;
-        for (uint i = 0; i < _authorizedAddresses.length; i++) {
-            address newAuthorizedAddress = _authorizedAddresses[i];
-            fundsDistributionAuthorization[newAuthorizedAddress] = true;
-            emit FundsDistributionAuthorization(newAuthorizedAddress, true);
-        }
+        authorizedAddress = _authorizedAddress;
+        emit FundsDistributionAuthorization(_authorizedAddress, true);
         _transferOwnership(_newOwner);
     }
 
@@ -112,7 +98,14 @@ contract DecoEscrow is Ownable {
         StandardToken token = StandardToken(_tokenAddress);
         require(token.transferFrom(msg.sender, address(this), _amount));
         tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
-        emit IncomingPayment(msg.sender, _amount, PaymentType.Erc20, _tokenAddress);
+        emit FundsOperation (
+            msg.sender,
+            address(this),
+            _tokenAddress,
+            _amount,
+            PaymentType.Erc20,
+            OperationType.Receive
+        );
     }
 
     /**
@@ -128,7 +121,14 @@ contract DecoEscrow is Ownable {
             withdrawalAllowanceForAddress[msg.sender] = withdrawalAllowance.sub(_amount);
         }
         require(msg.sender.call.value(_amount)());
-        emit OutgoingPayment(msg.sender, _amount, PaymentType.Ether, address(0x0));
+        emit FundsOperation (
+            address(this),
+            msg.sender,
+            address(0x0),
+            _amount,
+            PaymentType.Ether,
+            OperationType.Send
+        );
     }
 
     /**
@@ -147,46 +147,36 @@ contract DecoEscrow is Ownable {
                 tokenWithdrawalAllowance.sub(_amount);
         }
         token.transfer(msg.sender, _amount);
-        emit OutgoingPayment(msg.sender, _amount, PaymentType.Erc20, _tokenAddress);
+        emit FundsOperation (
+            address(this),
+            msg.sender,
+            _tokenAddress,
+            _amount,
+            PaymentType.Erc20,
+            OperationType.Send
+        );
     }
 
     /**
-     * @dev Block funds for future use by authorized parties listed in `fundsDistributionAuthorization` mapping.
+     * @dev Block funds for future use by authorized party stored in `authorizedAddress`.
      * @param _amount An uint of Wei to be blocked.
      */
     function blockFunds(uint _amount) external onlyAuthorized {
         require(_amount <= balance);
         balance = balance.sub(_amount);
         blockedBalance = blockedBalance.add(_amount);
-        emit FundsBlockedOrUnblocked(
+        emit FundsOperation (
+            address(this),
             msg.sender,
             address(0x0),
             _amount,
             PaymentType.Ether,
-            false
+            OperationType.Block
         );
     }
 
     /**
-     * @dev Unblock blocked funds and make them available to the contract owner.
-     * @param _amount An uint of Wei to be unblocked.
-     */
-    function unblockFunds(uint _amount) external onlyAuthorized {
-        require(_amount <= blockedBalance);
-        blockedBalance = blockedBalance.sub(_amount);
-        balance = balance.add(_amount);
-        emit FundsBlockedOrUnblocked(
-            msg.sender,
-            address(0x0),
-            _amount,
-            PaymentType.Ether,
-            true
-        );
-    }
-
-    /**
-     * @dev Blocks ERC20 tokens funds for future use by authorized parties listed in
-     *      `fundsDistributionAuthorization` mapping.
+     * @dev Blocks ERC20 tokens funds for future use by authorized party listed in `authorizedAddress`.
      * @param _tokenAddress An address of ERC20 token.
      * @param _amount An uint of tokens to be blocked.
      */
@@ -195,95 +185,80 @@ contract DecoEscrow is Ownable {
         require(_amount <= accountedTokensBalance);
         tokensBalance[_tokenAddress] = accountedTokensBalance.sub(_amount);
         blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].add(_amount);
-        emit FundsBlockedOrUnblocked(
+        emit FundsOperation (
+            address(this),
             msg.sender,
             _tokenAddress,
             _amount,
             PaymentType.Erc20,
-            false
+            OperationType.Block
         );
     }
 
     /**
-     * @dev Unblock blocked token funds and make them available to the contract owner.
-     * @param _amount An uint of Wei to be unblocked.
-     */
-    function unblockTokenFunds(address _tokenAddress, uint _amount) external onlyAuthorized {
-        uint accountedBlockedTokensAmount = blockedTokensBalance[_tokenAddress];
-        require(_amount <= accountedBlockedTokensAmount);
-        blockedTokensBalance[_tokenAddress] = accountedBlockedTokensAmount.sub(_amount);
-        tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
-        emit FundsBlockedOrUnblocked(
-            msg.sender,
-            _tokenAddress,
-            _amount,
-            PaymentType.Erc20,
-            true
-        );
-    }
-
-    /**
-     * @dev Distribute funds between contract`s balance and allowances for some addresses.
+     * @dev Distribute funds between contract`s balance and allowance for some address.
      *  Deposit may be returned back to the contract address, i.e. to the escrow owner.
-     *  Or deposit may flow to the allowance for addresses as a result of an evidence
+     *  Or deposit may flow to the allowance for an address as a result of an evidence
      *  given by an authorized party about fullfilled obligations.
-     *  Or funds may be partially distributed between the owner and the target addresses.
-     * @param _destinations Destination addresses for funds distribution.
-     * @param _amounts Amounts to distribute ordered accordingly with destinations.
+     * @param _destination Destination address for funds distribution.
+     * @param _amount Amount to distribute in favor of a destination address.
      */
     function distributeFunds(
-        address[] _destinations,
-        uint[] _amounts
+        address _destination,
+        uint _amount
     )
         external
         onlyAuthorized
     {
+        if (_destination == owner) {
+            unblockFunds(_amount);
+            return;
+        }
+        require(_amount <= blockedBalance);
+        blockedBalance = blockedBalance.sub(_amount);
+        withdrawalAllowanceForAddress[_destination] = withdrawalAllowanceForAddress[_destination].add(_amount);
+        emit FundsOperation(
+            msg.sender,
+            _destination,
+            address(0x0),
+            _amount,
+            PaymentType.Ether,
+            OperationType.Distribute
+        );
     }
 
     /**
-     * @dev Distribute ERC20 token funds between contract`s balance and allowances for some addresses.
+     * @dev Distribute ERC20 token funds between contract`s balance and allowanc for some address.
      *      Deposit may be returned back to the contract address, i.e. to the escrow owner.
-     *      Or deposit may flow to the allowance for addresses as a result of an evidence
+     *      Or deposit may flow to the allowance for an address as a result of an evidence
      *      given by authorized party about fullfilled obligations.
-     *      Or funds may be partially distributed between the owner and the target addresses.
-     * @param _destinations Destination addresses for funds distribution.
-     * @param _token ERC20 Token address.
-     * @param _amounts Amounts to distribute ordered accordingly with destinations.
+     * @param _destination Destination address for funds distribution.
+     * @param _tokenAddress ERC20 Token address.
+     * @param _amount Amount to distribute in favor of a destination address.
      */
     function distributeTokenFunds(
-        address[] _destinations,
-        address _token,
-        uint[] _amounts
+        address _destination,
+        address _tokenAddress,
+        uint _amount
     )
         external
         onlyAuthorized
     {
-    }
-
-    /**
-     * @dev Check if there is enough available ETH on the contract address.
-     * @param _requiredAmount Wei amount required.
-     * @return A boolean value indicating if there is enough deposited funds on the contract address.
-     */
-    function checkIfEnoughFunds(uint _requiredAmount) external view returns(bool) {
-        return balance >= _requiredAmount;
-    }
-
-    /**
-     * @dev Check if there is enough available token on the contract address.
-     * @param _tokenAddress An address of targeted ERC20 token.
-     * @param _requiredAmount Wei amount required.
-     * @return A boolean value indicating if there is enough deposited funds on the contract address.
-     */
-    function checkIfEnoughTokenFunds(
-        address _tokenAddress,
-        uint _requiredAmount
-    )
-        external
-        view
-        returns(bool)
-    {
-        return tokensBalance[_tokenAddress] >= _requiredAmount;
+        if(_destination == owner) {
+            unblockTokenFunds(_tokenAddress, _amount);
+            return;
+        }
+        blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].sub(_amount);
+        uint allowanceForSender = tokensWithdrawalAllowanceForAddress[_destination][_tokenAddress];
+        tokensWithdrawalAllowanceForAddress[_destination][_tokenAddress] = allowanceForSender.add(_amount);
+        emit FundsOperation(
+            msg.sender,
+            _destination,
+            _tokenAddress,
+            _amount,
+            PaymentType.Erc20,
+            OperationType.Distribute
+        );
     }
 
     /**
@@ -301,6 +276,51 @@ contract DecoEscrow is Ownable {
     function deposit() public payable {
         require(msg.value > 0);
         balance = balance.add(msg.value);
-        emit IncomingPayment(msg.sender, msg.value, PaymentType.Ether, address(0x0));
+        emit FundsOperation (
+            msg.sender,
+            address(this),
+            address(0x0),
+            msg.value,
+            PaymentType.Ether,
+            OperationType.Receive
+        );
     }
+
+    /**
+     * @dev Unblock blocked funds and make them available to the contract owner.
+     * @param _amount An uint of Wei to be unblocked.
+     */
+    function unblockFunds(uint _amount) public onlyAuthorized {
+        require(_amount <= blockedBalance);
+        blockedBalance = blockedBalance.sub(_amount);
+        balance = balance.add(_amount);
+        emit FundsOperation (
+            msg.sender,
+            address(this),
+            address(0x0),
+            _amount,
+            PaymentType.Ether,
+            OperationType.Unblock
+        );
+    }
+
+    /**
+     * @dev Unblock blocked token funds and make them available to the contract owner.
+     * @param _amount An uint of Wei to be unblocked.
+     */
+    function unblockTokenFunds(address _tokenAddress, uint _amount) public onlyAuthorized {
+        uint accountedBlockedTokensAmount = blockedTokensBalance[_tokenAddress];
+        require(_amount <= accountedBlockedTokensAmount);
+        blockedTokensBalance[_tokenAddress] = accountedBlockedTokensAmount.sub(_amount);
+        tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
+        emit FundsOperation (
+            msg.sender,
+            address(this),
+            _tokenAddress,
+            _amount,
+            PaymentType.Erc20,
+            OperationType.Unblock
+        );
+    }
+
 }

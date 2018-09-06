@@ -1,6 +1,9 @@
 var BigNumber = require("bignumber.js")
 var DecoProjects = artifacts.require("./DecoProjects.sol")
 var DecoMilestonesStub = artifacts.require("./DecoMilestonesStub.sol")
+var DecoEscrowFactory = artifacts.require("./DecoEscrowFactory.sol")
+var DecoProjectsMock = artifacts.require("./DecoProjectsMock.sol")
+var DecoEscrow = artifacts.require("./DecoEscrow.sol")
 
 const DeployMilestonesContractStub = async (ownerAddress) => {
   return DecoMilestonesStub.new({from: ownerAddress, gasPrice: 1})
@@ -12,14 +15,15 @@ class Project {
     this.client = contractStructArray[1]
     this.maker = contractStructArray[2]
     this.arbiter = contractStructArray[3]
-    this.startDate = contractStructArray[4]
-    this.endDate = contractStructArray[5]
-    this.paymentWindow = contractStructArray[6]
-    this.feedbackWindow = contractStructArray[7]
-    this.milestonesCount = contractStructArray[8]
-    this.customerSatisfaction = contractStructArray[9]
-    this.makerSatisfaction = contractStructArray[10]
-    this.agreementsEncrypted = contractStructArray[11]
+    this.escrowContractAddress = contractStructArray[4]
+    this.startDate = contractStructArray[5]
+    this.endDate = contractStructArray[6]
+    this.paymentWindow = contractStructArray[7]
+    this.feedbackWindow = contractStructArray[8]
+    this.milestonesCount = contractStructArray[9]
+    this.customerSatisfaction = contractStructArray[10]
+    this.makerSatisfaction = contractStructArray[11]
+    this.agreementsEncrypted = contractStructArray[12]
   }
 
   assertProjectWithParams(
@@ -27,6 +31,7 @@ class Project {
     client,
     maker,
     arbiter,
+    escrowContractAddress,
     startDate,
     endDate,
     paymentWindow,
@@ -40,6 +45,7 @@ class Project {
     assert.equal(this.client, client)
     assert.equal(this.maker, maker)
     assert.equal(this.arbiter, arbiter)
+    assert.equal(this.escrowContractAddress, escrowContractAddress)
     expect(this.startDate.eq(startDate)).to.be.true
     expect(this.endDate.eq(endDate)).to.be.true
     expect(this.paymentWindow.eq(paymentWindow)).to.be.true
@@ -65,6 +71,7 @@ class Project {
       client,
       maker,
       arbiter,
+      this.escrowContractAddress,
       this.startDate,
       this.endDate,
       paymentWindow,
@@ -83,6 +90,7 @@ class Project {
         accounts[0],
         accounts[1],
         accounts[2],
+        accounts[29],
         new BigNumber(new Date().getTime() / 1000),
         new BigNumber(Math.round(new Date().getTime() / 1000) + 30 * 24 * 60 * 60),
         new BigNumber("10"),
@@ -131,7 +139,25 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should start the project with maker address and matching signature.", async () => {
-    await StartProject(signature, mock.client)
+    let decoEscrowFactory = await DecoEscrowFactory.deployed()
+    await decoProjects.setEscrowFactoryContractAddress(
+      decoEscrowFactory.address,
+      {from: accounts[0], gasPrice: 1}
+    )
+    let decoMilestonesStub = await DeployMilestonesContractStub(accounts[0])
+    await decoProjects.setMilestonesContractAddress(
+      decoMilestonesStub.address,
+      {from: accounts[0], gasPrice: 1}
+    )
+
+    let listener = decoEscrowFactory.EscrowCreated()
+    let txn = await StartProject(signature, mock.client)
+    expect(txn.logs).to.have.lengthOf.at.least(1)
+    let events = await listener.get()
+    let escrowCreatedEvent = events[events.length - 1]
+    expect(escrowCreatedEvent.event).to.be.equal("EscrowCreated")
+    expect((new BigNumber(escrowCreatedEvent.args.newEscrowAddress)).toNumber()).to.not.be.equal(0)
+
     let projectArray = await decoProjects.projects.call(testAgreementHash)
     expect(projectArray[0]).to.not.be.undefined
     let project = new Project(projectArray)
@@ -145,6 +171,7 @@ contract("DecoProjects", async (accounts) => {
       mock.milestonesCount,
       mock.agreementsEncrypted
     )
+    expect(project.escrowContractAddress).to.be.equal(escrowCreatedEvent.args.newEscrowAddress)
   })
 
   it("should fail project creation if makers signature isn't valid.", async () => {
@@ -305,12 +332,13 @@ contract("DecoProjects", async (accounts) => {
   it("should emit the event upon creation of a new project.", async () => {
     let txn = await StartProject(signature, mock.client)
     let blockNumInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
-    expect(txn.logs).to.have.length(1)
-    expect(txn.logs[0].event).to.be.equal("ProjectStateUpdate")
-    expect(txn.logs[0].args.agreementHash).to.be.equal(testAgreementHash)
-    expect(txn.logs[0].args.updatedBy).to.be.equal(mock.client)
-    expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockNumInfo.timestamp)
-    expect(txn.logs[0].args.state.toNumber()).to.be.equal(0)
+    expect(txn.logs).to.have.lengthOf.at.least(1)
+    let emittedEvent = txn.logs[txn.logs.length - 1]
+    expect(emittedEvent.event).to.be.equal("ProjectStateUpdate")
+    expect(emittedEvent.args.agreementHash).to.be.equal(testAgreementHash)
+    expect(emittedEvent.args.updatedBy).to.be.equal(mock.client)
+    expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockNumInfo.timestamp)
+    expect(emittedEvent.args.state.toNumber()).to.be.equal(0)
   })
 
   it("shouldn't emit the event when creation of a new project fails.", async () => {
@@ -1661,5 +1689,95 @@ contract("DecoProjects", async (accounts) => {
     testAgreementHash = web3.sha3(notExistingAgreementId)
     milestonesCount = await decoProjects.getProjectMilestonesCount(testAgreementHash)
     expect(milestonesCount.toNumber()).to.be.equal(0)
+  })
+
+  it(
+    "should save valid escrow factory address and reject invalid or the same as already saved address.",
+    async () => {
+      let newEscrowFactory = accounts[12]
+      await decoProjects.setEscrowFactoryContractAddress(newEscrowFactory, {from: accounts[0], gasPrice: 1})
+      let actualAddress = await decoProjects.escrowFactoryAddress.call()
+      expect(actualAddress).to.be.equal(newEscrowFactory)
+
+      await decoProjects.setEscrowFactoryContractAddress(
+        newEscrowFactory,
+        {from: accounts[0], gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected exception.")
+        let actualAddress = await decoProjects.escrowFactoryAddress.call()
+        expect(actualAddress).to.be.equal(newEscrowFactory)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+
+      await decoProjects.setEscrowFactoryContractAddress(
+        "0x0",
+        {from: accounts[0], gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected exception.")
+        let actualAddress = await decoProjects.escrowFactoryAddress.call()
+        expect(actualAddress).to.be.equal(newEscrowFactory)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+  })
+
+  it("should correctly deploy escrow clone if there is valid factory contract.", async () => {
+    let decoProjectsMockOwner = accounts[4]
+    let decoProjectsMock = await DecoProjectsMock.new({from: decoProjectsMockOwner, gasPrice: 1})
+    let decoEscrowFactory = await DecoEscrowFactory.deployed()
+
+    await decoProjectsMock.setEscrowFactoryContractAddress(
+      decoEscrowFactory.address,
+      {from: decoProjectsMockOwner, gasPrice: 1}
+    )
+    await decoProjectsMock.setMilestonesContractAddress(
+      decoEscrowFactory.address,
+      {from: decoProjectsMockOwner, gasPrice: 1}
+    )
+    let txn = await decoProjectsMock.testDeployEscrowClone(
+      decoProjectsMockOwner,
+      {from: decoProjectsMockOwner, gasPrice: 1}
+    )
+
+    let emittedEvent = txn.logs[txn.logs.length - 1]
+    expect(emittedEvent.args.newCloneAddress).to.be.not.empty
+
+    let decoEscrow = await DecoEscrow.at(emittedEvent.args.newCloneAddress)
+    let ownerOfEscrow = await decoEscrow.owner.call()
+    let authorizedAddress = await decoEscrow.authorizedAddress.call()
+
+    expect(ownerOfEscrow).to.be.equal(decoProjectsMockOwner)
+    expect(authorizedAddress).to.be.equal(decoEscrowFactory.address)
+  })
+
+  it("should fail deploying escrow clone if there is invalid factory contract address.", async () => {
+    let decoProjectsMockOwner = accounts[4]
+    let decoProjectsMock = await DecoProjectsMock.new({from: decoProjectsMockOwner, gasPrice: 1})
+    let decoEscrowFactory = await DecoEscrowFactory.deployed()
+
+    await decoProjectsMock.setEscrowFactoryContractAddress(
+      accounts[5],
+      {from: decoProjectsMockOwner, gasPrice: 1}
+    )
+    await decoProjectsMock.setMilestonesContractAddress(
+      decoEscrowFactory.address,
+      {from: decoProjectsMockOwner, gasPrice: 1}
+    )
+    await decoProjectsMock.testDeployEscrowClone(
+      decoProjectsMockOwner,
+      {from: decoProjectsMockOwner, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Expected exception.")
+      expect(err.receipt.logs).to.be.empty
+    }).then(async (txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
   })
 })

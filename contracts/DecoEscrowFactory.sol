@@ -35,18 +35,17 @@ contract DecoEscrowFactory is Ownable, CloneFactory {
     /**
      * @dev Create Escrow clone.
      * @param _ownerAddress An address of the Escrow contract owner.
-     * @param _authorizedAddresses Addresses that are going to be authorized in Escrow contract.
+     * @param _authorizedAddress An addresses that is going to be authorized in Escrow contract.
      */
     function createEscrow(
         address _ownerAddress,
-        address[] _authorizedAddresses
+        address _authorizedAddress
     )
         external
-        onlyOwner
-        returns(address newCloneAddress)
+        returns(address)
     {
         address clone = createClone(libraryAddress);
-        DecoEscrow(clone).initialize(_ownerAddress, _authorizedAddresses);
+        DecoEscrow(clone).initialize(_ownerAddress, _authorizedAddress);
         emit EscrowCreated(clone);
         return clone;
     }

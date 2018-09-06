@@ -82,37 +82,17 @@ contract("DecoEscrowFactory", async (accounts) => {
     let decoEscrowFactory = await DecoEscrowFactory.new(decoEscrowStub.address, {from: accounts[0], gasPrice: 1})
     let decoMilestones = await DecoMilestones.deployed()
     let decoProjects = await DecoProjects.deployed()
-    let addresses = [decoMilestones.address, decoProjects.address]
+    let address = decoMilestones.address
     let newEscrowCloneTxn = await decoEscrowFactory.createEscrow(
       accounts[1],
-      addresses,
-      {from: accounts[0], gasPrice: 1}
+      address,
+      {from: accounts[8], gasPrice: 1}
     )
     expect(newEscrowCloneTxn.logs[0].event).to.be.equal("EscrowCreated")
     decoEscrowStub = await DecoEscrowStub.at(newEscrowCloneTxn.logs[0].args.newEscrowAddress)
     let newContractOwner = await decoEscrowStub.newOwner.call()
-    let authorizedAddress1 = await decoEscrowStub.authorizedAddresses.call(0)
-    let authorizedAddress2 = await decoEscrowStub.authorizedAddresses.call(1)
+    let authorizedAddress = await decoEscrowStub.authorizedAddress.call()
     expect(newContractOwner).to.be.equal(accounts[1])
-    expect(addresses).to.include.members([authorizedAddress1.toString(), authorizedAddress2.toString()])
-  })
-
-  it("should fail creating Escrow clone if txn signed not from the owner's account.", async () => {
-    let decoEscrowStub = await DecoEscrowStub.new({from: accounts[0], gasPrice: 1})
-    let decoEscrowFactory = await DecoEscrowFactory.new(decoEscrowStub.address, {from: accounts[0], gasPrice: 1})
-    let decoMilestones = await DecoMilestones.deployed()
-    let decoProjects = await DecoProjects.deployed()
-    let addresses = [decoMilestones.address, decoProjects.address]
-    await decoEscrowFactory.createEscrow(
-      accounts[1],
-      addresses,
-      {from: accounts[1], gasPrice: 1}
-    ).catch(async (err) => {
-      assert.isOk(err, "Should throw an exception here.")
-    }).then(async (txn) => {
-      if(txn) {
-        assert.fail(txn, "Should have failed above.")
-      }
-    })
+    expect(address).to.be.equal(authorizedAddress)
   })
 })
