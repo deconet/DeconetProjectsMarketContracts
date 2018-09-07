@@ -42,12 +42,12 @@ contract DecoEscrow is Ownable {
 
     // Logged when an operation with funds occurred.
     event FundsOperation (
-        address sender,
-        address target,
+        address indexed sender,
+        address indexed target,
         address tokenAddress,
         uint amount,
         PaymentType paymentType,
-        OperationType operationType
+        OperationType indexed operationType
     );
 
     // Logged when the given address authorization to distribute Escrow funds changed.
@@ -120,7 +120,7 @@ contract DecoEscrow is Ownable {
             uint withdrawalAllowance = withdrawalAllowanceForAddress[msg.sender];
             withdrawalAllowanceForAddress[msg.sender] = withdrawalAllowance.sub(_amount);
         }
-        require(msg.sender.call.value(_amount)());
+        msg.sender.transfer(_amount);
         emit FundsOperation (
             address(this),
             msg.sender,

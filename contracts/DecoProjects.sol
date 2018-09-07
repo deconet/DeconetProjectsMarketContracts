@@ -6,6 +6,7 @@ import "zeppelin-solidity/contracts/ECRecovery.sol";
 import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoMilestones.sol";
 import "./DecoEscrowFactory.sol";
+import "./DecoRelay.sol";
 
 
 contract DecoProjects is DecoBaseProjectsMarketplace {
@@ -72,11 +73,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // maps hashes of all client's projects to the client's address.
     mapping (address => bytes32[]) public clientProjects;
 
-    // stores the address of the `DecoMilestones` contract.
-    address public milestonesContractAddress;
-
-    // stores the address of the `DecoEscrowFactory' contract.
-    address public escrowFactoryAddress;
+    // stores the address of the `DecoRelay` contract.
+    address public relayContractAddress;
 
     // Modifier to restrict method to be called either by project`s owner or maker
     modifier eitherClientOrMaker(bytes32 _agreementHash) {
@@ -109,8 +107,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Modifier to restrict method to be called by the milestones contract.
     modifier onlyMilestonesContract(bytes32 _agreementHash) {
+        DecoRelay relay = DecoRelay(relayContractAddress);
         require(
-            msg.sender == milestonesContractAddress,
+            msg.sender == relay.milestonesContractAddress(),
             "Only milestones contract can perform this operation."
         );
         Project memory project = projects[_agreementHash];
@@ -199,7 +198,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0);
-        DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
+        DecoMilestones milestonesContract = DecoMilestones(
+            DecoRelay(relayContractAddress).milestonesContractAddress()
+        );
         if (project.client == msg.sender) {
             require(milestonesContract.canClientTerminate(_agreementHash));
         } else {
@@ -225,7 +226,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0);
         projects[_agreementHash].endDate = now;
-        DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
+        DecoMilestones milestonesContract = DecoMilestones(
+            DecoRelay(relayContractAddress).milestonesContractAddress()
+        );
         bool isLastMilestoneAccepted;
         uint8 milestoneNumber;
         (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
@@ -294,7 +297,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             "Maker should sign the hash of immutable agreement doc."
         );
         require(project.client != address(0x0), "Only allowed for existing projects.");
-        DecoMilestones milestonesContract = DecoMilestones(milestonesContractAddress);
+        DecoMilestones milestonesContract = DecoMilestones(
+            DecoRelay(relayContractAddress).milestonesContractAddress()
+        );
         bool isLastMilestoneAccepted;
         uint8 milestoneNumber;
         (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
@@ -310,23 +315,12 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Updates the address of the `DecoMilestones` contract.
-     * @param _newAddress An `address` of the new contract instance.
+     * @dev Update the `DecoRelay` contract address.
+     * @param _newAddress An address of the new contract instance.
      */
-    function setMilestonesContractAddress(address _newAddress) external onlyOwner {
+    function setRelayContractAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0x0));
-        require(_newAddress != milestonesContractAddress);
-        milestonesContractAddress = _newAddress;
-    }
-
-    /**
-     * @dev Updates the address of the `DecoEscrowFactory` contract.
-     * @param _newAddress An `address` of the new contract instance.
-     */
-    function setEscrowFactoryContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0));
-        require(_newAddress != escrowFactoryAddress);
-        escrowFactoryAddress = _newAddress;
+        relayContractAddress = _newAddress;
     }
 
     /**
@@ -478,7 +472,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @dev Deploy DecoEscrow contract clone for the newly created project.
      */
     function deployEscrowClone(address _newContractOwner) internal returns(address) {
-        DecoEscrowFactory factory = DecoEscrowFactory(escrowFactoryAddress);
-        return factory.createEscrow(_newContractOwner, milestonesContractAddress);
+        DecoRelay relay = DecoRelay(relayContractAddress);
+        DecoEscrowFactory factory = DecoEscrowFactory(relay.escrowFactoryContractAddress());
+        return factory.createEscrow(_newContractOwner, relay.milestonesContractAddress());
     }
 }

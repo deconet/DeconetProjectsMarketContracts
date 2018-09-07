@@ -31,7 +31,9 @@ contract DecoMilestonesStub is DecoMilestones {
     function acceptLastMilestone(bytes32 _agreementHash) external {
         require(msg.sender == projectOwnerAddress);
         if (projectMilestones[_agreementHash].length == 0) {
-            DecoProjects projectsContract = DecoProjects(projectContractAddress);
+            DecoProjects projectsContract = DecoProjects(
+                DecoRelay(relayContractAddress).projectsContractAddress()
+            );
             projectsContract.completeProject(_agreementHash);
         }
     }
@@ -39,8 +41,8 @@ contract DecoMilestonesStub is DecoMilestones {
     function rejectLastDeliverable(bytes32 _agreementHash) external {
     }
 
-    function setProjectContractAddress(address _newAddress) external {
-        projectContractAddress = _newAddress;
+    function setRelayContractAddress(address _newAddress) external {
+        relayContractAddress = _newAddress;
     }
 
     function setIfClientCanTerminate(bool config) public {

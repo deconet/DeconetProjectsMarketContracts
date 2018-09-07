@@ -30,8 +30,8 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     // map agreement id hash to milestones list.
     mapping (bytes32 => Milestone[]) public projectMilestones;
 
-    // DecoProjects contract address to load some project data.
-    address public projectContractAddress;
+    // `DecoRelay` contract address.
+    address public relayContractAddress;
 
     // Logged when milestone state changes.
     event MilestoneStateUpdate (
@@ -58,7 +58,9 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     {
         require(_depositAmount == msg.value);
         uint8 completedMilestonesCount = uint8(projectMilestones[_agreementHash].length);
-        DecoProjects projectsContract = DecoProjects(projectContractAddress);
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
         require(projectsContract.checkIfProjectExists(_agreementHash));
         uint8 numberOfProjectMilestones = projectsContract.getProjectMilestonesCount(_agreementHash);
         require(completedMilestonesCount < numberOfProjectMilestones);
@@ -139,11 +141,12 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Set the new address of deployed project contract.
+     * @dev Set the new address of the `DecoRelay` contract.
      * @param _newAddress An address of the new contract.
      */
-    function setProjectContractAddress(address _newAddress) external {
-        projectContractAddress = _newAddress;
+    function setRelayContractAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0x0));
+        relayContractAddress = _newAddress;
     }
 
     /**
