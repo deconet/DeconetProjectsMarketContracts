@@ -4186,6 +4186,10 @@ onetime@^2.0.0:
   dependencies:
     mimic-fn "^1.0.0"
 
+openzeppelin-solidity@1.12.0:
+  version "1.12.0"
+  resolved "https://registry.yarnpkg.com/openzeppelin-solidity/-/openzeppelin-solidity-1.12.0.tgz#7b9c55975e73370d4541e3442b30cb3d91ac973a"
+
 optimist@^0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/optimist/-/optimist-0.6.1.tgz#da3ea74686fa21a19a111c326e90eb15a0196686"
@@ -6412,7 +6416,3 @@ yeoman-generator@^2.0.5:
     text-table "^0.2.0"
     through2 "^2.0.0"
     yeoman-environment "^2.0.5"
-
-zeppelin-solidity@1.10.0:
-  version "1.10.0"
-  resolved "https://registry.yarnpkg.com/zeppelin-solidity/-/zeppelin-solidity-1.10.0.tgz#ca82bf1b6f2e41e3504641783271ea718a917a0f"

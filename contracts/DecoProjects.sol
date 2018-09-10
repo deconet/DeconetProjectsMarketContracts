@@ -1,8 +1,8 @@
 pragma solidity 0.4.24;
 
 
-import "zeppelin-solidity/contracts/math/SafeMath.sol";
-import "zeppelin-solidity/contracts/ECRecovery.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/ECRecovery.sol";
 import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoMilestones.sol";
 import "./DecoEscrowFactory.sol";

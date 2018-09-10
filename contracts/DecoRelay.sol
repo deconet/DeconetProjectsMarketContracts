@@ -1,9 +1,9 @@
 pragma solidity 0.4.24;
 
-import "zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./DecoBaseProjectsMarketplace.sol";
 
 
-contract DecoRelay is Ownable {
+contract DecoRelay is DecoBaseProjectsMarketplace {
     address public projectsContractAddress;
     address public milestonesContractAddress;
     address public escrowFactoryContractAddress;

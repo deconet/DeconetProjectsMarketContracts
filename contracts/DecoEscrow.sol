@@ -1,9 +1,9 @@
 pragma solidity 0.4.24;
 
 import "./DecoMilestones.sol";
-import "zeppelin-solidity/contracts/ownership/Ownable.sol";
-import "zeppelin-solidity/contracts/math/SafeMath.sol";
-import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 
 contract DecoEscrow is Ownable {
@@ -95,7 +95,7 @@ contract DecoEscrow is Ownable {
      */
     function depositErc20(address _tokenAddress, uint _amount) external {
         require(_tokenAddress != address(0x0));
-        StandardToken token = StandardToken(_tokenAddress);
+        ERC20 token = ERC20(_tokenAddress);
         require(token.transferFrom(msg.sender, address(this), _amount));
         tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
         emit FundsOperation (
@@ -137,7 +137,7 @@ contract DecoEscrow is Ownable {
      * @param _amount Amount to withdraw.
      */
     function withdrawErc20(address _tokenAddress, uint _amount) external {
-        StandardToken token = StandardToken(_tokenAddress);
+        ERC20 token = ERC20(_tokenAddress);
         require(_amount <= token.balanceOf(this));
         if (msg.sender == owner) {
             tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].sub(_amount);

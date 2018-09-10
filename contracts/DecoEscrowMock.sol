@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./DecoEscrow.sol";
-import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 
 contract DecoEscrowMock is DecoEscrow {
@@ -16,7 +16,7 @@ contract DecoEscrowMock is DecoEscrow {
     }
 
     function setTokensBalanceValueToAlmostMaximum(address _tokenAddress) public {
-        StandardToken token = StandardToken(_tokenAddress);
+        ERC20 token = ERC20(_tokenAddress);
         tokensBalance[_tokenAddress] = token.totalSupply().sub(1000);
     }
 
