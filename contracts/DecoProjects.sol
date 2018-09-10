@@ -95,16 +95,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
-    // Modifier to restrict method to be called by project`s maker
-    modifier onlyMaker(bytes32 _agreementHash) {
-        Project memory project = projects[_agreementHash];
-        require(
-            project.maker == msg.sender,
-            "Only project maker can perform this operation."
-        );
-        _;
-    }
-
     // Modifier to restrict method to be called by the milestones contract.
     modifier onlyMilestonesContract(bytes32 _agreementHash) {
         DecoRelay relay = DecoRelay(relayContractAddress);
@@ -445,10 +435,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     function getProjectsByScoreType(address _address, ScoreType _scoreType) internal view returns(bytes32[]) {
         if (_scoreType == ScoreType.CustomerSatisfaction) {
             return makerProjects[_address];
-        } else if (_scoreType == ScoreType.MakerSatisfaction) {
-            return clientProjects[_address];
         } else {
-            return new bytes32[](0);
+            return clientProjects[_address];
         }
     }
 
@@ -461,10 +449,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     function getProjectScoreByType(bytes32 _agreementHash, ScoreType _scoreType) internal view returns(uint8) {
         if (_scoreType == ScoreType.CustomerSatisfaction) {
             return projects[_agreementHash].customerSatisfaction;
-        } else if (_scoreType == ScoreType.MakerSatisfaction) {
-            return projects[_agreementHash].makerSatisfaction;
         } else {
-            return 0;
+            return projects[_agreementHash].makerSatisfaction;
         }
     }
 

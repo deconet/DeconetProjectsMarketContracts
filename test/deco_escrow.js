@@ -1286,7 +1286,11 @@ contract("DecoEscrow", async (accounts) => {
 
         expect(emittedEvent.event).to.be.equal("FundsOperation")
         expect(emittedEvent.args.sender).to.be.equal(sender)
-        expect(emittedEvent.args.target).to.be.equal(targetAddress)
+        if(targetAddress == accounts[1]) {
+          expect(emittedEvent.args.target).to.be.equal(decoEscrow.address)
+        } else {
+          expect(emittedEvent.args.target).to.be.equal(targetAddress)
+        }
         expect(emittedEvent.args.amount.toString()).to.be.equal(amountInWei.toString())
         expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(0)
         expect((new BigNumber(emittedEvent.args.tokenAddress)).toNumber()).to.be.equal(0)
@@ -1295,6 +1299,7 @@ contract("DecoEscrow", async (accounts) => {
       await distributeAndCheckState(authorizedAddress, accounts[7], new BigNumber(1))
       await distributeAndCheckState(authorizedAddress, accounts[9], new BigNumber(1.2))
       await distributeAndCheckState(authorizedAddress, accounts[0], new BigNumber(0.1))
+      await distributeAndCheckState(authorizedAddress, accounts[1], new BigNumber(1.1))
       let resultingBlockedBalance = await decoEscrow.blockedBalance.call()
       expect(resultingBlockedBalance.toString()).to.be.equal(
         expecteFinalBlockedBalance.toString()
@@ -1415,7 +1420,11 @@ contract("DecoEscrow", async (accounts) => {
 
         expect(emittedEvent.event).to.be.equal("FundsOperation")
         expect(emittedEvent.args.sender).to.be.equal(sender)
-        expect(emittedEvent.args.target).to.be.equal(targetAddress)
+        if(targetAddress == accounts[1]) {
+          expect(emittedEvent.args.target).to.be.equal(decoEscrow.address)
+        } else {
+          expect(emittedEvent.args.target).to.be.equal(targetAddress)
+        }
         expect(emittedEvent.args.amount.toString()).to.be.equal(tokensAmount.toString())
         expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
         expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
@@ -1424,6 +1433,7 @@ contract("DecoEscrow", async (accounts) => {
       await distributeAndCheckState(authorizedAddress, accounts[7], new BigNumber(100))
       await distributeAndCheckState(authorizedAddress, accounts[9], new BigNumber(1999.2))
       await distributeAndCheckState(authorizedAddress, accounts[0], new BigNumber(3340.1))
+      await distributeAndCheckState(authorizedAddress, accounts[1], new BigNumber(1.1))
 
       let resultingBlockedTokensBalance = await decoEscrow.blockedTokensBalance.call(decoTestToken.address)
       expect(resultingBlockedTokensBalance.toString()).to.be.equal(

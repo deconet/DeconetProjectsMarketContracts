@@ -244,7 +244,7 @@ contract DecoEscrow is Ownable {
         external
         onlyAuthorized
     {
-        if(_destination == owner) {
+        if (_destination == owner) {
             unblockTokenFunds(_tokenAddress, _amount);
             return;
         }
