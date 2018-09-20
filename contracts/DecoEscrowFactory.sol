@@ -17,7 +17,7 @@ contract DecoEscrowFactory is Ownable, CloneFactory {
      * @dev Constructor for the contract.
      * @param _libraryAddress Escrow master-contract address.
      */
-    constructor(address _libraryAddress) {
+    constructor(address _libraryAddress) public {
         libraryAddress = _libraryAddress;
     }
 
