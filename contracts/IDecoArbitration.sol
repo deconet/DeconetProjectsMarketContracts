@@ -2,17 +2,17 @@ pragma solidity 0.4.24;
 
 
 interface IDecoArbitration {
-    function startDispute(bytes32 projectIdHash, uint8[] sharesProposal) external;
+    function startDispute(bytes32 idHash, uint8[] sharesProposal) external;
 
-    function acceptProposal(bytes32 projectIdHash) external;
+    function acceptProposal(bytes32 idHash) external;
 
-    function rejectProposal(bytes32 projectIdHash) external;
+    function rejectProposal(bytes32 idHash) external;
 
-    function settleDispute(bytes32 projectIdHash, uint8[] shares) external;
+    function settleDispute(bytes32 idHash, uint8[] shares) external;
 
-    event LogStartDispute(address sender, bytes32 projectIdHash, uint8[] sharesProposal);
+    event LogStartDispute(address sender, bytes32 idHash, uint8[] sharesProposal);
 
-    event LogRejectProposal(address sender, bytes32 projectIdHash);
+    event LogRejectProposal(address sender, bytes32 idHash);
 
-    event LogEndDispute(address sender, bytes32 projectIdHash, uint8[] shares);
+    event LogEndDispute(address sender, bytes32 idHash, uint8[] shares);
 }

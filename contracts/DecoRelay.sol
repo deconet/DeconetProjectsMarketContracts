@@ -7,6 +7,7 @@ contract DecoRelay is DecoBaseProjectsMarketplace {
     address public projectsContractAddress;
     address public milestonesContractAddress;
     address public escrowFactoryContractAddress;
+    address public arbitrationContractAddress;
 
     function setProjectsContractAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0x0));
@@ -21,5 +22,10 @@ contract DecoRelay is DecoBaseProjectsMarketplace {
     function setEscrowFactoryContractAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0x0));
         escrowFactoryContractAddress = _newAddress;
+    }
+
+    function setArbitrationContractAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0x0));
+        arbitrationContractAddress = _newAddress;
     }
 }
