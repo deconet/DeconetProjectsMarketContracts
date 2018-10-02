@@ -2,7 +2,9 @@ pragma solidity 0.4.24;
 
 
 interface IDecoArbitrationTarget {
-    function disputeStartFreeze(bytes32 projectIdHash) external;
+    function disputeStartedFreeze(bytes32 projectIdHash) external;
 
-    function disputeSettled(bytes32 projectIdHash, uint[] payoutShares) external;
+    function disputeSettledTerminate(bytes32 projectIdHash, uint8[] payoutShares) external;
+
+    function canStartDispute(bytes32 projectIdHash) external view returns(bool);
 }
