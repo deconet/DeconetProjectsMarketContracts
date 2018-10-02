@@ -14,5 +14,5 @@ interface IDecoArbitration {
 
     event LogRejectProposal(address sender, bytes32 projectIdHash);
 
-    event LogEndDispute(address sender, bytes32 projectIdHash, uint8[] shares)
+    event LogEndDispute(address sender, bytes32 projectIdHash, uint8[] shares);
 }
