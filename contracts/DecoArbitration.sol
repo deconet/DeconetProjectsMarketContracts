@@ -38,6 +38,8 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
         disputeProposal[idHash] = sharesProposal;
         disputeInitiator[idHash] = msg.sender;
 
+        target.disputeStartedFreeze(idHash);
+
         emit LogStartDispute(msg.sender, idHash, sharesProposal);
     }
 

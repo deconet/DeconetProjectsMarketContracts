@@ -42,6 +42,9 @@ contract("DecoArbitration", async (accounts) => {
       let disputeProposal = await arbitration.getDisputeProposal(hash)
       let disputeInitiator = await arbitration.disputeInitiator.call(hash)
 
+      let isStartedInStub = await arbitrationTargetStub.disputeStarted.call()
+      expect(isStartedInStub).to.be.true
+
       expect(isStarted).to.be.true
       expect(disputeProposal.map(x => x.toNumber())).to.have.members(shares)
       expect(disputeInitiator).to.be.equal(sender)
@@ -69,6 +72,8 @@ contract("DecoArbitration", async (accounts) => {
 
         let isStarted = await arbitration.disputeStarted.call(hash)
         expect(isStarted).to.be.false
+        let isStartedInStub = await arbitrationTargetStub.disputeStarted.call()
+        expect(isStartedInStub).to.be.false
       }).then(async (txn) => {
         if (txn) {
           assert.fail("Should have failed above.")
@@ -97,6 +102,9 @@ contract("DecoArbitration", async (accounts) => {
         expect(isStarted).to.be.true
         expect(disputeProposal.map(x => x.toNumber())).to.have.members(shares)
         expect(disputeInitiator).to.be.equal(sender)
+
+        let isStartedInStub = await arbitrationTargetStub.disputeStarted.call()
+        expect(isStartedInStub).to.be.true
       }).then(async (txn) => {
         if (txn) {
           assert.fail("Should have failed above.")
@@ -120,6 +128,8 @@ contract("DecoArbitration", async (accounts) => {
 
         let isStarted = await arbitration.disputeStarted.call(hash)
         expect(isStarted).to.be.false
+        let isStartedInStub = await arbitrationTargetStub.disputeStarted.call()
+        expect(isStartedInStub).to.be.false
       }).then(async (txn) => {
         if (txn) {
           assert.fail("Should have failed above.")
@@ -143,6 +153,8 @@ contract("DecoArbitration", async (accounts) => {
 
         let isStarted = await arbitration.disputeStarted.call(hash)
         expect(isStarted).to.be.false
+        let isStartedInStub = await arbitrationTargetStub.disputeStarted.call()
+        expect(isStartedInStub).to.be.false
       }).then(async (txn) => {
         if (txn) {
           assert.fail("Should have failed above.")
