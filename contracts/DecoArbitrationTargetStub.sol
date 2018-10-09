@@ -11,26 +11,37 @@ contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
 
     bool public disputeEnded;
 
-    bool public isEligibleForDoingAnythingWithDispute;
+    mapping(bytes32 => bool) public endedInternaly;
+
+    mapping(address => bool) public isEligibleForDoingAnythingWithDispute;
 
     function disputeStartedFreeze(bytes32 idHash) external {
         disputeStarted = true;
     }
 
-    function disputeSettledTerminate(bytes32 idHash, uint8[] payoutShares) external {
+    function disputeSettledTerminate(
+        bytes32 idHash,
+        address respondent,
+        uint8 respondentShare,
+        address initiator,
+        uint8 initiatorShare,
+        bool isInternal,
+        address arbiterWithdrawalAddress
+    ) external {
         disputeEnded = true;
+        endedInternaly[idHash] = isInternal;
     }
 
     function checkEligibility(bytes32 idHash, address addressToCheck) external view returns(bool) {
-        return isEligibleForDoingAnythingWithDispute;
+        return isEligibleForDoingAnythingWithDispute[addressToCheck];
     }
 
     function canStartDispute(bytes32 idHash) external view returns(bool) {
         return canStartDispute;
     }
 
-    function setEligibility(bool eligibility) public {
-        isEligibleForDoingAnythingWithDispute = eligibility;
+    function setEligibility(bool eligibility, address target) public {
+        isEligibleForDoingAnythingWithDispute[target] = eligibility;
     }
 
     function setIfCanStartDispute(bool canStart) public {
@@ -40,7 +51,5 @@ contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
     function resetState() public {
         disputeStarted = false;
         disputeEnded = false;
-        canStartDispute = false;
-        isEligibleForDoingAnythingWithDispute = false;
     }
 }

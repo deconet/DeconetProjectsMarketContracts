@@ -11,4 +11,11 @@ contract DecoBaseProjectsMarketplace is Ownable {
     function () public payable {
         require(msg.value == 0);
     }
+
+    /**
+     * @return A `bool` indicating if sender is the owner of the current contract.
+     */
+    function isOwner() public view returns(bool) {
+        return msg.sender == owner;
+    }
 }

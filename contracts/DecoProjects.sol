@@ -7,6 +7,7 @@ import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoMilestones.sol";
 import "./DecoEscrowFactory.sol";
 import "./DecoRelay.sol";
+import "./IDecoArbitration.sol";
 
 
 contract DecoProjects is DecoBaseProjectsMarketplace {
@@ -73,6 +74,12 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // maps hashes of all client's projects to the client's address.
     mapping (address => bytes32[]) public clientProjects;
 
+    // maps arbiter's fixed fee to a project.
+    mapping (bytes32 => uint) public projectArbiterFixedFee;
+
+    // maps arbiter's share fee to a project.
+    mapping (bytes32 => uint8) public projectArbiterShareFee;
+
     // stores the address of the `DecoRelay` contract.
     address public relayContractAddress;
 
@@ -136,33 +143,25 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     {
         require(msg.sender == _client, "Only the client can kick of the project.");
         require(_client != _maker, "Client can`t be a maker on her own project.");
-        require(
-            _arbiter != _maker && _arbiter != _client,
-            "Arbiter must not be a client nor a maker."
-        );
+        require(_arbiter != _maker && _arbiter != _client, "Arbiter must not be a client nor a maker.");
 
-        bytes32 hash = keccak256(_agreementId);
-        address signatureAddress = hash.toEthSignedMessageHash().recover(_makersSignature);
         require(
-            signatureAddress == _maker,
+            isMakersSignatureValid(_maker, _makersSignature, _agreementId, _arbiter),
             "Maker should sign the hash of immutable agreement doc."
         );
+        require(_milestonesCount >= 1 && _milestonesCount <= 24, "Milestones count is not in the allowed 1-24 range.");
+        bytes32 hash = keccak256(_agreementId);
+        require(projects[hash].client == address(0x0), "Project shouldn't exist yet.");
 
-        require(_milestonesCount >= 1 && _milestonesCount <= 24);
+        saveCurrentArbitrationFees(_arbiter, hash);
 
-        require(projects[hash].client == address(0x0));
-
-        makerProjects[_maker].push(hash);
-        clientProjects[_client].push(hash);
-
-
-        address newEscroCloneAddress = deployEscrowClone(msg.sender);
+        address newEscrowCloneAddress = deployEscrowClone(msg.sender);
         projects[hash] = Project(
             _agreementId,
             msg.sender,
             _maker,
             _arbiter,
-            newEscroCloneAddress,
+            newEscrowCloneAddress,
             now,
             0, // end date is unknown yet
             _paymentWindow,
@@ -172,6 +171,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             0, // MSAT is 0 to indicate that it isn't set by client yet
             _agreementEncrypted
         );
+        makerProjects[_maker].push(hash);
+        clientProjects[_client].push(hash);
         emit ProjectStateUpdate(hash, msg.sender, now, ProjectState.Active);
     }
 
@@ -187,14 +188,20 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
-        require(project.endDate == 0);
+        require(project.endDate == 0, "Only allowed for active projects.");
         DecoMilestones milestonesContract = DecoMilestones(
             DecoRelay(relayContractAddress).milestonesContractAddress()
         );
         if (project.client == msg.sender) {
-            require(milestonesContract.canClientTerminate(_agreementHash));
+            require(
+                milestonesContract.canClientTerminate(_agreementHash), 
+                "Milestone contract should confirm termination is possible by client."
+            );
         } else {
-            require(milestonesContract.canMakerTerminate(_agreementHash));
+            require(
+                milestonesContract.canMakerTerminate(_agreementHash),
+                "Milestone contract should confirm termination is possible by maker."
+            );
         }
         milestonesContract.terminateLastMilestone(_agreementHash);
 
@@ -214,7 +221,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
-        require(project.endDate == 0);
+        require(project.endDate == 0, "Only allowed for active projects.");
         projects[_agreementHash].endDate = now;
         DecoMilestones milestonesContract = DecoMilestones(
             DecoRelay(relayContractAddress).milestonesContractAddress()
@@ -224,8 +231,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
             _agreementHash
         );
-        require(milestoneNumber == projects[_agreementHash].milestonesCount);
-        require(isLastMilestoneAccepted);
+        require(
+            milestoneNumber == projects[_agreementHash].milestonesCount,
+            "The last milestone should be the last for that project."
+        );
+        require(isLastMilestoneAccepted, "Only allowed when all milestones are completed.");
         emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Completed);
     }
 
@@ -242,15 +252,15 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         external
         eitherClientOrMaker(_agreementHash)
     {
-        require(_rating >= 1 && _rating <= 10);
+        require(_rating >= 1 && _rating <= 10, "Project rating should be in the range 1-10.");
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
-        require(project.endDate != 0);
+        require(project.endDate != 0, "Only allowed for active projects.");
         if (msg.sender == project.client) {
-            require(project.customerSatisfaction == 0);
+            require(project.customerSatisfaction == 0, "CSAT is allowed to provide only once.");
             project.customerSatisfaction = _rating;
         } else {
-            require(project.makerSatisfaction == 0);
+            require(project.makerSatisfaction == 0, "MSAT is allowed to provide only once.");
             project.makerSatisfaction = _rating;
         }
         emit ProjectRated(_agreementHash, msg.sender, _rating, now);
@@ -295,8 +305,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
             _agreementHash
         );
-        require(milestoneNumber < projects[_agreementHash].milestonesCount);
-        require(isLastMilestoneAccepted);
+        require(
+            milestoneNumber < projects[_agreementHash].milestonesCount,
+            "Supplemental agreement can be added only before the last milestone start."
+        );
+        require(isLastMilestoneAccepted, "Supplemental agreement can't be added when there is an active milestone.");
         projectChangesDocumentsIds[_agreementHash].push(_supplementalAgreementHash);
         project.milestonesCount = _milestonesCount;
         project.paymentWindow = _paymentWindow;
@@ -309,8 +322,22 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _newAddress An address of the new contract instance.
      */
     function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0));
+        require(_newAddress != address(0x0), "Address should not be 0x0.");
         relayContractAddress = _newAddress;
+    }
+
+    /**
+     * @dev Pulls the current arbitration contract fixed & share fees and save them for a project.
+     * @param _arbiter An `address` of arbitration contract.
+     * @param _agreementHash A `bytes32` hash of agreement id.
+     */
+    function saveCurrentArbitrationFees(address _arbiter, bytes32 _agreementHash) internal {
+        IDecoArbitration arbitration = IDecoArbitration(_arbiter);
+        uint fixedFee;
+        uint8 shareFee;
+        (fixedFee, shareFee) = arbitration.getFixedAndShareFees();
+        projectArbiterFixedFee[_agreementHash] = fixedFee;
+        projectArbiterShareFee[_agreementHash] = shareFee;
     }
 
     /**
@@ -392,6 +419,18 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
+     * @dev Returns configured for the given project arbiter fees.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint` fixed fee and an `uint8` share fee of the project's arbiter.
+     */
+    function getProjectArbitrationFees(bytes32 _agreementHash) public view returns(uint, uint8) {
+        return (
+            projectArbiterFixedFee[_agreementHash],
+            projectArbiterShareFee[_agreementHash]
+        );
+    }
+
+    /**
      * @dev Calculates the sum of scores and the number of ended and rated projects for the given client`s or
      *      maker`s address.
      * @param _address An `address` to look up.
@@ -456,10 +495,35 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Deploy DecoEscrow contract clone for the newly created project.
+     * @param _newContractOwner An `address` of a new contract owner.
+     * @return An `address` of a new deployed escrow contract.
      */
     function deployEscrowClone(address _newContractOwner) internal returns(address) {
         DecoRelay relay = DecoRelay(relayContractAddress);
         DecoEscrowFactory factory = DecoEscrowFactory(relay.escrowFactoryContractAddress());
         return factory.createEscrow(_newContractOwner, relay.milestonesContractAddress());
+    }
+
+    /**
+     * @dev Check validness of maker's signature on project creation.
+     * @param _maker An `address` of a maker.
+     * @param _signature A `bytes` digital signature generated by a maker.
+     * @param _agreementId A `string` unique id of the agreement document for a project.
+     * @param _arbiter An `address` of a referee to settle all escalated disputes between parties.
+     * @return A `bool` indicating validity of the signature.
+     */
+    function isMakersSignatureValid(
+        address _maker,
+        bytes _signature,
+        string _agreementId,
+        address _arbiter
+    )
+        internal
+        pure
+        returns(bool)
+    {
+        bytes32 hash = keccak256(_agreementId, _arbiter);
+        address signatureAddress = hash.toEthSignedMessageHash().recover(_signature);
+        return signatureAddress == _maker;
     }
 }

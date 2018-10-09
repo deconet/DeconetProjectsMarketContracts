@@ -64,7 +64,7 @@ contract DecoEscrow is Ownable {
 
     // Restrict function call to be originated from an address that was authorized to distribute funds.
     modifier onlyAuthorized() {
-        require(authorizedAddress == msg.sender);
+        require(authorizedAddress == msg.sender, "Only authorized addresses allowed.");
         _;
     }
 
@@ -81,7 +81,7 @@ contract DecoEscrow is Ownable {
      * @param _authorizedAddress An address that will be stored as authorized.
      */
     function initialize(address _newOwner, address _authorizedAddress) external {
-        require(!isInitialized);
+        require(!isInitialized, "Only uninitialized contracts allowed.");
         isInitialized = true;
         authorizedAddress = _authorizedAddress;
         emit FundsDistributionAuthorization(_authorizedAddress, true);
@@ -94,9 +94,12 @@ contract DecoEscrow is Ownable {
      * @param _amount Amount to transfer from sender`s address.
      */
     function depositErc20(address _tokenAddress, uint _amount) external {
-        require(_tokenAddress != address(0x0));
+        require(_tokenAddress != address(0x0), "Token Address shouldn't be 0x0.");
         ERC20 token = ERC20(_tokenAddress);
-        require(token.transferFrom(msg.sender, address(this), _amount));
+        require(
+            token.transferFrom(msg.sender, address(this), _amount),
+            "Transfer operation should be successful."
+        );
         tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
         emit FundsOperation (
             msg.sender,
@@ -113,7 +116,10 @@ contract DecoEscrow is Ownable {
      * @param _amount Amount to withdraw.
      */
     function withdraw(uint _amount) external {
-        require(_amount <= address(this).balance);
+        require(
+            _amount <= address(this).balance,
+            "Amount to withdraw should be less or equal than balance."
+        );
         if (msg.sender == owner) {
             balance = balance.sub(_amount);
         } else {
@@ -138,13 +144,15 @@ contract DecoEscrow is Ownable {
      */
     function withdrawErc20(address _tokenAddress, uint _amount) external {
         ERC20 token = ERC20(_tokenAddress);
-        require(_amount <= token.balanceOf(this));
+        require(
+            _amount <= token.balanceOf(this),
+            "Token amount to withdraw should be less or equal than balance."
+        );
         if (msg.sender == owner) {
             tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].sub(_amount);
         } else {
             uint tokenWithdrawalAllowance = getTokenWithdrawalAllowance(msg.sender, _tokenAddress);
-            tokensWithdrawalAllowanceForAddress[msg.sender][_tokenAddress] =
-                tokenWithdrawalAllowance.sub(_amount);
+            tokensWithdrawalAllowanceForAddress[msg.sender][_tokenAddress] = tokenWithdrawalAllowance.sub(_amount);
         }
         token.transfer(msg.sender, _amount);
         emit FundsOperation (
@@ -162,7 +170,7 @@ contract DecoEscrow is Ownable {
      * @param _amount An uint of Wei to be blocked.
      */
     function blockFunds(uint _amount) external onlyAuthorized {
-        require(_amount <= balance);
+        require(_amount <= balance, "Amount to block should be less or equal than balance.");
         balance = balance.sub(_amount);
         blockedBalance = blockedBalance.add(_amount);
         emit FundsOperation (
@@ -182,7 +190,10 @@ contract DecoEscrow is Ownable {
      */
     function blockTokenFunds(address _tokenAddress, uint _amount) external onlyAuthorized {
         uint accountedTokensBalance = tokensBalance[_tokenAddress];
-        require(_amount <= accountedTokensBalance);
+        require(
+            _amount <= accountedTokensBalance,
+            "Tokens mount to block should be less or equal than balance."
+        );
         tokensBalance[_tokenAddress] = accountedTokensBalance.sub(_amount);
         blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].add(_amount);
         emit FundsOperation (
@@ -214,7 +225,10 @@ contract DecoEscrow is Ownable {
             unblockFunds(_amount);
             return;
         }
-        require(_amount <= blockedBalance);
+        require(
+            _amount <= blockedBalance,
+            "Amount to distribute should be less or equal than blocked balance."
+        );
         blockedBalance = blockedBalance.sub(_amount);
         withdrawalAllowanceForAddress[_destination] = withdrawalAllowanceForAddress[_destination].add(_amount);
         emit FundsOperation(
@@ -274,7 +288,7 @@ contract DecoEscrow is Ownable {
      * @dev Accept and account incoming deposit in contract state.
      */
     function deposit() public payable {
-        require(msg.value > 0);
+        require(msg.value > 0, "Deposited amount should be greater than 0.");
         balance = balance.add(msg.value);
         emit FundsOperation (
             msg.sender,
@@ -291,7 +305,10 @@ contract DecoEscrow is Ownable {
      * @param _amount An uint of Wei to be unblocked.
      */
     function unblockFunds(uint _amount) public onlyAuthorized {
-        require(_amount <= blockedBalance);
+        require(
+            _amount <= blockedBalance,
+            "Amount to unblock should be less or equal than balance"
+        );
         blockedBalance = blockedBalance.sub(_amount);
         balance = balance.add(_amount);
         emit FundsOperation (
@@ -310,7 +327,10 @@ contract DecoEscrow is Ownable {
      */
     function unblockTokenFunds(address _tokenAddress, uint _amount) public onlyAuthorized {
         uint accountedBlockedTokensAmount = blockedTokensBalance[_tokenAddress];
-        require(_amount <= accountedBlockedTokensAmount);
+        require(
+            _amount <= accountedBlockedTokensAmount,
+            "Tokens amount to unblock should be less or equal than balance"
+        );
         blockedTokensBalance[_tokenAddress] = accountedBlockedTokensAmount.sub(_amount);
         tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
         emit FundsOperation (

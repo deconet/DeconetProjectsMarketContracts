@@ -11,4 +11,17 @@ contract DecoProjectsMock is DecoProjects {
         address cloneAddress = deployEscrowClone(_newOwner);
         emit MockCloningTestEvent(cloneAddress);
     }
+
+    function testIsMakersSignatureValid(
+        address _maker,
+        bytes _signature,
+        string _agreementId,
+        address _arbiter
+    )
+        public
+        pure
+        returns(bool) 
+    {
+        return isMakersSignatureValid(_maker, _signature, _agreementId, _arbiter);
+    }
 }
