@@ -43,6 +43,13 @@ interface IDecoArbitration {
     );
 
     /**
+     * @dev Should be logged when time limit to accept/reject proposal for respondent is updated.
+     */
+    event LogProposalTimeLimitUpdated(
+        uint proposalActionTimeLimit
+    );
+
+    /**
      * @dev Start dispute for the given project.
      * @param _idHash A `bytes32` hash of a project id.
      * @param _respondent An `address` of the second paty involved in the dispute.

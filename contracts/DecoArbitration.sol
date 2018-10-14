@@ -82,16 +82,38 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
         }
     }
 
-    function acceptProposal(bytes32 idHash) external {
+    /**
+     * @dev Accept proposal by respondent.
+     *      Dispute must exist and proposal must be active.
+     * @param _idHash A `bytes32` hash of id.
+     */
+    function acceptProposal(bytes32 _idHash) external {
+        Dispute memory dispute = disputes[_idHash];
+        require(msg.sender == dispute.respondent, "Proposal can be accepted only by a respondent.");
         this.settleDispute(
-            idHash,
-            uint8(disputes[idHash].respondentShare),
-            uint8(disputes[idHash].initiatorShare)
+            _idHash,
+            disputes[_idHash].respondentShare,
+            disputes[_idHash].initiatorShare
         );
     }
 
-    function rejectProposal(bytes32 idHash) external {
-        emit LogRejectedProposal(msg.sender, idHash, now, disputes[idHash].respondentShare);
+    /**
+     * @dev Reject proposal by respondent.
+     *      Dispute must exist and proposal must be active.
+     * @param _idHash A `bytes32` hash of id.
+     */
+    function rejectProposal(bytes32 _idHash) external {
+        Dispute storage dispute = disputes[_idHash];
+        require(msg.sender == dispute.respondent, "Proposal can be rejected only by a respondent.");
+        uint nowTime = now;
+        require(
+            dispute.startedTime.add(timeLimitForReplyOnProposal) > nowTime,
+            "Respondent should reject within a limited timeframe after the dispute with proposal started."
+        );
+        uint8 respondentShare = dispute.respondentShare;
+        dispute.respondentShare = 0;
+        dispute.initiatorShare = 0;
+        emit LogRejectedProposal(msg.sender, _idHash, nowTime, respondentShare);
     }
 
     /**
@@ -111,11 +133,11 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
         require(dispute.startedTime != 0, "Dispute must exist.");
         require(dispute.settledTime == 0, "Dispute must be active.");
         uint nowTime = now;
+
         require(
-            dispute.respondentShare == 100 ||
-            (dispute.respondentShare + dispute.initiatorShare) == 0 ||
-            dispute.startedTime.add(this.getTimeLimitForReplyOnProposal()) < nowTime,
-            "There shouldn't be an active proposal or should be the best possible proposal."
+            canBeSettledByArbiter(_idHash) ||
+            canBeSettledWithAcceptedProposal(_idHash, _respondentShare, _initiatorShare),
+            "Should be called by this contract(aka accepted proposal) on time, or arbiter outside time limits."
         );
         require(_respondentShare.add(_initiatorShare) == 100, "Sum must be 100%");
         dispute.respondentShare = uint8(_respondentShare);
@@ -134,55 +156,170 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
         emit LogSettledDispute(msg.sender, _idHash, nowTime, dispute.respondentShare, dispute.initiatorShare);
     }
 
+    /**
+     * @dev Update withdrawal address.
+     */
     function setWithdrawalAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0x0), "Should be not 0 address.");
         withdrawalAddress = _newAddress;
     }
 
-    function setRelayContractAddress(address _newAddress) external {
+    /**
+     * @dev Update relay contract address.
+     */
+    function setRelayContractAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0x0), "Should be not 0 address.");
         relayContractAddress = _newAddress;
     }
 
-    function setTimeLimitForReplyOnProposal(uint _newLimit) external {
+    /**
+     * @dev Update time limit for respondent to accept or reject proposal.
+     */
+    function setTimeLimitForReplyOnProposal(uint _newLimit) external onlyOwner {
         timeLimitForReplyOnProposal = _newLimit;
+        emit LogProposalTimeLimitUpdated(timeLimitForReplyOnProposal);
     }
 
-    function getWithdrawalAddress() external view returns(address) {
-        return withdrawalAddress;
+    /**
+     * @dev Update fees.
+     * @param _fixedFee An `uint` fixed fee in Wei.
+     * @param _shareFee An `uint8` share fee.
+     */
+    function setFees(uint _fixedFee, uint8 _shareFee) external onlyOwner {
+        fixedFee = _fixedFee;
+        require(
+            _shareFee >= 0 && _shareFee <= 100, 
+            "Share fee should be in 0-100% range."
+        );
+        shareFee = _shareFee;
     }
 
-    function getFixedAndShareFees() external view returns(uint, uint8) {
-        return (0, 0);
-    }
-
+    /**
+     * @return Preconfigured time limit for respondent to accept/reject proposal.
+     */
     function getTimeLimitForReplyOnProposal() external view returns(uint) {
         return timeLimitForReplyOnProposal;
     }
 
-    function getDisputeProposal(bytes32 idHash) public view returns(uint8) {
-        return disputes[idHash].respondentShare;
+    /**
+     * @return Withdrawal address of the current arbitration contract.
+     */
+    function getWithdrawalAddress() external view returns(address) {
+        return withdrawalAddress;
     }
 
-    function getDisputeInitiator(bytes32 idHash) public view returns(address) {
-        return disputes[idHash].initiator;
+    /**
+     * @return Preconfigured arbitration fees for the current contract.
+     */
+    function getFixedAndShareFees() external view returns(uint, uint8) {
+        return (fixedFee, shareFee);
     }
 
-    function getDisputeStartedStatus(bytes32 idHash) public view returns(bool) {
-        return disputes[idHash].startedTime != 0;
+    /**
+     * @return Dispute respondent's share.
+     */
+    function getDisputeProposalShare(bytes32 _idHash) public view returns(uint8) {
+        return disputes[_idHash].respondentShare;
     }
 
-    function getDisputeStartTime(bytes32 idHash) public view returns(uint) {
-        return disputes[idHash].startedTime;
+    /**
+     * @return Dispute initiator's share.
+     */
+    function getDisputeInitiatorShare(bytes32 _idHash) public view returns(uint8) {
+        return disputes[_idHash].initiatorShare;
     }
 
-    function getDisputeSettledStatus(bytes32 idHash) public view returns(bool) {
-        return disputes[idHash].settledTime != 0;
+    /**
+     * @return Dispute's initiator.
+     */
+    function getDisputeInitiator(bytes32 _idHash) public view returns(address) {
+        return disputes[_idHash].initiator;
     }
 
-    function getDisputeSettlementTime(bytes32 idHash) public view returns(uint) {
-        return disputes[idHash].settledTime;
+    /**
+     * @return Dispute's respondent.
+     */
+    function getDisputeRespondent(bytes32 _idHash) public view returns(address) {
+        return disputes[_idHash].respondent;
     }
 
+    /**
+     * @return `True` if dispute is started.
+     */
+    function getDisputeStartedStatus(bytes32 _idHash) public view returns(bool) {
+        return disputes[_idHash].startedTime != 0;
+    }
+
+    /**
+     * @return Dispute's start time.
+     */
+    function getDisputeStartTime(bytes32 _idHash) public view returns(uint) {
+        return disputes[_idHash].startedTime;
+    }
+
+    /**
+     * @return `True` if dispute is settled.
+     */
+    function getDisputeSettledStatus(bytes32 _idHash) public view returns(bool) {
+        return disputes[_idHash].settledTime != 0;
+    }
+
+    /**
+     * @return Dispute's settlement time.
+     */
+    function getDisputeSettlementTime(bytes32 _idHash) public view returns(uint) {
+        return disputes[_idHash].settledTime;
+    }
+
+    /**
+     * @dev Utility internal function.
+     * @return Arbitration target address.
+     */
     function getTargetContractAddress() internal returns(address) {
         return DecoRelay(relayContractAddress).milestonesContractAddress();
+    }
+
+    /**
+     * @dev Internal method to check if proposal is active 
+     *      and can be settled by respondent, aka from the contract address.
+     * @param _idHash A `bytes32` hash of id.
+     * @param _respondentShare An `uint` share proposal for a respondent.
+     * @param _initiatorShare An `uint` share for an initiator.
+     * @return A `bool` status, `true` if respondent initialized this transaction 
+     *         and shares are valid.
+     */
+    function canBeSettledWithAcceptedProposal(
+        bytes32 _idHash,
+        uint _respondentShare,
+        uint _initiatorShare
+    )
+        internal
+        returns(bool)
+    {
+        Dispute memory dispute = disputes[_idHash];
+        // Sender should be contract address for accepted proposal.
+        return msg.sender == address(this) &&
+            // Proposal can be accepted in a limited timeframe after initiated.
+            dispute.startedTime.add(timeLimitForReplyOnProposal) >= now &&
+            // Dispute stored shares must exact same as those passed in function parameters.
+            dispute.respondentShare == _respondentShare && dispute.initiatorShare == _initiatorShare;
+    }
+
+    /**
+     * @dev Internal method to check if proposal doesn't exist 
+     *      or it is no longer active, and can be settled by arbiter.
+     * @param _idHash A `bytes32` hash of id.
+     * @return A `bool` status, `true` if arbiter initialized this transaction 
+     *         and can settle dispute.
+     */
+    function canBeSettledByArbiter(bytes32 _idHash) internal returns(bool) {
+        Dispute memory dispute = disputes[_idHash];
+        uint8 sum = dispute.respondentShare + dispute.initiatorShare;
+        // Transaction should be initiated by arbiter aka this contract owner.
+        return isOwner() &&
+            // Sum of stored shares should be either 0 - no proposal
+            (sum == 0 ||
+            // Or it should be 100 but the time when the proposal can be accepted has passed.
+            (sum == 100 && dispute.startedTime.add(timeLimitForReplyOnProposal) < now));
     }
 }
