@@ -905,9 +905,11 @@ contract("DecoArbitration", async (accounts) => {
       let savedLimit = await arbitration.getTimeLimitForReplyOnProposal()
       expect(savedLimit.toNumber()).to.be.equal(limit)
 
+      let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
       let emittedEvent = txn.logs[0]
       expect(emittedEvent.event).to.be.equal("LogProposalTimeLimitUpdated")
       expect(emittedEvent.args.proposalActionTimeLimit.toNumber()).to.be.equal(limit)
+      expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
     }
 
     await setAndCheck(133)
@@ -983,10 +985,17 @@ contract("DecoArbitration", async (accounts) => {
     let owner = await arbitration.owner()
 
     let setFeeAndCheck = async (fixedFee, shareFee, sender) => {
-      await arbitration.setFees(fixedFee, shareFee, {from: sender, gasPrice: 1})
+      let txn = await arbitration.setFees(fixedFee, shareFee, {from: sender, gasPrice: 1})
       let fees = await arbitration.getFixedAndShareFees()
       expect(fees[0].toString()).to.be.equal(fixedFee)
       expect(fees[1].toNumber()).to.be.equal(shareFee)
+
+      let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+      let emittedEvent = txn.logs[0]
+      expect(emittedEvent.event).to.be.equal("LogFeesUpdated")
+      expect(emittedEvent.args.fixedFee.toString()).to.be.equal(fixedFee)
+      expect(emittedEvent.args.shareFee.toNumber()).to.be.equal(shareFee)
+      expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
     }
 
     await setFeeAndCheck(web3.toWei(1), 10, owner)

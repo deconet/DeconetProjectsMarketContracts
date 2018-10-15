@@ -177,7 +177,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      */
     function setTimeLimitForReplyOnProposal(uint _newLimit) external onlyOwner {
         timeLimitForReplyOnProposal = _newLimit;
-        emit LogProposalTimeLimitUpdated(timeLimitForReplyOnProposal);
+        emit LogProposalTimeLimitUpdated(now, timeLimitForReplyOnProposal);
     }
 
     /**
@@ -192,6 +192,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
             "Share fee should be in 0-100% range."
         );
         shareFee = _shareFee;
+        emit LogFeesUpdated(now, _fixedFee, _shareFee);
     }
 
     /**

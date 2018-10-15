@@ -7,8 +7,8 @@ interface IDecoArbitration {
      * @dev Should be logged upon dispute start.
      */
     event LogStartedDispute(
-        address sender,
-        bytes32 idHash,
+        address indexed sender,
+        bytes32 indexed idHash,
         uint timestamp,
         int respondentShareProposal
     );
@@ -17,8 +17,8 @@ interface IDecoArbitration {
      * @dev Should be logged upon proposal rejection.
      */
     event LogRejectedProposal(
-        address sender,
-        bytes32 idHash,
+        address indexed sender,
+        bytes32 indexed idHash,
         uint timestamp,
         uint8 rejectedProposal
     );
@@ -27,8 +27,8 @@ interface IDecoArbitration {
      * @dev Should be logged upon dispute settlement.
      */
     event LogSettledDispute(
-        address sender,
-        bytes32 idHash,
+        address indexed sender,
+        bytes32 indexed idHash,
         uint timestamp,
         uint8 respondentShare,
         uint8 initiatorShare
@@ -38,6 +38,7 @@ interface IDecoArbitration {
      * @dev Should be logged when contract owner updates fees.
      */
     event LogFeesUpdated(
+        uint timestamp,
         uint fixedFee,
         uint8 shareFee
     );
@@ -46,6 +47,7 @@ interface IDecoArbitration {
      * @dev Should be logged when time limit to accept/reject proposal for respondent is updated.
      */
     event LogProposalTimeLimitUpdated(
+        uint timestamp,
         uint proposalActionTimeLimit
     );
 
