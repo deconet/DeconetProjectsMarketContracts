@@ -189,7 +189,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     function setFees(uint _fixedFee, uint8 _shareFee) external onlyOwner {
         fixedFee = _fixedFee;
         require(
-            _shareFee >= 0 && _shareFee <= 100, 
+            _shareFee <= 100, 
             "Share fee should be in 0-100% range."
         );
         shareFee = _shareFee;
