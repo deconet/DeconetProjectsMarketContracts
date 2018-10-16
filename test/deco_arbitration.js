@@ -841,11 +841,20 @@ contract("DecoArbitration", async (accounts) => {
 
   it("should set withdrawal address from owner address", async () => {
     let owner = await arbitration.owner()
-    await arbitration.setWithdrawalAddress(accounts[1], {from: owner, gasPrice: 1})
-    await arbitration.setWithdrawalAddress(accounts[2], {from: owner, gasPrice: 1})
-    await arbitration.setWithdrawalAddress(accounts[3], {from: owner, gasPrice: 1})
-    await arbitration.setWithdrawalAddress(accounts[4], {from: owner, gasPrice: 1})
-    await arbitration.setWithdrawalAddress(accounts[5], {from: owner, gasPrice: 1})
+    let setAndCheck = async (newAddress) => {
+      let txn = await arbitration.setWithdrawalAddress(newAddress, {from: owner, gasPrice: 1})
+
+      let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+      let emittedEvent = txn.logs[0]
+      expect(emittedEvent.event).to.be.equal("LogWithdrawalAddressChanged")
+      expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
+      expect(emittedEvent.args.newWithdrawalAddress).to.be.equal(newAddress)
+    }
+    await setAndCheck(accounts[1])
+    await setAndCheck(accounts[2])
+    await setAndCheck(accounts[3])
+    await setAndCheck(accounts[4])
+    await setAndCheck(accounts[5])
   })
 
   it("should fail setting invalid withdrawal address or from non-owner's address.", async () => {

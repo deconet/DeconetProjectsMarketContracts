@@ -162,6 +162,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     function setWithdrawalAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0x0), "Should be not 0 address.");
         withdrawalAddress = _newAddress;
+        emit LogWithdrawalAddressChanged(now, _newAddress);
     }
 
     /**

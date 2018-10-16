@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./DecoEscrow.sol";
+import "../DecoEscrow.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 

@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
-import "./DecoMilestones.sol";
-import "./DecoProjects.sol";
+import "../DecoMilestones.sol";
+import "../DecoProjects.sol";
 
 
 contract DecoMilestonesStub is DecoMilestones {

@@ -52,6 +52,14 @@ interface IDecoArbitration {
     );
 
     /**
+     * @dev Should be logged when the withdrawal address for the contract owner changed.
+     */
+    event LogWithdrawalAddressChanged(
+        uint timestamp,
+        address newWithdrawalAddress
+    );
+
+    /**
      * @dev Start dispute for the given project.
      * @param _idHash A `bytes32` hash of a project id.
      * @param _respondent An `address` of the second paty involved in the dispute.

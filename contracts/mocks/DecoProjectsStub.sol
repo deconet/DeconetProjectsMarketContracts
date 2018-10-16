@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./DecoProjects.sol";
+import "../DecoProjects.sol";
 
 
 contract DecoProjectsStub is DecoProjects {

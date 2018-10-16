@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./DecoArbitration.sol";
+import "../DecoArbitration.sol";
 
 
 contract DecoArbitrationStub is DecoArbitration {

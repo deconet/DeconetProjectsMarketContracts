@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./DecoEscrow.sol";
+import "../DecoEscrow.sol";
 
 
 contract DecoEscrowStub is DecoEscrow {
