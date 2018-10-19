@@ -2,10 +2,14 @@ pragma solidity 0.4.24;
 
 
 import "./DecoBaseProjectsMarketplace.sol";
+import "./DecoRelay.sol";
+import "./DecoEscrow.sol";
 import "./DecoProjects.sol";
 
 
 contract DecoMilestones is DecoBaseProjectsMarketplace {
+
+    address public constant ETH_TOKEN_ADDRESS = address(0x0);
 
     // struct to describe Milestone
     struct Milestone {
@@ -19,6 +23,8 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
         uint32 adjustedDuration; 
 
         uint depositAmount;
+        address tokenAddress;
+
         uint startTime;
         uint deliveryTime;
         bool isAccepted;
@@ -34,11 +40,11 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     address public relayContractAddress;
 
     // Logged when milestone state changes.
-    event MilestoneStateUpdate (
+    event LogMilestoneStateUpdated (
         bytes32 indexed agreementHash,
-        address updatedBy,
-        uint8 milestoneNumber,
+        address indexed updatedBy,
         uint timestamp,
+        uint8 milestoneNumber,
         MilestoneState state
     );
 
@@ -51,35 +57,51 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     function startMilestone(
         bytes32 _agreementHash,
         uint _depositAmount,
+        address _tokenAddress,
         uint32 _duration
     )
         external
-        payable
     {
-        require(_depositAmount == msg.value);
         uint8 completedMilestonesCount = uint8(projectMilestones[_agreementHash].length);
+        if (completedMilestonesCount > 0) {
+            Milestone memory lastMilestone = projectMilestones[_agreementHash][completedMilestonesCount - 1];
+            require(lastMilestone.isAccepted, "All milestones must be accepted prior starting a new one.");
+        }
         DecoProjects projectsContract = DecoProjects(
             DecoRelay(relayContractAddress).projectsContractAddress()
         );
-        require(projectsContract.checkIfProjectExists(_agreementHash));
-        uint8 numberOfProjectMilestones = projectsContract.getProjectMilestonesCount(_agreementHash);
-        require(completedMilestonesCount < numberOfProjectMilestones);
+        require(projectsContract.checkIfProjectExists(_agreementHash), "Project must exist.");
+        require(
+            projectsContract.getProjectClient(_agreementHash) == msg.sender,
+            "Only project's client starts a miestone"
+        );
+        require(
+            projectsContract.getProjectMilestonesCount(_agreementHash) > completedMilestonesCount,
+            "Milestones count should not exceed the number configured in the project."
+        );
+        blockFundsInEscrow(
+            projectsContract.getProjectEscrowAddress(_agreementHash),
+            _depositAmount,
+            _tokenAddress
+        );
+        uint nowTimestamp = now;
         projectMilestones[_agreementHash].push(
             Milestone(
                 completedMilestonesCount + 1,
                 _duration,
-                _duration,
+                0,
                 _depositAmount,
-                now,
+                _tokenAddress,
+                nowTimestamp,
                 0,
                 false
             )
         );
-        emit MilestoneStateUpdate(
+        emit LogMilestoneStateUpdated(
             _agreementHash,
             msg.sender,
-            completedMilestonesCount,
-            now,
+            nowTimestamp,
+            completedMilestonesCount + 1,
             MilestoneState.Active
         );
     }
@@ -114,6 +136,15 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     }
 
     /**
+     * @dev Set the new address of the `DecoRelay` contract.
+     * @param _newAddress An address of the new contract.
+     */
+    function setRelayContractAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0x0));
+        relayContractAddress = _newAddress;
+    }
+
+    /**
      * @dev Returns the last project milestone completion status and number.
      * @param _agreementHash Project's unique hash.
      * @return isAccepted A boolean flag for acceptance state, and milestoneNumber for the last milestone.
@@ -138,15 +169,6 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
      * @param _agreementHash Project`s unique hash.
      */
     function canMakerTerminate(bytes32 _agreementHash) public returns(bool) {
-    }
-
-    /**
-     * @dev Set the new address of the `DecoRelay` contract.
-     * @param _newAddress An address of the new contract.
-     */
-    function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0));
-        relayContractAddress = _newAddress;
     }
 
     /**
@@ -184,5 +206,20 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
             milestones[_position].deliveryTime,
             milestones[_position].isAccepted
         );
+    }
+
+    function blockFundsInEscrow(
+        address projectEscrowContractAddress,
+        uint _amount,
+        address _tokenAddress
+    )
+        internal
+    {
+        DecoEscrow escrow = DecoEscrow(projectEscrowContractAddress);
+        if (_tokenAddress == ETH_TOKEN_ADDRESS) {
+            escrow.blockFunds(_amount);
+        } else {
+            escrow.blockTokenFunds(_tokenAddress, _amount);
+        }
     }
 }

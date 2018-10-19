@@ -327,17 +327,39 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Pulls the current arbitration contract fixed & share fees and save them for a project.
-     * @param _arbiter An `address` of arbitration contract.
-     * @param _agreementHash A `bytes32` hash of agreement id.
+     * @dev Query for getting the address of Escrow contract clone deployed for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `address` of a clone.
      */
-    function saveCurrentArbitrationFees(address _arbiter, bytes32 _agreementHash) internal {
-        IDecoArbitration arbitration = IDecoArbitration(_arbiter);
-        uint fixedFee;
-        uint8 shareFee;
-        (fixedFee, shareFee) = arbitration.getFixedAndShareFees();
-        projectArbiterFixedFee[_agreementHash] = fixedFee;
-        projectArbiterShareFee[_agreementHash] = shareFee;
+    function getProjectEscrowAddress(bytes32 _agreementHash) public view returns(address) {
+        return projects[_agreementHash].escrowContractAddress;
+    }
+
+    /**
+     * @dev Query for getting the address of a client for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `address` of a client.
+     */
+    function getProjectClient(bytes32 _agreementHash) public view returns(address) {
+        return projects[_agreementHash].client;
+    }
+
+    /**
+     * @dev Query for getting the address of a maker for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `address` of a maker.
+     */
+    function getProjectMaker(bytes32 _agreementHash) public view returns(address) {
+        return projects[_agreementHash].maker;
+    }
+
+    /**
+     * @dev Query for getting the address of an arbiter for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `address` of an arbiter.
+     */
+    function getProjectArbiter(bytes32 _agreementHash) public view returns(address) {
+        return projects[_agreementHash].arbiter;
     }
 
     /**
@@ -428,6 +450,20 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             projectArbiterFixedFee[_agreementHash],
             projectArbiterShareFee[_agreementHash]
         );
+    }
+
+    /**
+     * @dev Pulls the current arbitration contract fixed & share fees and save them for a project.
+     * @param _arbiter An `address` of arbitration contract.
+     * @param _agreementHash A `bytes32` hash of agreement id.
+     */
+    function saveCurrentArbitrationFees(address _arbiter, bytes32 _agreementHash) internal {
+        IDecoArbitration arbitration = IDecoArbitration(_arbiter);
+        uint fixedFee;
+        uint8 shareFee;
+        (fixedFee, shareFee) = arbitration.getFixedAndShareFees();
+        projectArbiterFixedFee[_agreementHash] = fixedFee;
+        projectArbiterShareFee[_agreementHash] = shareFee;
     }
 
     /**

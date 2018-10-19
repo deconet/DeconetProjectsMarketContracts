@@ -208,8 +208,8 @@ contract("DecoEscrow", async (accounts) => {
     "should manage to deposit ERC20 token with correctly preconfigured allowance by sending party to contract address.",
     async () => {
       let decoTestToken = await Erc20Token.create(accounts[0])
-        let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
-        let depositErc20TokenAndCheckState = async (sender, amountToSend) => {
+      let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
+      let depositErc20TokenAndCheckState = async (sender, amountToSend) => {
         let initialRealContractTokensBalance = await decoTestToken.balanceOf(decoEscrow.address)
         let initialAccountedTokensBalance = await decoEscrow.tokensBalance.call(decoTestToken.address)
         await decoTestToken.approveAllowance(
