@@ -79,6 +79,10 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
             projectsContract.getProjectMilestonesCount(_agreementHash) > completedMilestonesCount,
             "Milestones count should not exceed the number configured in the project."
         );
+        require(
+            projectsContract.getProjectEndDate(_agreementHash) == 0,
+            "Project should be active."
+        );
         blockFundsInEscrow(
             projectsContract.getProjectEscrowAddress(_agreementHash),
             _depositAmount,

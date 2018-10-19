@@ -6,6 +6,7 @@ import "../DecoProjects.sol";
 contract DecoProjectsStub is DecoProjects {
     bool public checkIfProjectExistsConfig = true;
     uint8 public projectMilestonesCountConfig = 10;
+    uint public projectEndDateConfig = 0;
 
     bool public projectCompleted = false;
 
@@ -30,6 +31,10 @@ contract DecoProjectsStub is DecoProjects {
         projectMilestonesCountConfig = config;
     }
 
+    function setProjectEndDateConfig(uint config) public {
+        projectEndDateConfig = config;
+    }
+
     function setEscrowContractStubAddress(address newAddress) public {
         escrowContractStub = newAddress;
     }
@@ -48,6 +53,10 @@ contract DecoProjectsStub is DecoProjects {
 
     function checkIfProjectExists(bytes32 _agreementHash) public view returns(bool) {
         return checkIfProjectExistsConfig;
+    }
+
+    function getProjectEndDate(bytes32 _agreementHash) public view returns(uint) {
+        return projectEndDateConfig;
     }
 
     function getProjectMilestonesCount(bytes32 _agreementHash) public view returns(uint8) {

@@ -408,6 +408,15 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
+     * @dev Query for getting end date of the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint` end time of the project
+     */
+    function getProjectEndDate(bytes32 _agreementHash) public view returns(uint) {
+        return projects[_agreementHash].endDate;
+    }
+
+    /**
      * @dev Returns preconfigured count of milestones for a project with the given hash.
      * @param _agreementHash A `bytes32` hash of the project`s agreement id.
      * @return An `uint8` count of milestones set upon the project creation.

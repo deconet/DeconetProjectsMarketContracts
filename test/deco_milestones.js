@@ -415,15 +415,14 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it(
-    "should fail starting a new milestone when the very last one has been already completed.",
+    "should fail starting a new milestone for ended project.",
     async () => {
       await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(1)
+      await decoProjectsStub.setProjectMilestonesCountConfig(10)
+      await decoProjectsStub.setProjectEndDateConfig(Date.now() / 1000 - 60)
       await decoProjectsStub.setProjectClient(client)
 
-      await decoEscrowStub.sendTransaction({from: accounts[8], value: 1000000, gasPrice: 1})
       let escrowEthBalance = await decoEscrowStub.balance.call()
-      await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
       let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
 
       let startAndCheck = async () => {
@@ -436,7 +435,7 @@ contract("DecoMilestones", async (accounts) => {
         ).catch(async (err) => {
           assert.isOk(err, "Exception should be thrown for the transaction.")
           let milestoneArray = await decoMilestonesMock.getMilestone(testAgreementHash, 0)
-          expect(milestoneArray[0].toNumber()).to.be.equal(1)
+          expect(milestoneArray[0].toNumber()).to.be.equal(0)
         }).then((txn) => {
           if(txn) {
             assert.fail("Should have failed above.")
@@ -444,32 +443,18 @@ contract("DecoMilestones", async (accounts) => {
         })
       }
 
-      mock.depositAmount = escrowEthBalance.div(3)
+      mock.depositAmount = escrowEthBalance
       mock.tokenAddress = "0x0"
-      await decoMilestonesMock.startMilestone(
-        testAgreementHash,
-        mock.depositAmount.toString(),
-        mock.tokenAddress,
-        mock.duration.toNumber(),
-        { from: client, gasPrice: 1 }
-      )
-      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
-      mock.milestoneNumber = mock.milestoneNumber.plus(1)
       await startAndCheck()
-
-      BumpProjectId()
-
-      mock.depositAmount = tokenBalance.div(3)
+      mock.depositAmount = escrowEthBalance
+      mock.tokenAddress = "0x0"
+      await startAndCheck()
+      mock.depositAmount = tokenBalance
       mock.tokenAddress = decoTestToken.address
-      await decoMilestonesMock.startMilestone(
-        testAgreementHash,
-        mock.depositAmount.toString(),
-        mock.tokenAddress,
-        mock.duration.toNumber(),
-        { from: client, gasPrice: 1 }
-      )
-      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
-      mock.milestoneNumber = mock.milestoneNumber.plus(1)
       await startAndCheck()
+      mock.depositAmount = tokenBalance
+      mock.tokenAddress = decoTestToken.address
+      await startAndCheck()
+      await decoProjectsStub.setProjectEndDateConfig(0)
   })
 })
