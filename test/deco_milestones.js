@@ -16,6 +16,7 @@ class Milestone {
     this.startTime = contractStructArray[5]
     this.deliveryTime = contractStructArray[6]
     this.isAccepted = contractStructArray[7]
+    this.isOnHold = contractStructArray[8]
   }
 
   assertWithMilestoneParams(
@@ -26,7 +27,8 @@ class Milestone {
     tokenAddress,
     startTime,
     deliveryTime,
-    isAccepted
+    isAccepted,
+    isOnHold
   ) {
     expect(this.milestoneNumber.eq(milestoneNumber)).to.be.true
     expect(this.duration.eq(duration)).to.be.true
@@ -38,6 +40,7 @@ class Milestone {
     expect(this.startTime.eq(startTime)).to.be.true
     expect(this.deliveryTime.eq(deliveryTime)).to.be.true
     expect(this.isAccepted).to.be.equal(isAccepted)
+    expect(this.isOnHold).to.be.equal(isOnHold)
   }
 
   static createValidMilestoneInstance(milestoneNumber) {
@@ -49,11 +52,12 @@ class Milestone {
       [
         new BigNumber(milestoneNumber),
         duration,
-        new BigNumber(0),
+        duration,
         priceInEther,
         "0x0",
         new BigNumber(new Date().getTime() / 1000),
         new BigNumber(0),
+        false,
         false
       ]
     )
@@ -70,6 +74,7 @@ contract("DecoMilestones", async (accounts) => {
   let testAgreementHash = ""
   let mock = undefined
   let client = undefined
+  let maker = undefined
 
   const DeployProjectsStubContract = async (ownerAddress) => {
     decoProjectsStub = await DecoProjectsStub.new({ from: ownerAddress, gasPrice: 1 })
@@ -86,7 +91,6 @@ contract("DecoMilestones", async (accounts) => {
       await decoProjectsStub.setEscrowContractStubAddress(decoEscrowStub.address)
     }
     if (decoMilestonesMock.address != undefined) {
-      console.log("milestones mock set as escrow authorized address.")
       await decoEscrowStub.initialize(ownerAddress, decoMilestonesMock.address, {from: ownerAddress, gasPrice: 1})
     }
   }
@@ -111,6 +115,7 @@ contract("DecoMilestones", async (accounts) => {
     BumpProjectId()
     mock = Milestone.createValidMilestoneInstance(1)
     client = accounts[0]
+    maker = accounts[1]
   })
 
   it("should start a new milestone for the existing project.", async () => {
@@ -155,7 +160,8 @@ contract("DecoMilestones", async (accounts) => {
         mock.tokenAddress,
         new BigNumber(blockInfo.timestamp),
         new BigNumber(0),
-        mock.isAccepted
+        mock.isAccepted,
+        mock.isOnHold
       )
 
       mock.milestoneNumber = mock.milestoneNumber.plus(1)
@@ -456,5 +462,248 @@ contract("DecoMilestones", async (accounts) => {
       mock.tokenAddress = decoTestToken.address
       await startAndCheck()
       await decoProjectsStub.setProjectEndDateConfig(0)
+  })
+
+  it("should manage to make a delivery by maker.", async () => {
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setProjectMilestonesCountConfig(10)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+
+    await decoEscrowStub.sendTransaction({from: accounts[8], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+    mock.depositAmount = escrowEthBalance.div(10)
+    mock.tokenAddress = "0x0"
+
+    let milestoneId = 0
+    let deliverAndCheckState = async () => {
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        { from: client, gasPrice: 1 }
+      )
+      let txn = await decoMilestonesMock.deliverLastMilestone(testAgreementHash, {from: maker, gasPrice: 1})
+      let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+      let milestoneArray = await decoMilestonesMock.getMilestone(testAgreementHash, milestoneId)
+      let milestone = new Milestone(milestoneArray)
+      expect(milestone.deliveryTime.toNumber()).to.be.equal(blockInfo.timestamp)
+      let emittedEvent = txn.logs[0]
+      expect(emittedEvent.event).to.be.equal("LogMilestoneStateUpdated")
+      expect(emittedEvent.args.agreementHash).to.be.equal(testAgreementHash)
+      expect(emittedEvent.args.updatedBy).to.be.equal(maker)
+      expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
+      expect(emittedEvent.args.milestoneNumber.toNumber()).to.be.equal(mock.milestoneNumber.toNumber())
+      expect(emittedEvent.args.state.toNumber()).to.be.equal(1)
+
+      milestoneId += 1
+      mock.milestoneNumber = mock.milestoneNumber.plus(1)
+      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+    }
+
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+  })
+
+  it("should fail delivering milestone that is not active.", async () => {
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setProjectMilestonesCountConfig(10)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+
+    await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
+    let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
+    mock.depositAmount = tokenBalance.div(10)
+    mock.tokenAddress = decoTestToken.address
+
+    let milestoneId = 0
+    let deliverAndCheckState = async () => {
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        { from: client, gasPrice: 1 }
+      )
+      if(milestoneId % 2 == 1) {
+        await decoMilestonesMock.markMilestoneAsDelivered(testAgreementHash)
+      } else {
+        await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+      }
+      await decoMilestonesMock.deliverLastMilestone(
+        testAgreementHash, {from: maker, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected exception.")
+        let milestoneArray = await decoMilestonesMock.getMilestone(testAgreementHash, milestoneId)
+        let milestone = new Milestone(milestoneArray)
+        expect(milestone.deliveryTime.toNumber()).to.not.be.equal(0)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+
+      milestoneId += 1
+      mock.milestoneNumber = mock.milestoneNumber.plus(1)
+      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+    }
+
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+  })
+
+  it("should fail delivering milestone that is frozen/on hold.", async () => {
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setProjectMilestonesCountConfig(10)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+
+    await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
+    let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
+    mock.depositAmount = tokenBalance.div(10)
+    mock.tokenAddress = decoTestToken.address
+
+    let milestoneId = 0
+    let deliverAndCheckState = async () => {
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        { from: client, gasPrice: 1 }
+      )
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, true)
+
+      await decoMilestonesMock.deliverLastMilestone(
+        testAgreementHash, {from: maker, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected exception.")
+        let milestoneArray = await decoMilestonesMock.getMilestone(testAgreementHash, milestoneId)
+        let milestone = new Milestone(milestoneArray)
+        expect(milestone.deliveryTime.toNumber()).to.be.equal(0)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+
+      milestoneId += 1
+      mock.milestoneNumber = mock.milestoneNumber.plus(1)
+      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false)
+    }
+
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+  })
+
+  it("should fail delivering milestone by not a maker.", async () => {
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setProjectMilestonesCountConfig(10)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+
+    await decoEscrowStub.sendTransaction({from: accounts[4], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+    mock.depositAmount = escrowEthBalance.div(10)
+    mock.tokenAddress = "0x0"
+
+    let milestoneId = 0
+    let deliverAndCheckState = async (sender) => {
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        { from: client, gasPrice: 1 }
+      )
+
+      await decoMilestonesMock.deliverLastMilestone(
+        testAgreementHash, {from: sender, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected exception.")
+        let milestoneArray = await decoMilestonesMock.getMilestone(testAgreementHash, milestoneId)
+        let milestone = new Milestone(milestoneArray)
+        expect(milestone.deliveryTime.toNumber()).to.be.equal(0)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+
+      milestoneId += 1
+      mock.milestoneNumber = mock.milestoneNumber.plus(1)
+      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false)
+    }
+
+    await deliverAndCheckState(accounts[10])
+    await deliverAndCheckState(accounts[11])
+    await deliverAndCheckState(accounts[12])
+    await deliverAndCheckState(accounts[13])
+    await deliverAndCheckState(accounts[14])
+  })
+
+  it("should fail delivering milestone of a project that is not active.", async () => {
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectMilestonesCountConfig(10)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+    mock.depositAmount = escrowEthBalance.div(10)
+    mock.tokenAddress = "0x0"
+
+    let milestoneId = 0
+    let deliverAndCheckState = async () => {
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        { from: client, gasPrice: 1 }
+      )
+
+      await decoProjectsStub.setProjectEndDateConfig(Date.now() / 1000 - 60)
+      await decoMilestonesMock.deliverLastMilestone(
+        testAgreementHash, {from: maker, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected exception.")
+        let milestoneArray = await decoMilestonesMock.getMilestone(testAgreementHash, milestoneId)
+        let milestone = new Milestone(milestoneArray)
+        expect(milestone.deliveryTime.toNumber()).to.be.equal(0)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+
+      milestoneId += 1
+      mock.milestoneNumber = mock.milestoneNumber.plus(1)
+      await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false)
+      await decoProjectsStub.setProjectEndDateConfig(0)
+    }
+
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
+    await deliverAndCheckState()
   })
 })

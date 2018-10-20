@@ -14,13 +14,15 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     // struct to describe Milestone
     struct Milestone {
         uint8 milestoneNumber;
+
+        // original duration of a milestone.
         uint32 duration;
 
         // track all adjustments caused by state changes Active <-> Delivered <-> Rejected
         // `adjustedDuration` time gets increased by the time that is spent by client
         // to provide a feedback when agreed milestone time is not exceeded yet.
         // Initial value is the same as duration.
-        uint32 adjustedDuration; 
+        uint32 adjustedDuration;
 
         uint depositAmount;
         address tokenAddress;
@@ -28,10 +30,15 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
         uint startTime;
         uint deliveryTime;
         bool isAccepted;
+
+        // indicates that a milestone progress was paused.
+        bool isOnHold;
     }
 
     // enumeration to describe possible milestone states. 
     enum MilestoneState { Active, Delivered, Accepted, Rejected, Terminated }
+
+    enum DurationAdjustmentType { Rejected, Unpaused }
 
     // map agreement id hash to milestones list.
     mapping (bytes32 => Milestone[]) public projectMilestones;
@@ -45,7 +52,14 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
         address indexed updatedBy,
         uint timestamp,
         uint8 milestoneNumber,
-        MilestoneState state
+        MilestoneState indexed state
+    );
+
+    event LogMilestoneDurationAdjusted (
+        bytes32 indexed agreementHash,
+        address indexed sender,
+        uint32 amountAdded,
+        DurationAdjustmentType indexed adjustmentType
     );
 
     /**
@@ -93,11 +107,12 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
             Milestone(
                 completedMilestonesCount + 1,
                 _duration,
-                0,
+                _duration,
                 _depositAmount,
                 _tokenAddress,
                 nowTimestamp,
                 0,
+                false,
                 false
             )
         );
@@ -115,6 +130,27 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
      * @param _agreementHash Project`s unique hash.
      */
     function deliverLastMilestone(bytes32 _agreementHash) external {
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
+        require(projectsContract.getProjectEndDate(_agreementHash) == 0, "Project should be active.");
+        require(projectsContract.getProjectMaker(_agreementHash) == msg.sender, "Sender must be a maker.");
+        uint nowTimestamp = now;
+        uint8 milestonesCount = uint8(projectMilestones[_agreementHash].length);
+        Milestone storage milestone = projectMilestones[_agreementHash][milestonesCount - 1];
+        require(
+            milestone.startTime > 0 && milestone.deliveryTime == 0 && milestone.isAccepted == false,
+            "Milestone must be active, not delivered and not accepted."
+        );
+        require(!milestone.isOnHold, "Milestone must not be paused.");
+        milestone.deliveryTime = nowTimestamp;
+        emit LogMilestoneStateUpdated(
+            _agreementHash,
+            msg.sender,
+            nowTimestamp,
+            milestonesCount,
+            MilestoneState.Delivered
+        );
     }
 
     /**
@@ -192,23 +228,28 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
             uint32 duration,
             uint32 adjustedDuration,
             uint depositAmount,
+            address tokenAddress,
             uint startTime,
             uint deliveryTime,
-            bool isAccepted
+            bool isAccepted,
+            bool isOnHold
         )
     {
         Milestone[] storage milestones = projectMilestones[_agreementHash];
         if (_position >= milestones.length) {
-            return (0, 0, 0, 0, 0, 0, false);
+            return (0, 0, 0, 0, address(0x0), 0, 0, false, false);
         }
+        Milestone milestone = milestones[_position];
         return (
-            milestones[_position].milestoneNumber,
-            milestones[_position].duration,
-            milestones[_position].adjustedDuration,
-            milestones[_position].depositAmount,
-            milestones[_position].startTime,
-            milestones[_position].deliveryTime,
-            milestones[_position].isAccepted
+            milestone.milestoneNumber,
+            milestone.duration,
+            milestone.adjustedDuration,
+            milestone.depositAmount,
+            milestone.tokenAddress,
+            milestone.startTime,
+            milestone.deliveryTime,
+            milestone.isAccepted,
+            milestone.isOnHold
         );
     }
 
