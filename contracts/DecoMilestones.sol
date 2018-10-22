@@ -133,6 +133,7 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
         DecoProjects projectsContract = DecoProjects(
             DecoRelay(relayContractAddress).projectsContractAddress()
         );
+        require(projectsContract.checkIfProjectExists(_agreementHash), "Project must exist.");
         require(projectsContract.getProjectEndDate(_agreementHash) == 0, "Project should be active.");
         require(projectsContract.getProjectMaker(_agreementHash) == msg.sender, "Sender must be a maker.");
         uint nowTimestamp = now;
@@ -158,6 +159,38 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
      * @param _agreementHash Project`s unique hash.
      */
     function acceptLastMilestone(bytes32 _agreementHash) external {
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
+        require(projectsContract.checkIfProjectExists(_agreementHash), "Project must exist.");
+        require(projectsContract.getProjectEndDate(_agreementHash) == 0, "Project should be active.");
+        require(projectsContract.getProjectClient(_agreementHash) == msg.sender, "Sender must be a client.");
+        uint8 milestonesCount = uint8(projectMilestones[_agreementHash].length);
+        Milestone storage milestone = projectMilestones[_agreementHash][milestonesCount - 1];
+        require(
+            milestone.startTime > 0 &&
+            milestone.isAccepted == false &&
+            milestone.deliveryTime > 0 &&
+            milestone.isOnHold == false,
+            "Milestone should be active and delivered, but not rejected, or already accepted, or put on hold."
+        );
+        milestone.isAccepted = true;
+        if (projectsContract.getProjectMilestonesCount(_agreementHash) == milestonesCount) {
+            projectsContract.completeProject(_agreementHash);
+        }
+        distributeFundsInEscrow(
+            projectsContract.getProjectEscrowAddress(_agreementHash),
+            projectsContract.getProjectMaker(_agreementHash),
+            milestone.depositAmount,
+            milestone.tokenAddress
+        );
+        emit LogMilestoneStateUpdated(
+            _agreementHash,
+            msg.sender,
+            now,
+            milestonesCount,
+            MilestoneState.Accepted
+        );
     }
 
     /**
@@ -254,17 +287,33 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
     }
 
     function blockFundsInEscrow(
-        address projectEscrowContractAddress,
+        address _projectEscrowContractAddress,
         uint _amount,
         address _tokenAddress
     )
         internal
     {
-        DecoEscrow escrow = DecoEscrow(projectEscrowContractAddress);
+        DecoEscrow escrow = DecoEscrow(_projectEscrowContractAddress);
         if (_tokenAddress == ETH_TOKEN_ADDRESS) {
             escrow.blockFunds(_amount);
         } else {
             escrow.blockTokenFunds(_tokenAddress, _amount);
+        }
+    }
+
+    function distributeFundsInEscrow(
+        address _projectEscrowContractAddress,
+        address _distributionTargetAddress,
+        uint _amount,
+        address _tokenAddress
+    )
+        internal
+    {
+        DecoEscrow escrow = DecoEscrow(_projectEscrowContractAddress);
+        if (_tokenAddress == ETH_TOKEN_ADDRESS) {
+            escrow.distributeFunds(_distributionTargetAddress, _amount);
+        } else {
+            escrow.distributeTokenFunds(_distributionTargetAddress, _tokenAddress, _amount);
         }
     }
 }

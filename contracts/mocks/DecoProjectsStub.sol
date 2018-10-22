@@ -17,6 +17,7 @@ contract DecoProjectsStub is DecoProjects {
 
     function completeProject(bytes32 _agreementHash) external {
         projectCompleted = true;
+        projectEndDateConfig = now;
     }
 
     function setProjectCompleted(bool value) public {
