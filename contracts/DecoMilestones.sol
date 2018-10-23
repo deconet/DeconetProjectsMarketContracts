@@ -198,6 +198,34 @@ contract DecoMilestones is DecoBaseProjectsMarketplace {
      * @param _agreementHash Project`s unique hash.
      */
     function rejectLastDeliverable(bytes32 _agreementHash) external {
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
+        require(projectsContract.checkIfProjectExists(_agreementHash), "Project must exist.");
+        require(projectsContract.getProjectEndDate(_agreementHash) == 0, "Project should be active.");
+        require(projectsContract.getProjectClient(_agreementHash) == msg.sender, "Sender must be a client.");
+        uint8 milestonesCount = uint8(projectMilestones[_agreementHash].length);
+        Milestone storage milestone = projectMilestones[_agreementHash][milestonesCount - 1];
+        require(
+            milestone.startTime > 0 &&
+            milestone.isAccepted == false &&
+            milestone.deliveryTime > 0 &&
+            milestone.isOnHold == false,
+            "Milestone should be active and delivered, but not rejected, or already accepted, or put on hold."
+        );
+        uint nowTimestamp = now;
+        if (milestone.startTime.add(milestone.adjustedDuration) > milestone.deliveryTime) {
+            milestone.adjustedDuration = milestone.adjustedDuration +
+                uint32(nowTimestamp.sub(milestone.deliveryTime));
+        }
+        milestone.deliveryTime = 0;
+        emit LogMilestoneStateUpdated(
+            _agreementHash,
+            msg.sender,
+            nowTimestamp,
+            milestonesCount,
+            MilestoneState.Rejected
+        );
     }
 
     /**

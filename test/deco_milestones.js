@@ -100,8 +100,12 @@ contract("DecoMilestones", async (accounts) => {
     testAgreementHash = web3.sha3(`QmS8fdQE1RyzETQtjXik71eUdXSeTo8f9L1eo6ALEDmtWN${projectId++}`)
   }
 
-  const IncreaseTime = async () => {
-    await increaseTime(500)
+  const IncreaseTime = async (time) => {
+    if (time == undefined) {
+      await increaseTime(500)
+    } else {
+      await increaseTime(time)
+    }
   }
 
   before(async () => {
@@ -712,7 +716,7 @@ contract("DecoMilestones", async (accounts) => {
     await deliverAndCheckState()
   })
 
-  it("should accept milestone successfully by client.", async () => {
+  it("should accept delivered milestone successfully by client.", async () => {
     let maxNumberOfMilestones = 4
     await decoProjectsStub.setIsProjectExistingConfig(true)
     await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
@@ -1058,4 +1062,268 @@ contract("DecoMilestones", async (accounts) => {
     await decoProjectsStub.setProjectEndDateConfig(Date.now() / 1000 - 60)
     await acceptAndCheckState()
   })
+
+  it("should reject delivered milestone by client", async () => {
+    let maxNumberOfMilestones = 4
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setProjectCompleted(false)
+
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+
+    let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = "0x0"
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      { from: client, gasPrice: 1 }
+    )
+
+    let rejectAndCheckState = async (shouldOverdue) => {
+      let milestoneArray = await decoMilestonesMock.getMilestone(
+        testAgreementHash,
+        0
+      )
+      let milestone = new Milestone(milestoneArray)
+      let durationToWait = Date.now() - milestone.startTime.plus(milestone.adjustedDuration).toNumber()
+
+      await IncreaseTime(shouldOverdue ? durationToWait : undefined)
+
+      await decoMilestonesMock.deliverLastMilestone(
+        testAgreementHash, {from: maker, gasPrice: 1}
+      )
+
+      let blockedAmount, makerWithdrawalAllowance
+      blockedAmount = await decoEscrowStub.blockedBalance.call()
+      makerWithdrawalAllowance = await decoEscrowStub.withdrawalAllowanceForAddress(maker)
+
+      milestoneArray = await decoMilestonesMock.getMilestone(
+        testAgreementHash,
+        0
+      )
+      milestone = new Milestone(milestoneArray)
+      let startTime = milestone.startTime
+      let duration = milestone.adjustedDuration
+      let deliveryTime = milestone.deliveryTime
+      await IncreaseTime()
+
+      let txn = await decoMilestonesMock.rejectLastDeliverable(
+        testAgreementHash,
+        {from: client, gasPrice: 1}
+      )
+
+      let actualBlockedAmount, actualMakerWithdrawalAllowance
+      actualBlockedAmount = await decoEscrowStub.blockedBalance.call()
+      actualMakerWithdrawalAllowance = await decoEscrowStub.withdrawalAllowanceForAddress(maker)
+
+      expect(actualBlockedAmount.toNumber()).to.be.equal(blockedAmount.toNumber())
+      expect(actualMakerWithdrawalAllowance.toNumber()).to.be.equal(makerWithdrawalAllowance.toNumber())
+
+      let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+      milestoneArray = await decoMilestonesMock.getMilestone(
+        testAgreementHash,
+        0
+      )
+      milestone = new Milestone(milestoneArray)
+
+      let rejectionTime = new BigNumber(blockInfo.timestamp)
+      if(startTime.plus(duration).gt(deliveryTime)) {
+        expect(milestone.adjustedDuration.toNumber()).to.be.equal(
+          duration.plus(rejectionTime).minus(deliveryTime).toNumber()
+        )
+      } else {
+        expect(milestone.adjustedDuration.toNumber()).to.be.equal(duration.toNumber())
+      }
+
+      expect(milestone.isAccepted).to.be.false
+      expect(milestone.deliveryTime.toNumber()).to.be.equal(0)
+
+      let projectEndDate = await decoProjectsStub.getProjectEndDate(testAgreementHash)
+      expect(projectEndDate.toNumber()).to.be.equal(0)
+
+      let emittedEvent = txn.logs[0]
+      expect(emittedEvent.event).to.be.equal("LogMilestoneStateUpdated")
+      expect(emittedEvent.args.agreementHash).to.be.equal(testAgreementHash)
+      expect(emittedEvent.args.updatedBy).to.be.equal(client)
+      expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
+      expect(emittedEvent.args.milestoneNumber.toNumber()).to.be.equal(mock.milestoneNumber.toNumber())
+      expect(emittedEvent.args.state.toNumber()).to.be.equal(3)
+    }
+
+    await rejectAndCheckState(false)
+    await rejectAndCheckState(false)
+    await rejectAndCheckState(true)
+    await rejectAndCheckState(true)
+  })
+
+  it("should fail rejecting delivered milestone by not a client.", async () => {
+    let maxNumberOfMilestones = 4
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
+    await decoProjectsStub.setProjectClient(client)
+    await decoProjectsStub.setProjectMaker(maker)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setProjectCompleted(false)
+
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+
+    let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = "0x0"
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      { from: client, gasPrice: 1 }
+    )
+    await decoMilestonesMock.deliverLastMilestone(
+      testAgreementHash, {from: maker, gasPrice: 1}
+    )
+
+
+    let rejectAndCheckState = async (sender) => {
+      let milestoneArray = await decoMilestonesMock.getMilestone(
+        testAgreementHash,
+        0
+      )
+      let milestone = new Milestone(milestoneArray)
+      let startTime = milestone.startTime
+      let duration = milestone.adjustedDuration
+      let deliveryTime = milestone.deliveryTime
+
+      let blockedAmount, makerWithdrawalAllowance
+      blockedAmount = await decoEscrowStub.blockedBalance.call()
+      makerWithdrawalAllowance = await decoEscrowStub.withdrawalAllowanceForAddress(maker)
+
+      await IncreaseTime()
+
+      await decoMilestonesMock.rejectLastDeliverable(
+        testAgreementHash,
+        {from: sender, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected crash.")
+        let actualBlockedAmount, actualMakerWithdrawalAllowance
+        actualBlockedAmount = await decoEscrowStub.blockedBalance.call()
+        actualMakerWithdrawalAllowance = await decoEscrowStub.withdrawalAllowanceForAddress(maker)
+
+        expect(actualBlockedAmount.toNumber()).to.be.equal(blockedAmount.toNumber())
+        expect(actualMakerWithdrawalAllowance.toNumber()).to.be.equal(makerWithdrawalAllowance.toNumber())
+        milestoneArray = await decoMilestonesMock.getMilestone(
+          testAgreementHash,
+          0
+        )
+        milestone = new Milestone(milestoneArray)
+
+        expect(milestone.deliveryTime.toNumber()).to.be.equal(deliveryTime.toNumber())
+        expect(milestone.adjustedDuration.toNumber()).to.be.equal(duration.toNumber())
+
+        expect(milestone.isAccepted).to.be.false
+
+        let projectEndDate = await decoProjectsStub.getProjectEndDate(testAgreementHash)
+        expect(projectEndDate.toNumber()).to.be.equal(0)
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+    }
+
+    await rejectAndCheckState(accounts[8])
+    await rejectAndCheckState(accounts[9])
+    await rejectAndCheckState(accounts[7])
+    await rejectAndCheckState(accounts[6])
+  })
+
+  it(
+    "should fail rejecting milestone if it is not delivered, or already accepted, or on hold, or project is not active.",
+    async () => {
+      let maxNumberOfMilestones = 4
+      await decoProjectsStub.setIsProjectExistingConfig(true)
+      await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
+      await decoProjectsStub.setProjectClient(client)
+      await decoProjectsStub.setProjectMaker(maker)
+      await decoProjectsStub.setProjectEndDateConfig(0)
+      await decoProjectsStub.setProjectCompleted(false)
+
+      await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+      let escrowEthBalance = await decoEscrowStub.balance.call()
+
+      let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+      mock.depositAmount = new BigNumber(amount)
+      mock.tokenAddress = "0x0"
+
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        { from: client, gasPrice: 1 }
+      )
+      let rejectAndCheckState = async (sender) => {
+        let milestoneArray = await decoMilestonesMock.getMilestone(
+          testAgreementHash,
+          0
+        )
+        let milestone = new Milestone(milestoneArray)
+        let startTime = milestone.startTime
+        let duration = milestone.adjustedDuration
+        let deliveryTime = milestone.deliveryTime
+
+        let blockedAmount, makerWithdrawalAllowance
+        blockedAmount = await decoEscrowStub.blockedBalance.call()
+        makerWithdrawalAllowance = await decoEscrowStub.withdrawalAllowanceForAddress(maker)
+
+        await IncreaseTime()
+
+        await decoMilestonesMock.rejectLastDeliverable(
+          testAgreementHash,
+          {from: sender, gasPrice: 1}
+        ).catch(async (err) => {
+          assert.isOk(err, "Expected crash.")
+          let actualBlockedAmount, actualMakerWithdrawalAllowance
+          actualBlockedAmount = await decoEscrowStub.blockedBalance.call()
+          actualMakerWithdrawalAllowance = await decoEscrowStub.withdrawalAllowanceForAddress(maker)
+
+          expect(actualBlockedAmount.toNumber()).to.be.equal(blockedAmount.toNumber())
+          expect(actualMakerWithdrawalAllowance.toNumber()).to.be.equal(makerWithdrawalAllowance.toNumber())
+          milestoneArray = await decoMilestonesMock.getMilestone(
+            testAgreementHash,
+            0
+          )
+          milestone = new Milestone(milestoneArray)
+
+          expect(milestone.deliveryTime.toNumber()).to.be.equal(deliveryTime.toNumber())
+          expect(milestone.adjustedDuration.toNumber()).to.be.equal(duration.toNumber())
+        }).then(async (txn) => {
+          if(txn) {
+            assert.fail("Should have failed above.")
+          }
+        })
+      }
+
+      await rejectAndCheckState()
+      await decoMilestonesMock.deliverLastMilestone(
+        testAgreementHash, {from: maker, gasPrice: 1}
+      )
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, true)
+      await rejectAndCheckState()
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false)
+      await decoProjectsStub.setProjectEndDateConfig(Date.now() / 1000 - 60)
+      await rejectAndCheckState()
+      await decoProjectsStub.setProjectEndDateConfig(0)
+      await decoMilestonesMock.acceptLastMilestone(testAgreementHash, {from: client, gasPrice: 1})
+      await rejectAndCheckState()
+    }
+  )
 })
