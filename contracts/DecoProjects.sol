@@ -23,7 +23,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         address escrowContractAddress;
         uint startDate;
         uint endDate;
-        uint8 paymentWindow;
+        uint8 milestoneStartWindow;
         uint8 feedbackWindow;
         uint8 milestonesCount;
 
@@ -121,7 +121,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _maker An `address` of the project`s maker.
      * @param _makersSignature A `bytes` digital signature of the maker to proof the agreement acceptance.
      * @param _milestonesCount An `uint8` count of planned milestones for the project.
-     * @param _paymentWindow An `uint8` count of days project`s owner has to deposit funds for the next milestone.
+     * @param _milestoneStartWindow An `uint8` count of days project`s owner has to start the next milestone.
      *        If this time is exceeded then the maker can terminate the project.
      * @param _feedbackWindow An `uint8` time in days project`s owner has to provide feedback for the last milestone.
      *                        If that time is exceeded then maker can terminate the project and get paid for awaited
@@ -135,7 +135,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         address _maker,
         bytes _makersSignature,
         uint8 _milestonesCount,
-        uint8 _paymentWindow,
+        uint8 _milestoneStartWindow,
         uint8 _feedbackWindow,
         bool _agreementEncrypted
     )
@@ -164,7 +164,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             newEscrowCloneAddress,
             now,
             0, // end date is unknown yet
-            _paymentWindow,
+            _milestoneStartWindow,
             _feedbackWindow,
             _milestonesCount,
             0, // CSAT is 0 to indicate that it isn't set by maker yet
@@ -192,18 +192,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         DecoMilestones milestonesContract = DecoMilestones(
             DecoRelay(relayContractAddress).milestonesContractAddress()
         );
-        if (project.client == msg.sender) {
-            require(
-                milestonesContract.canClientTerminate(_agreementHash), 
-                "Milestone contract should confirm termination is possible by client."
-            );
-        } else {
-            require(
-                milestonesContract.canMakerTerminate(_agreementHash),
-                "Milestone contract should confirm termination is possible by maker."
-            );
-        }
-        milestonesContract.terminateLastMilestone(_agreementHash);
+        milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
 
         project.endDate = now;
         emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Terminated);
@@ -273,7 +262,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _makersSignature A `bytes` digital signature of the maker to proof the acceptance of
      *                         the new supplemental agreement.
      * @param _milestonesCount An `uint8` number of planned milestones for the project.
-     * @param _paymentWindow An `uint8` number of days project`s owner has to deposit funds for the next milestone.
+     * @param _milestoneStartWindow An `uint8` number of days project`s owner has to start the next milestone.
      *        If this time is exceeded then maker can terminate the project.
      * @param _feedbackWindow An `uint8` number of days project`s owner has to provide feedback for the last milestone.
      *                        If the time is exceeded then maker can terminate the project and get paid for
@@ -284,7 +273,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         string _supplementalAgreementHash,
         bytes _makersSignature,
         uint8 _milestonesCount,
-        uint8 _paymentWindow,
+        uint8 _milestoneStartWindow,
         uint8 _feedbackWindow
     )
         external
@@ -312,7 +301,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         require(isLastMilestoneAccepted, "Supplemental agreement can't be added when there is an active milestone.");
         projectChangesDocumentsIds[_agreementHash].push(_supplementalAgreementHash);
         project.milestonesCount = _milestonesCount;
-        project.paymentWindow = _paymentWindow;
+        project.milestoneStartWindow = _milestoneStartWindow;
         project.feedbackWindow = _feedbackWindow;
         emit NewSupplementalAgreement(_agreementHash, _supplementalAgreementHash, now);
     }
@@ -360,6 +349,33 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      */
     function getProjectArbiter(bytes32 _agreementHash) public view returns(address) {
         return projects[_agreementHash].arbiter;
+    }
+
+    /**
+     * @dev Query for getting the feedback window for a client for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint8` feedback window in days.
+     */
+    function getProjectFeedbackWindow(bytes32 _agreementHash) public view returns(uint8) {
+        return projects[_agreementHash].feedbackWindow;
+    }
+
+    /**
+     * @dev Query for getting the milestone start window for a client for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint8` milestone start window in days.
+     */
+    function getProjectMilestoneStartWindow(bytes32 _agreementHash) public view returns(uint8) {
+        return projects[_agreementHash].milestoneStartWindow;
+    }
+
+    /**
+     * @dev Query for getting the start date for the given project.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint` start date.
+     */
+    function getProjectStartDate(bytes32 _agreementHash) public view returns(uint) {
+        return projects[_agreementHash].startDate;
     }
 
     /**

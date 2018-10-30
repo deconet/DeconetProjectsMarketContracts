@@ -12,9 +12,6 @@ contract DecoMilestonesStub is DecoMilestones {
     uint8 internal lastMilestoneNumberConfig = 10;
     address internal projectOwnerAddress = address(0x0);
 
-    function terminateLastMilestone(bytes32 _agreementHash) external {
-    }
-
     function startMilestone(
         bytes32 _agreementHash,
         uint _depositAmount,
@@ -45,6 +42,19 @@ contract DecoMilestonesStub is DecoMilestones {
         relayContractAddress = _newAddress;
     }
 
+    function terminateLastMilestone(bytes32 _agreementHash, address _initiator) public {
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
+        address client = projectsContract.getProjectClient(_agreementHash);
+        address maker = projectsContract.getProjectMaker(_agreementHash);
+        if (client == _initiator) {
+            require(canClientTerminate(_agreementHash));
+        } else if (maker == _initiator) {
+            require(canMakerTerminate(_agreementHash));
+        }
+    }
+
     function setIfClientCanTerminate(bool config) public {
         canClientTerminateConfig = config;
     }
@@ -65,11 +75,11 @@ contract DecoMilestonesStub is DecoMilestones {
         projectOwnerAddress = _newAddress;
     }
 
-    function canClientTerminate(bytes32 _agreementHash) public returns(bool) {
+    function canClientTerminate(bytes32 _agreementHash) public view returns(bool) {
         return canClientTerminateConfig;
     }
 
-    function canMakerTerminate(bytes32 _agreementHash) public returns(bool) {
+    function canMakerTerminate(bytes32 _agreementHash) public view returns(bool) {
         return canMakerTerminateConfig;
     }
 
