@@ -6,11 +6,17 @@ import "../DecoMilestones.sol";
 contract DecoMilestonesMock is DecoMilestones {
     bool public canClientTerminateConfig = true;
     bool public canMakerTerminateConfig = true;
+    bool public canStartDisputeConfig = true;
 
     bool public shouldSkipContractCanTerminateCall = true;
+    bool public shouldSkipContractCanStartDisputeCall = true;
 
     function setSkipCanTerminateLogic(bool shouldSkip) public {
         shouldSkipContractCanTerminateCall = shouldSkip;
+    }
+
+    function setSkipCanStartDisputeLogic(bool shouldSkip) public {
+        shouldSkipContractCanStartDisputeCall = shouldSkip;
     }
 
     function setMockClientCanTerminate(bool canTerminate) public {
@@ -21,20 +27,24 @@ contract DecoMilestonesMock is DecoMilestones {
         canMakerTerminateConfig = canTerminate;
     }
 
+    function setMockCanStartDispute(bool canStart) public {
+        canStartDisputeConfig = canStart;
+    }
+
     function markMilestoneAsCompletedAndAccepted(bytes32 _agreementHash) public {
         Milestone[] storage milestones = projectMilestones[_agreementHash];
         require(milestones.length > 0);
         Milestone storage milestone = milestones[milestones.length - 1];
         uint nowTimestamp = now;
-        milestone.deliveredTime = nowTimestamp + milestone.duration;
-        milestone.acceptedTime = nowTimestamp;
+        milestone.deliveredTime = nowTimestamp;
+        milestone.acceptedTime = nowTimestamp + 1;
     }
 
     function markMilestoneAsDelivered(bytes32 _agreementHash) public {
         Milestone[] storage milestones = projectMilestones[_agreementHash];
         require(milestones.length > 0);
         Milestone storage milestone = milestones[milestones.length - 1];
-        milestone.deliveredTime = now + milestone.duration;
+        milestone.deliveredTime = now;
     }
 
     function markMilestoneAsOnHold(bytes32 _agreementHash, bool isOnHold) public {
@@ -58,6 +68,14 @@ contract DecoMilestonesMock is DecoMilestones {
             return canMakerTerminateConfig;
         } else {
             return super.canMakerTerminate(_agreementHash);
+        }
+    }
+
+    function canStartDispute(bytes32 _agreementHash) public view returns(bool) {
+        if (shouldSkipContractCanStartDisputeCall) {
+            return canStartDisputeConfig;
+        } else {
+            return super.canStartDispute(_agreementHash);
         }
     }
 }

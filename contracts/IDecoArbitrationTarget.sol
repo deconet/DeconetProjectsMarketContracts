@@ -5,6 +5,7 @@ interface IDecoArbitrationTarget {
 
     /**
      * @dev Prepare arbitration target for a started dispute.
+     * @param _idHash A `bytes32` hash of id.
      */
     function disputeStartedFreeze(bytes32 _idHash) external;
 

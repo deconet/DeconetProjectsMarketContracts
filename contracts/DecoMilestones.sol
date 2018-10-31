@@ -37,7 +37,7 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
     }
 
     // enumeration to describe possible milestone states. 
-    enum MilestoneState { Active, Delivered, Accepted, Rejected, Terminated }
+    enum MilestoneState { Active, Delivered, Accepted, Rejected, Terminated, Paused }
 
     enum DurationAdjustmentType { Rejected, Unpaused }
 
@@ -250,9 +250,41 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
         relayContractAddress = _newAddress;
     }
 
+    /**
+     * @dev Prepare arbitration target for a started dispute.
+     * @param _idHash A `bytes32` hash of id.
+     */
     function disputeStartedFreeze(bytes32 _idHash) external {
+        address projectsContractAddress = DecoRelay(relayContractAddress).projectsContractAddress();
+        DecoProjects projectsContract = DecoProjects(projectsContractAddress);
+        require(
+            projectsContract.getProjectArbiter(_idHash) == msg.sender,
+            "Freezing upon dispute start can be sent only by arbiter."
+        );
+        require(canStartDispute(_idHash), "Milestone should be in valid state for starting a dispute.");
+        uint milestonesCount = projectMilestones[_idHash].length;
+        require(milestonesCount > 0, "There must be active milestone.");
+        Milestone storage lastMilestone = projectMilestones[_idHash][milestonesCount - 1];
+        lastMilestone.isOnHold = true;
+        emit LogMilestoneStateUpdated(
+            _idHash,
+            msg.sender,
+            now,
+            uint8(milestonesCount),
+            MilestoneState.Paused
+        );
     }
 
+    /**
+     * @dev React to an active dispute settlement with given parameters.
+     * @param _idHash A `bytes32` hash of id.
+     * @param _respondent An `address` of a respondent.
+     * @param _respondentShare An `uint8` share for the respondent.
+     * @param _initiator An `address` of a dispute initiator.
+     * @param _initiatorShare An `uint8` share for the initiator.
+     * @param _isInternal A `bool` indicating if dispute was settled by participants without an arbiter.
+     * @param _arbiterWithdrawalAddress An `address` for sending out arbiter compensation.
+     */
     function disputeSettledTerminate(
         bytes32 _idHash,
         address _respondent,
@@ -266,10 +298,45 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
     {
     }
 
+    /**
+     * @dev Check eligibility of a given address to perform operations,
+     *      basically the address should be either client or maker.
+     * @param _idHash A `bytes32` hash of id.
+     * @param _addressToCheck An `address` to check.
+     * @return A `bool` check status.
+     */
     function checkEligibility(bytes32 _idHash, address _addressToCheck) external view returns(bool) {
+        address projectsContractAddress = DecoRelay(relayContractAddress).projectsContractAddress();
+        DecoProjects projectsContract = DecoProjects(projectsContractAddress);
+        return _addressToCheck == projectsContract.getProjectClient(_idHash) ||
+            _addressToCheck == projectsContract.getProjectMaker(_idHash);
     }
 
-    function canStartDispute(bytes32 _idHash) external view returns(bool) {
+    /**
+     * @dev Check if target is ready for a dispute.
+     * @param _idHash A `bytes32` hash of id.
+     * @return A `bool` check status.
+     */
+    function canStartDispute(bytes32 _idHash) public view returns(bool) {
+        uint milestonesCount = projectMilestones[_idHash].length;
+        if (milestonesCount == 0) return false;
+        Milestone storage lastMilestone = projectMilestones[_idHash][milestonesCount - 1];
+        if (lastMilestone.isOnHold || lastMilestone.acceptedTime > 0) return false;
+        address projectsContractAddress = DecoRelay(relayContractAddress).projectsContractAddress();
+        DecoProjects projectsContract = DecoProjects(projectsContractAddress);
+        uint feedbackWindow = uint(projectsContract.getProjectFeedbackWindow(_idHash)).mul(24 hours);
+        uint nowTimestamp = now;
+        if (lastMilestone.deliveredTime == 0 &&
+            lastMilestone.startedTime.add(uint(lastMilestone.adjustedDuration)) < nowTimestamp)
+            return false;
+        if (lastMilestone.deliveredTime > 0 &&
+            lastMilestone.startedTime.add(uint(lastMilestone.adjustedDuration)) < lastMilestone.deliveredTime)
+            return false;
+        if (lastMilestone.deliveredTime > 0 &&
+            lastMilestone.acceptedTime == 0 &&
+            lastMilestone.deliveredTime.add(feedbackWindow) < nowTimestamp)
+            return false;
+        return true;
     }
 
     /**
@@ -350,7 +417,7 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
         Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
         return lastMilestone.acceptedTime == 0 &&
             !lastMilestone.isOnHold &&
-            lastMilestone.startedTime.add(uint(lastMilestone.duration)) < now;
+            lastMilestone.startedTime.add(uint(lastMilestone.adjustedDuration)) < now;
     }
 
     /**

@@ -77,6 +77,9 @@ contract("DecoMilestones", async (accounts) => {
   let client = undefined
   let maker = undefined
   let arbiter = undefined
+  let maxNumberOfMilestones = 4
+  let feedbackWindow = 1
+  let milestoneStartWindow = 1
 
   const DeployProjectsStubContract = async (ownerAddress) => {
     decoProjectsStub = await DecoProjectsStub.new({ from: ownerAddress, gasPrice: 1 })
@@ -130,11 +133,25 @@ contract("DecoMilestones", async (accounts) => {
     await decoProjectsStub.setProjectMaker(maker)
     arbiter = accounts[2]
     await decoProjectsStub.setProjectArbiter(arbiter)
+
+    maxNumberOfMilestones = 4
+    feedbackWindow = 1
+    milestoneStartWindow = 1
+    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
+    await decoProjectsStub.setProjectCompleted(false)
+    await decoProjectsStub.setProjectEndDateConfig(0)
+    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoMilestonesMock.setSkipCanTerminateLogic(false)
+    await decoProjectsStub.setProjectFeedbackWindow(feedbackWindow)
+    await decoProjectsStub.setProjectMilestoneStartWindow(milestoneStartWindow)
+
+    let lastBlock = await web3.eth.getBlock(web3.eth.blockNumber)
+    await decoProjectsStub.setProjectStartDateConfig(lastBlock.timestamp)
   })
 
   it("should start a new milestone for the existing project.", async () => {
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(10)
+    maxNumberOfMilestones = 10
+    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
 
     await decoEscrowStub.sendTransaction({from: accounts[7], value: web3.toWei(9), gasPrice: 1})
 
@@ -197,8 +214,8 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail starting a new milestone for the existing project if there is no funds in Escrow.",
     async () => {
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(10)
+      maxNumberOfMilestones = 10
+      await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
 
       let escrowEthBalance = await decoEscrowStub.balance.call()
       let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
@@ -239,7 +256,6 @@ contract("DecoMilestones", async (accounts) => {
     "should fail starting a new milestone for not existing project.",
     async () => {
       await decoProjectsStub.setIsProjectExistingConfig(false)
-      await decoProjectsStub.setProjectMilestonesCountConfig(10)
 
       let escrowEthBalance = await decoEscrowStub.balance.call()
       let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
@@ -279,8 +295,6 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail starting a new milestone by not project's client.",
     async () => {
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(10)
       await decoProjectsStub.setProjectClient(accounts[7])
 
       let escrowEthBalance = await decoEscrowStub.balance.call()
@@ -321,8 +335,6 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail starting a new milestone when there is one active.",
     async () => {
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(10)
 
       let escrowEthBalance = await decoEscrowStub.balance.call()
       let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
@@ -374,8 +386,8 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail starting a new milestone when the very last one has been already completed.",
     async () => {
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(1)
+      maxNumberOfMilestones = 1
+      await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
 
       await decoEscrowStub.sendTransaction({from: accounts[8], value: 1000000, gasPrice: 1})
       let escrowEthBalance = await decoEscrowStub.balance.call()
@@ -432,9 +444,8 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail starting a new milestone for ended project.",
     async () => {
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(10)
-      await decoProjectsStub.setProjectEndDateConfig(Date.now() / 1000 - 60)
+      let lastBlock = await web3.eth.getBlock(web3.eth.blockNumber)
+      await decoProjectsStub.setProjectEndDateConfig(lastBlock.timestamp - 60)
 
       let escrowEthBalance = await decoEscrowStub.balance.call()
       let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
@@ -469,14 +480,9 @@ contract("DecoMilestones", async (accounts) => {
       mock.depositAmount = tokenBalance
       mock.tokenAddress = decoTestToken.address
       await startAndCheck()
-      await decoProjectsStub.setProjectEndDateConfig(0)
   })
 
   it("should manage to make a delivery by maker.", async () => {
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectMilestonesCountConfig(10)
-
     await decoEscrowStub.sendTransaction({from: accounts[8], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
     mock.depositAmount = escrowEthBalance.div(10)
@@ -509,18 +515,12 @@ contract("DecoMilestones", async (accounts) => {
       await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
     }
 
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
+    for(var i = 0; i < maxNumberOfMilestones; i++) {
+      await deliverAndCheckState()
+    }
   })
 
   it("should fail delivering milestone that is not active.", async () => {
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectMilestonesCountConfig(10)
-
     await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
     let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
     mock.depositAmount = tokenBalance.div(10)
@@ -558,18 +558,12 @@ contract("DecoMilestones", async (accounts) => {
       await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
     }
 
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
+    for(var i = 0; i < maxNumberOfMilestones; i++) {
+      await deliverAndCheckState()
+    }
   })
 
   it("should fail delivering milestone that is frozen/on hold.", async () => {
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectMilestonesCountConfig(10)
-
     await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
     let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
     mock.depositAmount = tokenBalance.div(10)
@@ -605,18 +599,12 @@ contract("DecoMilestones", async (accounts) => {
       await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false)
     }
 
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
+    for(var i = 0; i < maxNumberOfMilestones; i++) {
+      await deliverAndCheckState()
+    }
   })
 
   it("should fail delivering milestone by not a maker.", async () => {
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectMilestonesCountConfig(10)
-
     await decoEscrowStub.sendTransaction({from: accounts[4], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
     mock.depositAmount = escrowEthBalance.div(10)
@@ -655,13 +643,9 @@ contract("DecoMilestones", async (accounts) => {
     await deliverAndCheckState(accounts[11])
     await deliverAndCheckState(accounts[12])
     await deliverAndCheckState(accounts[13])
-    await deliverAndCheckState(accounts[14])
   })
 
   it("should fail delivering milestone of a project that is not active.", async () => {
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(10)
-
     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
     mock.depositAmount = escrowEthBalance.div(10)
@@ -698,19 +682,12 @@ contract("DecoMilestones", async (accounts) => {
       await decoProjectsStub.setProjectEndDateConfig(0)
     }
 
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
-    await deliverAndCheckState()
+    for(var i = 0; i < maxNumberOfMilestones; i++) {
+      await deliverAndCheckState()
+    }
   })
 
   it("should accept delivered milestone successfully by client.", async () => {
-    let maxNumberOfMilestones = 4
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-
     await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
     let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
 
@@ -809,12 +786,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail accepting milestone by not a client", async () => {
-    let maxNumberOfMilestones = 4
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
     let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
 
@@ -883,12 +854,6 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail accepting milestone if it is on hold, or not delivered, or already accepted.",
     async () => {
-      let maxNumberOfMilestones = 4
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-      await decoProjectsStub.setProjectEndDateConfig(0)
-      await decoProjectsStub.setProjectCompleted(false)
-
       await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
       let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
 
@@ -973,12 +938,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail accepting milestone when project is not active anymore.", async () => {
-    let maxNumberOfMilestones = 4
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
     let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
 
@@ -1045,12 +1004,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should reject delivered milestone by client", async () => {
-    let maxNumberOfMilestones = 4
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
 
@@ -1153,12 +1106,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail rejecting delivered milestone by not a client.", async () => {
-    let maxNumberOfMilestones = 4
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
 
@@ -1234,12 +1181,6 @@ contract("DecoMilestones", async (accounts) => {
   it(
     "should fail rejecting milestone if it is not delivered, or already accepted, or on hold, or project is not active.",
     async () => {
-      let maxNumberOfMilestones = 4
-      await decoProjectsStub.setIsProjectExistingConfig(true)
-      await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-      await decoProjectsStub.setProjectEndDateConfig(0)
-      await decoProjectsStub.setProjectCompleted(false)
-
       await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
       let escrowEthBalance = await decoEscrowStub.balance.call()
 
@@ -1312,13 +1253,6 @@ contract("DecoMilestones", async (accounts) => {
   )
 
   it("should terminate last milestone by maker or client.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoMilestonesMock.setMockMakerCanTerminate(true)
     await decoMilestonesMock.setMockClientCanTerminate(true)
     await decoMilestonesMock.setSkipCanTerminateLogic(true)
@@ -1390,13 +1324,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail terminating milestone if initiator is not a client or a maker.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoMilestonesMock.setMockMakerCanTerminate(true)
     await decoMilestonesMock.setMockClientCanTerminate(true)
     await decoMilestonesMock.setSkipCanTerminateLogic(true)
@@ -1458,13 +1385,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail terminating milestone if txn is sent not from project contract.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setProjectCompleted(false)
-
     await decoMilestonesMock.setMockMakerCanTerminate(true)
     await decoMilestonesMock.setMockClientCanTerminate(true)
     await decoMilestonesMock.setSkipCanTerminateLogic(true)
@@ -1526,13 +1446,7 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail terminating milestone if project doesn't exist.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectCompleted(false)
-    await decoProjectsStub.setProjectEndDateConfig(0)
     await decoProjectsStub.setIsProjectExistingConfig(false)
-
     await decoMilestonesMock.setMockMakerCanTerminate(true)
     await decoMilestonesMock.setMockClientCanTerminate(true)
     await decoMilestonesMock.setSkipCanTerminateLogic(true)
@@ -1573,13 +1487,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should fail terminating milestone if client/maker can not terminate at the moment.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectCompleted(false)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-
     await decoMilestonesMock.setMockMakerCanTerminate(false)
     await decoMilestonesMock.setMockClientCanTerminate(false)
     await decoMilestonesMock.setSkipCanTerminateLogic(true)
@@ -1640,19 +1547,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should correctly indicate if client can terminate.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    let milestoneStartWindow = 1
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectCompleted(false)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-
-    await decoMilestonesMock.setSkipCanTerminateLogic(false)
-
-    await decoProjectsStub.setProjectFeedbackWindow(feedbackWindow)
-    await decoProjectsStub.setProjectMilestoneStartWindow(milestoneStartWindow)
-
     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
 
@@ -1718,24 +1612,6 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should correctly indicate if maker can terminate.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    let milestoneStartWindow = 1
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectCompleted(false)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setIsProjectExistingConfig(true)
-
-    await decoMilestonesMock.setSkipCanTerminateLogic(false)
-
-    await decoProjectsStub.setProjectFeedbackWindow(feedbackWindow)
-    await decoProjectsStub.setProjectMilestoneStartWindow(milestoneStartWindow)
-
-
-    let lastBlock = await web3.eth.getBlock(web3.eth.blockNumber)
-
-    await decoProjectsStub.setProjectStartDateConfig(lastBlock.timestamp)
-
     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
 
@@ -1812,22 +1688,239 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should correctly react and modify milestone state when a dispute starts.", async () => {
-    let maxNumberOfMilestones = 4
-    let feedbackWindow = 1
-    let milestoneStartWindow = 1
-    await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
-    await decoProjectsStub.setProjectCompleted(false)
-    await decoProjectsStub.setProjectEndDateConfig(0)
-    await decoProjectsStub.setIsProjectExistingConfig(true)
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
 
-    await decoMilestonesMock.setSkipCanTerminateLogic(false)
+    let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = "0x0"
 
-    await decoProjectsStub.setProjectFeedbackWindow(feedbackWindow)
-    await decoProjectsStub.setProjectMilestoneStartWindow(milestoneStartWindow)
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      {from: client, gasPrice: 1}
+    )
 
-    let lastBlock = await web3.eth.getBlock(web3.eth.blockNumber)
+    let startDisputeAndCheck = async () => {
+      let txn = await decoMilestonesMock.disputeStartedFreeze(testAgreementHash, {from: arbiter, gasPrice: 1})
+      let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
 
-    await decoProjectsStub.setProjectStartDateConfig(lastBlock.timestamp)
+      let milestoneArray = await decoMilestonesMock.projectMilestones.call(
+        testAgreementHash,
+        mock.milestoneNumber.minus(1).toNumber()
+      )
+      expect(milestoneArray[0].toNumber()).to.not.be.equal(0)
+      let milestone = new Milestone(milestoneArray)
 
+      expect(milestone.isOnHold).to.be.true
+
+      let emittedEvent = txn.logs[0]
+      expect(emittedEvent.event).to.be.equal("LogMilestoneStateUpdated")
+      expect(emittedEvent.args.agreementHash).to.be.equal(testAgreementHash)
+      expect(emittedEvent.args.sender).to.be.equal(arbiter)
+      expect(emittedEvent.args.milestoneNumber.toNumber()).to.be.equal(mock.milestoneNumber.toNumber())
+      expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
+      expect(emittedEvent.args.state.toNumber()).to.be.equal(5)
+
+      await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false);
+    }
+
+    await startDisputeAndCheck()
+    await startDisputeAndCheck()
+  })
+
+  it("should fail putting milestone on hold when a dispute starts if sender is not an arbiter.", async () => {
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+
+    let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = "0x0"
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      {from: client, gasPrice: 1}
+    )
+
+    let startDisputeAndCheck = async (sender) => {
+      await decoMilestonesMock.disputeStartedFreeze(
+        testAgreementHash,
+        {from: sender, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected crash.")
+
+        let milestoneArray = await decoMilestonesMock.projectMilestones.call(
+          testAgreementHash,
+          mock.milestoneNumber.minus(1).toNumber()
+        )
+        expect(milestoneArray[0].toNumber()).to.not.be.equal(0)
+        let milestone = new Milestone(milestoneArray)
+
+        expect(milestone.isOnHold).to.be.false
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+    }
+
+    await startDisputeAndCheck(accounts[10])
+    await startDisputeAndCheck(accounts[11])
+    await startDisputeAndCheck(accounts[12])
+    await startDisputeAndCheck(accounts[13])
+  })
+
+  it(
+    "should fail putting milestone on hold when a dispute can't be started because of milestone state.",
+    async () => {
+      await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+      let escrowEthBalance = await decoEscrowStub.balance.call()
+
+      let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+      mock.depositAmount = new BigNumber(amount)
+      mock.tokenAddress = "0x0"
+
+      await decoMilestonesMock.startMilestone(
+        testAgreementHash,
+        mock.depositAmount.toNumber(),
+        mock.tokenAddress,
+        mock.duration.toNumber(),
+        {from: client, gasPrice: 1}
+      )
+
+      await decoMilestonesMock.setMockCanStartDispute(false)
+      await decoMilestonesMock.setSkipCanStartDisputeLogic(true)
+
+      let startDisputeAndCheck = async () => {
+        await decoMilestonesMock.disputeStartedFreeze(
+          testAgreementHash,
+          {from: arbiter, gasPrice: 1}
+        ).catch(async (err) => {
+          assert.isOk(err, "Expected crash.")
+
+          let milestoneArray = await decoMilestonesMock.projectMilestones.call(
+            testAgreementHash,
+            mock.milestoneNumber.minus(1).toNumber()
+          )
+          expect(milestoneArray[0].toNumber()).to.not.be.equal(0)
+          let milestone = new Milestone(milestoneArray)
+
+          expect(milestone.isOnHold).to.be.false
+        }).then(async (txn) => {
+          if(txn) {
+            assert.fail("Should have failed above.")
+          }
+        })
+      }
+
+      await startDisputeAndCheck()
+      await startDisputeAndCheck()
+    }
+  )
+
+  it("should correctly indicate if dispute can be started.", async () => {
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+
+    let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = "0x0"
+
+    await decoMilestonesMock.setSkipCanStartDisputeLogic(false)
+
+    let checkExpectedResult = async (expected) => {
+      let canStart = await decoMilestonesMock.canStartDispute(testAgreementHash)
+      expect(canStart).to.be.equal(expected)
+    }
+
+    await checkExpectedResult(false)
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      {from: client, gasPrice: 1}
+    )
+
+    await checkExpectedResult(true)
+
+    await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, true)
+
+    await checkExpectedResult(false)
+
+    await decoMilestonesMock.markMilestoneAsOnHold(testAgreementHash, false)
+
+    await decoMilestonesMock.markMilestoneAsDelivered(testAgreementHash)
+
+    await checkExpectedResult(true)
+
+    await decoProjectsStub.setProjectFeedbackWindow(0)
+
+    await IncreaseTime(1)
+
+    await checkExpectedResult(false)
+
+    await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
+    await decoProjectsStub.setProjectFeedbackWindow(1)
+
+    await checkExpectedResult(false)
+
+    BumpProjectId()
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      1,
+      {from: client, gasPrice: 1}
+    )
+    await decoProjectsStub.setProjectFeedbackWindow(1)
+    await checkExpectedResult(true)
+
+    await IncreaseTime(2)
+
+    await checkExpectedResult(false)
+
+    await decoMilestonesMock.markMilestoneAsDelivered(testAgreementHash)
+
+    await checkExpectedResult(false)
+
+    BumpProjectId()
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      {from: client, gasPrice: 1}
+    )
+
+    await decoMilestonesMock.markMilestoneAsDelivered(testAgreementHash)
+
+    await checkExpectedResult(true)
+
+    await decoProjectsStub.setProjectFeedbackWindow(0)
+
+    await IncreaseTime(1)
+
+    await checkExpectedResult(false)
+  })
+
+  it("should correctly indicate eligibility status of an address to participate in a dispute.", async () => {
+    let checkEligibility = async (expected, addressToCheck) => {
+      let isEligible = await decoMilestonesMock.checkEligibility(testAgreementHash, addressToCheck)
+      expect(isEligible).to.be.equal(expected)
+    }
+
+    await checkEligibility(true, client)
+    await checkEligibility(false, accounts[10])
+    await checkEligibility(false, accounts[11])
+    await checkEligibility(true, maker)
   })
 })
