@@ -21,7 +21,10 @@ contract DecoProjectsStub is DecoProjects {
     uint8 public feedbackWindow;
     uint8 public milestoneStartWindow;
 
-    function completeProject(bytes32 _agreementHash) external {
+    uint public arbiterFixedFee;
+    uint8 public arbiterShareFee;
+
+    function completeProject(bytes32) external {
         projectCompleted = true;
         projectEndDateConfig = now;
     }
@@ -29,7 +32,11 @@ contract DecoProjectsStub is DecoProjects {
     function terminateProject(bytes32 _agreementHash) external {
         DecoRelay relayContract = DecoRelay(relayContractAddress);
         DecoMilestones milestonesContract = DecoMilestones(relayContract.milestonesContractAddress());
-        milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
+        if (msg.sender != relayContract.milestonesContractAddress()) {
+            milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
+        } else {
+            projectEndDateConfig = now;
+        }
     }
 
     function setProjectCompleted(bool value) public {
@@ -76,43 +83,74 @@ contract DecoProjectsStub is DecoProjects {
         milestoneStartWindow = _window;
     }
 
-    function checkIfProjectExists(bytes32 _agreementHash) public view returns(bool) {
+    function setArbiterFees(uint fixedFee, uint8 shareFee) public {
+        arbiterFixedFee = fixedFee;
+        arbiterShareFee = shareFee;
+    }
+
+    function checkIfProjectExists(bytes32) public view returns(bool) {
         return checkIfProjectExistsConfig;
     }
 
-    function getProjectEndDate(bytes32 _agreementHash) public view returns(uint) {
+    function getProjectEndDate(bytes32) public view returns(uint) {
         return projectEndDateConfig;
     }
 
-    function getProjectStartDate(bytes32 _agreementHash) public view returns(uint) {
+    function getProjectStartDate(bytes32) public view returns(uint) {
         return projectStartDateConfig;
     }
 
-    function getProjectMilestonesCount(bytes32 _agreementHash) public view returns(uint8) {
+    function getProjectMilestonesCount(bytes32) public view returns(uint8) {
         return projectMilestonesCountConfig;
     }
 
-    function getProjectEscrowAddress(bytes32 _agreementHash) public view returns(address) {
+    function getProjectEscrowAddress(bytes32) public view returns(address) {
         return escrowContractStub;
     }
 
-    function getProjectClient(bytes32 _agreementHash) public view returns(address) {
+    function getProjectClient(bytes32) public view returns(address) {
         return client;
     }
 
-    function getProjectMaker(bytes32 _agreementHash) public view returns(address) {
+    function getProjectMaker(bytes32) public view returns(address) {
         return maker;
     }
 
-    function getProjectArbiter(bytes32 _agreementHash) public view returns(address) {
+    function getProjectArbiter(bytes32) public view returns(address) {
         return arbiter;
     }
 
-    function getProjectFeedbackWindow(bytes32 _agreementHash) public view returns(uint8) {
+    function getProjectFeedbackWindow(bytes32) public view returns(uint8) {
         return feedbackWindow;
     }
 
-    function getProjectMilestoneStartWindow(bytes32 _agreementHash) public view returns(uint8) {
+    function getProjectMilestoneStartWindow(bytes32) public view returns(uint8) {
         return milestoneStartWindow;
+    }
+
+    function getProjectArbitrationFees(bytes32) public view returns(uint, uint8) {
+        return (
+            arbiterFixedFee,
+            arbiterShareFee
+        );
+    }
+
+    function getInfoForDisputeAndValidate(
+        bytes32 _agreementHash,
+        address _respondent,
+        address _initiator,
+        address _arbiter
+    )
+        public
+        view
+        returns(uint, uint8, address)
+    {
+        require(arbiter == _arbiter, "Arbiter should be same as saved in project.");
+        require(
+            (_initiator == client && _respondent == maker) ||
+            (_initiator == maker && _respondent == client),
+            "Initiator and respondent must be different and equal to maker/client addresses."
+        );
+        return (arbiterFixedFee, arbiterShareFee, escrowContractStub);
     }
 }

@@ -13,16 +13,15 @@ contract DecoMilestonesStub is DecoMilestones {
     address internal projectOwnerAddress = address(0x0);
 
     function startMilestone(
-        bytes32 _agreementHash,
-        uint _depositAmount,
-        uint32 _duration
+        bytes32,
+        uint,
+        uint32
     )
         external
-        payable
     {
     }
 
-    function deliverLastMilestone(bytes32 _agreementHash) external {
+    function deliverLastMilestone(bytes32) external {
     }
 
     function acceptLastMilestone(bytes32 _agreementHash) external {
@@ -35,7 +34,7 @@ contract DecoMilestonesStub is DecoMilestones {
         }
     }
 
-    function rejectLastDeliverable(bytes32 _agreementHash) external {
+    function rejectLastDeliverable(bytes32) external {
     }
 
     function setRelayContractAddress(address _newAddress) external {
@@ -75,20 +74,28 @@ contract DecoMilestonesStub is DecoMilestones {
         projectOwnerAddress = _newAddress;
     }
 
-    function canClientTerminate(bytes32 _agreementHash) public view returns(bool) {
+    function canClientTerminate(bytes32) public view returns(bool) {
         return canClientTerminateConfig;
     }
 
-    function canMakerTerminate(bytes32 _agreementHash) public view returns(bool) {
+    function canMakerTerminate(bytes32) public view returns(bool) {
         return canMakerTerminateConfig;
     }
 
     function isLastMilestoneAccepted(
-        bytes32 _agreementHash
+        bytes32
     )
         public
+        view
         returns(bool isAccepted, uint8 milestoneNumber)
     {
         return (isLastMilestoneAcceptedConfig, lastMilestoneNumberConfig);
+    }
+
+    function terminateProjectAsDisputeResult(bytes32 hash) public {
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
+        projectsContract.terminateProject(hash);
     }
 }

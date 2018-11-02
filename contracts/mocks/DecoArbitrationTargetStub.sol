@@ -15,28 +15,30 @@ contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
 
     mapping(address => bool) public isEligibleForDoingAnythingWithDispute;
 
-    function disputeStartedFreeze(bytes32 idHash) external {
+    function disputeStartedFreeze(bytes32) public {
         disputeStarted = true;
     }
 
     function disputeSettledTerminate(
         bytes32 idHash,
-        address respondent,
-        uint8 respondentShare,
-        address initiator,
-        uint8 initiatorShare,
+        address,
+        uint8,
+        address,
+        uint8,
         bool isInternal,
-        address arbiterWithdrawalAddress
-    ) external {
+        address
+    )
+        public
+    {
         disputeEnded = true;
         endedInternaly[idHash] = isInternal;
     }
 
-    function checkEligibility(bytes32 idHash, address addressToCheck) external view returns(bool) {
+    function checkEligibility(bytes32, address addressToCheck) public view returns(bool) {
         return isEligibleForDoingAnythingWithDispute[addressToCheck];
     }
 
-    function canStartDispute(bytes32 idHash) external view returns(bool) {
+    function canStartDispute(bytes32) public view returns(bool) {
         return canStartDispute;
     }
 

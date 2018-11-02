@@ -474,7 +474,22 @@ contract("DecoProjects", async (accounts) => {
       })
   })
 
-  it("should fail to terminate if sender is not a client nor a maker.", async () => {
+  it("should terminate a projec if sent from milestones contract.", async () => {
+    await StartProject(signature, mock.client)
+
+    let txn = await decoMilestonesStub.terminateProjectAsDisputeResult(
+      testAgreementHash,
+      {from: mock.client, gasPrice: 1}
+    )
+
+    let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.not.be.empty
+    let project = new Project(projectArray)
+    expect(project.endDate.toNumber()).to.be.equal(blockInfo.timestamp)
+  })
+
+  it("should fail to terminate if sender is neither a client nor a maker nor a milestons contract.", async () => {
     await StartProject(signature, mock.client)
 
     await decoMilestonesStub.setIfMakerCanTerminate(true)
@@ -495,7 +510,7 @@ contract("DecoProjects", async (accounts) => {
     })
   })
 
-  it("should emit event when either client or maker terminates a project.", async () => {
+  it("should emit event upon termination of a project.", async () => {
     await StartProject(signature, mock.client)
 
     await decoMilestonesStub.setIfMakerCanTerminate(true)
@@ -530,6 +545,25 @@ contract("DecoProjects", async (accounts) => {
     expect(txn.logs[0].args.updatedBy).to.be.equal(mock.client)
     expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
     expect(txn.logs[0].args.state.toNumber()).to.be.equal(2)
+
+    GenerateNewAgreementId()
+    RefreshSignatureAndHashes()
+    await StartProject(signature, mock.client)
+    let observer = decoProjects.ProjectStateUpdate()
+    txn = await decoMilestonesStub.terminateProjectAsDisputeResult(
+      testAgreementHash,
+      {from: mock.client, gasPrice: 1}
+    )
+
+    let logs = await observer.get()
+    blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
+    expect(logs).to.have.lengthOf.at.least(1)
+    expect(logs[0].event).to.be.equal("ProjectStateUpdate")
+    expect(logs[0].args.agreementHash).to.be.equal(testAgreementHash)
+    expect(logs[0].args.updatedBy).to.be.equal(decoMilestonesStub.address)
+    expect(logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
+    expect(logs[0].args.state.toNumber()).to.be.equal(2)
+
   })
 
   it("shouldn't emit the event when termination of a project fails.", async () => {
@@ -567,6 +601,21 @@ contract("DecoProjects", async (accounts) => {
         assert.fail("Should have failed above.")
       }
     })
+
+    await decoMilestonesStub.terminateProjectAsDisputeResult(
+      testAgreementHash,
+      {from: mock.client, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+      let projectArray = await decoProjects.projects.call(testAgreementHash)
+      expect(projectArray[0]).to.be.empty
+      expect(err.receipt.logs).to.have.length(0)
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
   })
 
   it("should fail to terminate already completed or terminated project.", async () => {
@@ -1045,48 +1094,6 @@ contract("DecoProjects", async (accounts) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
       let projectArray = await decoProjects.projects.call(testAgreementHash)
       expect(projectArray[0]).to.be.empty
-    }).then((txn) => {
-      if(txn) {
-        assert.fail("Should have failed above.")
-      }
-    })
-  })
-
-  it("should let setting relay contract address by the contract owner.", async () => {
-    await decoProjects.setRelayContractAddress(
-      decoRelay.address,
-      { from: mock.client, gasPrice: 1 }
-    )
-
-    let newAddress = await decoProjects.relayContractAddress.call()
-    expect(newAddress).to.be.equal(decoRelay.address)
-  })
-
-  it("should fail setting 0x0 milestones contract address.", async () => {
-    let address = await decoProjects.relayContractAddress.call()
-
-    await decoProjects.setRelayContractAddress(
-      "0x0",
-      { from: mock.client, gasPrice: 1 }
-    ).catch(async (err) => {
-      assert.isOk(err, "Exception should be thrown for that transaction.")
-      let newAddress = await decoProjects.relayContractAddress.call()
-      expect(address).to.be.equal(newAddress)
-    }).then((txn) => {
-      if(txn) {
-        assert.fail("Should have failed above.")
-      }
-    })
-  })
-
-  it("should fail setting the milestones contract address by not the owner.", async () => {
-    let address = await decoProjects.relayContractAddress.call()
-
-    await decoProjects.setRelayContractAddress(
-      decoRelay.address,
-      { from: mock.maker, gasPrice: 1 }
-    ).catch(async (err) => {
-      assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
       if(txn) {
         assert.fail("Should have failed above.")

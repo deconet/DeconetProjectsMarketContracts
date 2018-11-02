@@ -80,14 +80,24 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // maps arbiter's share fee to a project.
     mapping (bytes32 => uint8) public projectArbiterShareFee;
 
-    // stores the address of the `DecoRelay` contract.
-    address public relayContractAddress;
-
     // Modifier to restrict method to be called either by project`s owner or maker
     modifier eitherClientOrMaker(bytes32 _agreementHash) {
         Project memory project = projects[_agreementHash];
         require(
             project.client == msg.sender || project.maker == msg.sender,
+            "Only project owner or maker can perform this operation."
+        );
+        _;
+    }
+
+    // Modifier to restrict method to be called either by project`s owner or maker
+    modifier eitherClientOrMakerOrMilestoneContract(bytes32 _agreementHash) {
+        Project memory project = projects[_agreementHash];
+        DecoRelay relay = DecoRelay(relayContractAddress);
+        require(
+            project.client == msg.sender ||
+            project.maker == msg.sender ||
+            relay.milestonesContractAddress() == msg.sender,
             "Only project owner or maker can perform this operation."
         );
         _;
@@ -180,19 +190,18 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @dev Terminate the project.
      * @param _agreementHash A `bytes32` hash of the project`s agreement id.
      */
-    function terminateProject(
-        bytes32 _agreementHash
-    )
+    function terminateProject(bytes32 _agreementHash)
         external
-        eitherClientOrMaker(_agreementHash)
+        eitherClientOrMakerOrMilestoneContract(_agreementHash)
     {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0, "Only allowed for active projects.");
-        DecoMilestones milestonesContract = DecoMilestones(
-            DecoRelay(relayContractAddress).milestonesContractAddress()
-        );
-        milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
+        address milestoneContractAddress = DecoRelay(relayContractAddress).milestonesContractAddress();
+        if (msg.sender != milestoneContractAddress) {
+            DecoMilestones milestonesContract = DecoMilestones(milestoneContractAddress);
+            milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
+        }
 
         project.endDate = now;
         emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Terminated);
@@ -304,15 +313,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         project.milestoneStartWindow = _milestoneStartWindow;
         project.feedbackWindow = _feedbackWindow;
         emit NewSupplementalAgreement(_agreementHash, _supplementalAgreementHash, now);
-    }
-
-    /**
-     * @dev Update the `DecoRelay` contract address.
-     * @param _newAddress An address of the new contract instance.
-     */
-    function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Address should not be 0x0.");
-        relayContractAddress = _newAddress;
     }
 
     /**
@@ -475,6 +475,29 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             projectArbiterFixedFee[_agreementHash],
             projectArbiterShareFee[_agreementHash]
         );
+    }
+
+    function getInfoForDisputeAndValidate(
+        bytes32 _agreementHash,
+        address _respondent,
+        address _initiator,
+        address _arbiter
+    )
+        public
+        view
+        returns(uint, uint8, address)
+    {
+        Project memory project = projects[_agreementHash];
+        address client = project.client;
+        address maker = project.maker;
+        require(project.arbiter == _arbiter, "Arbiter should be same as saved in project.");
+        require(
+            (_initiator == client && _respondent == maker) ||
+            (_initiator == maker && _respondent == client),
+            "Initiator and respondent must be different and equal to maker/client addresses."
+        );
+        (uint fixedFee, uint8 shareFee) = getProjectArbitrationFees(_agreementHash);
+        return (fixedFee, shareFee, project.escrowContractAddress);
     }
 
     /**

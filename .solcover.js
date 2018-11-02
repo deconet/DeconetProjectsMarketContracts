@@ -6,9 +6,6 @@ module.exports = {
   copyPackages: ['zeppelin-solidity'],
   skipFiles: [
     'Migrations.sol',
-    'DecoMilestonesStub.sol',
-    'DecoProjectsStub.sol',
-    'DecoEscrowStub.sol',
-    'DecoEscrowMock.sol'
+    'mocks/'
   ]
 };

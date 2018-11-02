@@ -1,13 +1,13 @@
 pragma solidity 0.4.24;
 
 
-interface IDecoArbitrationTarget {
+contract IDecoArbitrationTarget {
 
     /**
      * @dev Prepare arbitration target for a started dispute.
      * @param _idHash A `bytes32` hash of id.
      */
-    function disputeStartedFreeze(bytes32 _idHash) external;
+    function disputeStartedFreeze(bytes32 _idHash) public;
 
     /**
      * @dev React to an active dispute settlement with given parameters.
@@ -28,7 +28,7 @@ interface IDecoArbitrationTarget {
         bool _isInternal,
         address _arbiterWithdrawalAddress
     )
-        external;
+        public;
 
     /**
      * @dev Check eligibility of a given address to perform operations.
@@ -36,12 +36,12 @@ interface IDecoArbitrationTarget {
      * @param _addressToCheck An `address` to check.
      * @return A `bool` check status.
      */
-    function checkEligibility(bytes32 _idHash, address _addressToCheck) external view returns(bool);
+    function checkEligibility(bytes32 _idHash, address _addressToCheck) public view returns(bool);
 
     /**
      * @dev Check if target is ready for a dispute.
      * @param _idHash A `bytes32` hash of id.
      * @return A `bool` check status.
      */
-    function canStartDispute(bytes32 _idHash) external view returns(bool);
+    function canStartDispute(bytes32 _idHash) public view returns(bool);
 }

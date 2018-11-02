@@ -21,9 +21,6 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
         uint8 initiatorShare;
     }
 
-    // Address of Deconet relay contract.
-    address public relayContractAddress;
-
     // Contract owner withdrawal address that might be different from contract owner address.
     address public withdrawalAddress;
 
@@ -277,7 +274,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      * @dev Utility internal function.
      * @return Arbitration target address.
      */
-    function getTargetContractAddress() internal returns(address) {
+    function getTargetContractAddress() internal view returns(address) {
         return DecoRelay(relayContractAddress).milestonesContractAddress();
     }
 
@@ -296,6 +293,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
         uint _initiatorShare
     )
         internal
+        view
         returns(bool)
     {
         Dispute memory dispute = disputes[_idHash];
@@ -314,7 +312,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      * @return A `bool` status, `true` if arbiter initialized this transaction 
      *         and can settle dispute.
      */
-    function canBeSettledByArbiter(bytes32 _idHash) internal returns(bool) {
+    function canBeSettledByArbiter(bytes32 _idHash) internal view returns(bool) {
         Dispute memory dispute = disputes[_idHash];
         uint8 sum = dispute.respondentShare + dispute.initiatorShare;
         // Transaction should be initiated by arbiter aka this contract owner.

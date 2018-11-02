@@ -6,17 +6,11 @@ import "../DecoMilestones.sol";
 contract DecoMilestonesMock is DecoMilestones {
     bool public canClientTerminateConfig = true;
     bool public canMakerTerminateConfig = true;
-    bool public canStartDisputeConfig = true;
 
     bool public shouldSkipContractCanTerminateCall = true;
-    bool public shouldSkipContractCanStartDisputeCall = true;
 
     function setSkipCanTerminateLogic(bool shouldSkip) public {
         shouldSkipContractCanTerminateCall = shouldSkip;
-    }
-
-    function setSkipCanStartDisputeLogic(bool shouldSkip) public {
-        shouldSkipContractCanStartDisputeCall = shouldSkip;
     }
 
     function setMockClientCanTerminate(bool canTerminate) public {
@@ -25,10 +19,6 @@ contract DecoMilestonesMock is DecoMilestones {
 
     function setMockMakerCanTerminate(bool canTerminate) public {
         canMakerTerminateConfig = canTerminate;
-    }
-
-    function setMockCanStartDispute(bool canStart) public {
-        canStartDisputeConfig = canStart;
     }
 
     function markMilestoneAsCompletedAndAccepted(bytes32 _agreementHash) public {
@@ -68,14 +58,6 @@ contract DecoMilestonesMock is DecoMilestones {
             return canMakerTerminateConfig;
         } else {
             return super.canMakerTerminate(_agreementHash);
-        }
-    }
-
-    function canStartDispute(bytes32 _agreementHash) public view returns(bool) {
-        if (shouldSkipContractCanStartDisputeCall) {
-            return canStartDisputeConfig;
-        } else {
-            return super.canStartDispute(_agreementHash);
         }
     }
 }

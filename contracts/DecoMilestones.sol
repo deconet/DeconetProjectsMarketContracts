@@ -8,7 +8,7 @@ import "./DecoProjects.sol";
 import "./IDecoArbitrationTarget.sol";
 
 
-contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
+contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
 
     address public constant ETH_TOKEN_ADDRESS = address(0x0);
 
@@ -43,9 +43,6 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
 
     // map agreement id hash to milestones list.
     mapping (bytes32 => Milestone[]) public projectMilestones;
-
-    // `DecoRelay` contract address.
-    address public relayContractAddress;
 
     // Logged when milestone state changes.
     event LogMilestoneStateUpdated (
@@ -217,7 +214,7 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
             milestone.acceptedTime == 0 &&
             milestone.deliveredTime > 0 &&
             milestone.isOnHold == false,
-            "Milestone should be active and delivered, but not rejected, or already accepted, or put on hold."
+            "Milestone should be active and delivered, but not rejected, or already accepted, or on hold."
         );
         uint nowTimestamp = now;
         if (milestone.startedTime.add(milestone.adjustedDuration) > milestone.deliveredTime) {
@@ -242,26 +239,16 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
     }
 
     /**
-     * @dev Set the new address of the `DecoRelay` contract.
-     * @param _newAddress An address of the new contract.
-     */
-    function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0));
-        relayContractAddress = _newAddress;
-    }
-
-    /**
      * @dev Prepare arbitration target for a started dispute.
      * @param _idHash A `bytes32` hash of id.
      */
-    function disputeStartedFreeze(bytes32 _idHash) external {
+    function disputeStartedFreeze(bytes32 _idHash) public {
         address projectsContractAddress = DecoRelay(relayContractAddress).projectsContractAddress();
         DecoProjects projectsContract = DecoProjects(projectsContractAddress);
         require(
             projectsContract.getProjectArbiter(_idHash) == msg.sender,
             "Freezing upon dispute start can be sent only by arbiter."
         );
-        require(canStartDispute(_idHash), "Milestone should be in valid state for starting a dispute.");
         uint milestonesCount = projectMilestones[_idHash].length;
         require(milestonesCount > 0, "There must be active milestone.");
         Milestone storage lastMilestone = projectMilestones[_idHash][milestonesCount - 1];
@@ -294,8 +281,46 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
         bool _isInternal,
         address _arbiterWithdrawalAddress
     )
-        external
+        public
     {
+        uint milestonesCount = projectMilestones[_idHash].length;
+        require(milestonesCount > 0, "There must be at least one milestone.");
+        Milestone memory lastMilestone = projectMilestones[_idHash][milestonesCount - 1];
+        require(lastMilestone.isOnHold, "Last milestone must be on hold.");
+        require(uint(_respondentShare).add(uint(_initiatorShare)) == 100, "Shares must be 100% in sum.");
+        DecoProjects projectsContract = DecoProjects(
+            DecoRelay(relayContractAddress).projectsContractAddress()
+        );
+        (
+            uint fixedFee,
+            uint8 shareFee,
+            address escrowAddress
+        ) = projectsContract.getInfoForDisputeAndValidate (
+            _idHash,
+            _respondent,
+            _initiator,
+            msg.sender
+        );
+        distributeDisputeFunds(
+            escrowAddress, 
+            lastMilestone.tokenAddress,
+            _respondent,
+            _initiator,
+            _initiatorShare,
+            _isInternal,
+            _arbiterWithdrawalAddress,
+            lastMilestone.depositAmount,
+            fixedFee,
+            shareFee
+        );
+        projectsContract.terminateProject(_idHash);
+        emit LogMilestoneStateUpdated(
+            _idHash,
+            msg.sender,
+            now,
+            uint8(milestonesCount),
+            MilestoneState.Terminated
+        );
     }
 
     /**
@@ -305,7 +330,7 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
      * @param _addressToCheck An `address` to check.
      * @return A `bool` check status.
      */
-    function checkEligibility(bytes32 _idHash, address _addressToCheck) external view returns(bool) {
+    function checkEligibility(bytes32 _idHash, address _addressToCheck) public view returns(bool) {
         address projectsContractAddress = DecoRelay(relayContractAddress).projectsContractAddress();
         DecoProjects projectsContract = DecoProjects(projectsContractAddress);
         return _addressToCheck == projectsContract.getProjectClient(_idHash) ||
@@ -319,21 +344,20 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
      */
     function canStartDispute(bytes32 _idHash) public view returns(bool) {
         uint milestonesCount = projectMilestones[_idHash].length;
-        if (milestonesCount == 0) return false;
-        Milestone storage lastMilestone = projectMilestones[_idHash][milestonesCount - 1];
-        if (lastMilestone.isOnHold || lastMilestone.acceptedTime > 0) return false;
+        if (milestonesCount == 0)
+            return false;
+        Milestone memory lastMilestone = projectMilestones[_idHash][milestonesCount - 1];
+        if (lastMilestone.isOnHold || lastMilestone.acceptedTime > 0)
+            return false;
         address projectsContractAddress = DecoRelay(relayContractAddress).projectsContractAddress();
         DecoProjects projectsContract = DecoProjects(projectsContractAddress);
         uint feedbackWindow = uint(projectsContract.getProjectFeedbackWindow(_idHash)).mul(24 hours);
         uint nowTimestamp = now;
-        if (lastMilestone.deliveredTime == 0 &&
-            lastMilestone.startedTime.add(uint(lastMilestone.adjustedDuration)) < nowTimestamp)
+        uint plannedDeliveryTime = lastMilestone.startedTime.add(uint(lastMilestone.adjustedDuration));
+        if (plannedDeliveryTime < lastMilestone.deliveredTime || plannedDeliveryTime < nowTimestamp) {
             return false;
+        }
         if (lastMilestone.deliveredTime > 0 &&
-            lastMilestone.startedTime.add(uint(lastMilestone.adjustedDuration)) < lastMilestone.deliveredTime)
-            return false;
-        if (lastMilestone.deliveredTime > 0 &&
-            lastMilestone.acceptedTime == 0 &&
             lastMilestone.deliveredTime.add(feedbackWindow) < nowTimestamp)
             return false;
         return true;
@@ -368,20 +392,12 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
         if (milestonesCount > 0) {
             Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
             address projectEscrowContractAddress = projectsContract.getProjectEscrowAddress(_agreementHash);
-            if (_initiator == projectClient) {
-                unblockFundsInEscrow(
-                    projectEscrowContractAddress,
-                    lastMilestone.depositAmount,
-                    lastMilestone.tokenAddress
-                );
-            } else if (_initiator == projectMaker) {
-                distributeFundsInEscrow(
-                    projectEscrowContractAddress,
-                    _initiator,
-                    lastMilestone.depositAmount,
-                    lastMilestone.tokenAddress
-                );
-            }
+            distributeFundsInEscrow(
+                projectEscrowContractAddress,
+                _initiator,
+                lastMilestone.depositAmount,
+                lastMilestone.tokenAddress
+            );
         }
         emit LogMilestoneStateUpdated(
             _agreementHash,
@@ -401,8 +417,15 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
         bytes32 _agreementHash
     )
         public
+        view
         returns(bool isAccepted, uint8 milestoneNumber)
     {
+        milestoneNumber = uint8(projectMilestones[_agreementHash].length);
+        if (milestoneNumber > 0) {
+            isAccepted = projectMilestones[_agreementHash][milestoneNumber - 1].acceptedTime > 0;
+        } else {
+            isAccepted = false;
+        }
     }
 
     /**
@@ -450,51 +473,11 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
     }
 
     /**
-     * @dev Get the milestone for the given project and at the given position.
-     * @param _agreementHash A `bytes32` hash of the agreement id.
-     * @param _position An `uint` offset in milestones array for the project.
-     * @return A `Milestone` object.
+     * @dev Block funds in escrow from balance to the blocked balance.
+     * @param _projectEscrowContractAddress An `address` of project`s escrow.
+     * @param _amount An `uint` amount to distribute.
+     * @param _tokenAddress An `address` of a token.
      */
-    function getMilestone(
-        bytes32 _agreementHash,
-        uint _position
-    )
-        public
-        view
-        returns(
-            uint8 milestoneNumber,
-            uint32 duration,
-            uint32 adjustedDuration,
-            uint depositAmount,
-            address tokenAddress,
-            uint startedTime,
-            uint deliveredTime,
-            uint acceptedTime,
-            bool isOnHold
-        )
-    {
-        Milestone[] memory milestones = projectMilestones[_agreementHash];
-        if (_position >= milestones.length) {
-            return (0, 0, 0, 0, address(0x0), 0, 0, 0, false);
-        }
-        Milestone memory milestone = milestones[_position];
-        return (
-            milestone.milestoneNumber,
-            milestone.duration,
-            milestone.adjustedDuration,
-            milestone.depositAmount,
-            milestone.tokenAddress,
-            milestone.startedTime,
-            milestone.deliveredTime,
-            milestone.acceptedTime,
-            milestone.isOnHold
-        );
-    }
-
-    function checkProjectIsActive(bytes32 _agreementHash) internal returns(bool) {
-
-    }
-
     function blockFundsInEscrow(
         address _projectEscrowContractAddress,
         uint _amount,
@@ -510,21 +493,13 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
         }
     }
 
-    function unblockFundsInEscrow(
-        address _projectEscrowContractAddress,
-        uint _amount,
-        address _tokenAddress
-    )
-        internal
-    {
-        DecoEscrow escrow = DecoEscrow(_projectEscrowContractAddress);
-        if (_tokenAddress == ETH_TOKEN_ADDRESS) {
-            escrow.unblockFunds(_amount);
-        } else {
-            escrow.unblockTokenFunds(_tokenAddress, _amount);
-        }
-    }
-
+    /**
+     * @dev Distribute funds in escrow from blocked balance to the target address.
+     * @param _projectEscrowContractAddress An `address` of project`s escrow.
+     * @param _distributionTargetAddress Target `address`.
+     * @param _amount An `uint` amount to distribute.
+     * @param _tokenAddress An `address` of a token.
+     */
     function distributeFundsInEscrow(
         address _projectEscrowContractAddress,
         address _distributionTargetAddress,
@@ -533,11 +508,83 @@ contract DecoMilestones is DecoBaseProjectsMarketplace, IDecoArbitrationTarget {
     )
         internal
     {
+        if (_amount == 0) return;
         DecoEscrow escrow = DecoEscrow(_projectEscrowContractAddress);
         if (_tokenAddress == ETH_TOKEN_ADDRESS) {
             escrow.distributeFunds(_distributionTargetAddress, _amount);
         } else {
             escrow.distributeTokenFunds(_distributionTargetAddress, _tokenAddress, _amount);
         }
+    }
+
+    /**
+     * @dev Distribute project funds between arbiter and project parties.
+     * @param _projectEscrowContractAddress An `address` of project`s escrow.
+     * @param _tokenAddress An `address` of a token.
+     * @param _respondent An `address` of a respondent.
+     * @param _initiator An `address` of an initiator.
+     * @param _initiatorShare An `uint8` iniator`s share.
+     * @param _isInternal A `bool` indicating if dispute was settled solely by project parties.
+     * @param _arbiterWithdrawalAddress A withdrawal `address` of an arbiter.
+     * @param _amount An `uint` amount for distributing between project parties and arbiter.
+     * @param _fixedFee An `uint` fixed fee of an arbiter.
+     * @param _shareFee An `uint8` share fee of an arbiter.
+     */
+    function distributeDisputeFunds(
+        address _projectEscrowContractAddress,
+        address _tokenAddress,
+        address _respondent,
+        address _initiator,
+        uint8 _initiatorShare,
+        bool _isInternal,
+        address _arbiterWithdrawalAddress,
+        uint _amount,
+        uint _fixedFee,
+        uint8 _shareFee
+    )
+        internal
+    {
+        if (!_isInternal && _arbiterWithdrawalAddress != address(0x0)) {
+            uint arbiterFee = getArbiterFeeAmount(_fixedFee, _shareFee, _amount, _tokenAddress);
+            distributeFundsInEscrow(
+                _projectEscrowContractAddress,
+                _arbiterWithdrawalAddress,
+                arbiterFee,
+                _tokenAddress
+            );
+            _amount = _amount.sub(arbiterFee);
+        }
+        uint initiatorAmount = _amount.mul(_initiatorShare).div(100);
+        distributeFundsInEscrow(
+            _projectEscrowContractAddress,
+            _initiator,
+            initiatorAmount,
+            _tokenAddress
+        );
+        distributeFundsInEscrow(
+            _projectEscrowContractAddress,
+            _respondent,
+            _amount.sub(initiatorAmount),
+            _tokenAddress
+        );
+    }
+
+    /**
+     * @dev Calculates arbiter`s fee.
+     * @param _fixedFee An `uint` fixed fee of an arbiter.
+     * @param _shareFee An `uint8` share fee of an arbiter.
+     * @param _amount An `uint` amount for distributing between project parties and arbiter.
+     * @param _tokenAddress An `address` of a token.
+     * @return An `uint` amount allotted to the arbiter.
+     */
+    function getArbiterFeeAmount(uint _fixedFee, uint8 _shareFee, uint _amount, address _tokenAddress) 
+        internal
+        pure
+        returns(uint)
+    {
+        if (_tokenAddress != ETH_TOKEN_ADDRESS) {
+            _fixedFee = 0;
+        }
+        return _amount.sub(_fixedFee).mul(uint(_shareFee)).div(100).add(_fixedFee);
     }
 }
