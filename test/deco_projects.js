@@ -8,6 +8,7 @@ var DecoEscrow = artifacts.require("./DecoEscrow.sol")
 var DecoRelay = artifacts.require("./DecoRelay.sol")
 var DecoArbitration = artifacts.require("./DecoArbitration.sol")
 var DecoArbitrationStub = artifacts.require("./DecoArbitrationStub.sol")
+var DecoTest = artifacts.require("./DecoTest.sol")
 
 
 class Project {
@@ -19,7 +20,7 @@ class Project {
     this.escrowContractAddress = contractStructArray[4]
     this.startDate = contractStructArray[5]
     this.endDate = contractStructArray[6]
-    this.paymentWindow = contractStructArray[7]
+    this.milestoneStartWindow = contractStructArray[7]
     this.feedbackWindow = contractStructArray[8]
     this.milestonesCount = contractStructArray[9]
     this.customerSatisfaction = contractStructArray[10]
@@ -35,7 +36,7 @@ class Project {
     escrowContractAddress,
     startDate,
     endDate,
-    paymentWindow,
+    milestoneStartWindow,
     feedbackWindow,
     milestonesCount,
     customerSatisfaction,
@@ -49,7 +50,7 @@ class Project {
     assert.equal(this.escrowContractAddress, escrowContractAddress)
     expect(this.startDate.eq(startDate)).to.be.true
     expect(this.endDate.eq(endDate)).to.be.true
-    expect(this.paymentWindow.eq(paymentWindow)).to.be.true
+    expect(this.milestoneStartWindow.eq(milestoneStartWindow)).to.be.true
     expect(this.feedbackWindow.eq(feedbackWindow)).to.be.true
     expect(this.milestonesCount.eq(milestonesCount)).to.be.true
     expect(this.customerSatisfaction.eq(customerSatisfaction)).to.be.true
@@ -62,7 +63,7 @@ class Project {
     client,
     maker,
     arbiter,
-    paymentWindow,
+    milestoneStartWindow,
     feedbackWindow,
     milestonesCount,
     agreementsEncrypted
@@ -75,7 +76,7 @@ class Project {
       this.escrowContractAddress,
       this.startDate,
       this.endDate,
-      paymentWindow,
+      milestoneStartWindow,
       feedbackWindow,
       milestonesCount,
       this.customerSatisfaction,
@@ -142,7 +143,7 @@ contract("DecoProjects", async (accounts) => {
       mock.maker,
       sign,
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
+      mock.milestoneStartWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
       mock.agreementsEncrypted,
       { from: sender, gasPrice: 1 }
@@ -198,7 +199,7 @@ contract("DecoProjects", async (accounts) => {
       mock.client,
       mock.maker,
       mock.arbiter,
-      mock.paymentWindow,
+      mock.milestoneStartWindow,
       mock.feedbackWindow,
       mock.milestonesCount,
       mock.agreementsEncrypted
@@ -1291,14 +1292,15 @@ contract("DecoProjects", async (accounts) => {
     let messageForSigning = web3.sha3(supplementalAgreementDocId)
     signature = web3.eth.sign(mock.maker, messageForSigning)
     mock.milestonesCount = mock.milestonesCount.plus(1)
-    mock.paymentWindow = mock.paymentWindow.plus(2)
+    mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
     mock.feedbackWindow = mock.feedbackWindow.plus(3)
+    let initialSupplementalAgreementsCount = await decoProjects.getSupplementalAgreementsCount(testAgreementHash)
     await decoProjects.saveSupplementalAgreement(
       testAgreementHash,
       supplementalAgreementDocId,
       signature,
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
+      mock.milestoneStartWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
       { from: mock.client, gasPrice: 1 }
     )
@@ -1307,11 +1309,13 @@ contract("DecoProjects", async (accounts) => {
     expect(projectArray[0]).to.not.be.empty
     let newProject = new Project(projectArray)
     expect(newProject.milestonesCount.toNumber()).to.be.equal(mock.milestonesCount.toNumber())
-    expect(newProject.paymentWindow.toNumber()).to.be.equal(mock.paymentWindow.toNumber())
+    expect(newProject.milestoneStartWindow.toNumber()).to.be.equal(mock.milestoneStartWindow.toNumber())
     expect(newProject.feedbackWindow.toNumber()).to.be.equal(mock.feedbackWindow.toNumber())
 
     let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
     expect(supplementalAgreementId).to.be.equal(supplementalAgreementDocId)
+    let actualSupplementalAgreementsCount = await decoProjects.getSupplementalAgreementsCount(testAgreementHash)
+    expect(actualSupplementalAgreementsCount.toNumber()).to.be.equal(initialSupplementalAgreementsCount.plus(1).toNumber())
   })
 
   it("should fail adding supplemental agreement when transaction is sent by not a client.", async () => {
@@ -1321,14 +1325,14 @@ contract("DecoProjects", async (accounts) => {
     let messageForSigning = web3.sha3(supplementalAgreementDocId)
     signature = web3.eth.sign(mock.maker, messageForSigning)
     mock.milestonesCount = mock.milestonesCount.plus(1)
-    mock.paymentWindow = mock.paymentWindow.plus(2)
+    mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
     mock.feedbackWindow = mock.feedbackWindow.plus(3)
     await decoProjects.saveSupplementalAgreement(
       testAgreementHash,
       supplementalAgreementDocId,
       signature,
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
+      mock.milestoneStartWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
       { from: mock.maker, gasPrice: 1 }
     ).catch(async (err) => {
@@ -1342,7 +1346,7 @@ contract("DecoProjects", async (accounts) => {
         mock.client,
         mock.maker,
         mock.arbiter,
-        mock.paymentWindow.minus(2),
+        mock.milestoneStartWindow.minus(2),
         mock.feedbackWindow.minus(3),
         mock.milestonesCount.minus(1),
         mock.agreementsEncrypted
@@ -1364,14 +1368,14 @@ contract("DecoProjects", async (accounts) => {
     let supplementalAgreementDocId = "IPFS_DOCUMENT"
     let messageForSigning = web3.sha3(supplementalAgreementDocId)
     mock.milestonesCount = mock.milestonesCount.plus(1)
-    mock.paymentWindow = mock.paymentWindow.plus(2)
+    mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
     mock.feedbackWindow = mock.feedbackWindow.plus(3)
     await decoProjects.saveSupplementalAgreement(
       testAgreementHash,
       supplementalAgreementDocId,
       signature, // original signature from the project creation process, should be unique for the new agreement.
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
+      mock.milestoneStartWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
@@ -1385,7 +1389,7 @@ contract("DecoProjects", async (accounts) => {
         mock.client,
         mock.maker,
         mock.arbiter,
-        mock.paymentWindow.minus(2),
+        mock.milestoneStartWindow.minus(2),
         mock.feedbackWindow.minus(3),
         mock.milestonesCount.minus(1),
         mock.agreementsEncrypted
@@ -1405,14 +1409,14 @@ contract("DecoProjects", async (accounts) => {
     let messageForSigning = web3.sha3(supplementalAgreementDocId)
     signature = web3.eth.sign(mock.maker, messageForSigning)
     mock.milestonesCount = mock.milestonesCount.plus(1)
-    mock.paymentWindow = mock.paymentWindow.plus(2)
+    mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
     mock.feedbackWindow = mock.feedbackWindow.plus(3)
     await decoProjects.saveSupplementalAgreement(
       testAgreementHash,
       supplementalAgreementDocId,
       signature,
       mock.milestonesCount.toNumber(),
-      mock.paymentWindow.toNumber(),
+      mock.milestoneStartWindow.toNumber(),
       mock.feedbackWindow.toNumber(),
       { from: mock.client, gasPrice: 1 }
     ).catch(async (err) => {
@@ -1436,14 +1440,14 @@ contract("DecoProjects", async (accounts) => {
 
       signature = web3.eth.sign(mock.maker, messageForSigning)
       mock.milestonesCount = mock.milestonesCount.plus(1)
-      mock.paymentWindow = mock.paymentWindow.plus(2)
+      mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
       mock.feedbackWindow = mock.feedbackWindow.plus(3)
       let txn = await decoProjects.saveSupplementalAgreement(
         testAgreementHash,
         supplementalAgreementDocId,
         signature,
         mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
+        mock.milestoneStartWindow.toNumber(),
         mock.feedbackWindow.toNumber(),
         { from: mock.client, gasPrice: 1 }
       )
@@ -1478,14 +1482,14 @@ contract("DecoProjects", async (accounts) => {
       let messageForSigning = web3.sha3(supplementalAgreementDocId)
       signature = web3.eth.sign(mock.maker, messageForSigning)
       mock.milestonesCount = mock.milestonesCount.plus(1)
-      mock.paymentWindow = mock.paymentWindow.plus(2)
+      mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
       mock.feedbackWindow = mock.feedbackWindow.plus(3)
       await decoProjects.saveSupplementalAgreement(
         testAgreementHash,
         supplementalAgreementDocId,
         signature,
         mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
+        mock.milestoneStartWindow.toNumber(),
         mock.feedbackWindow.toNumber(),
         { from: mock.client, gasPrice: 1 }
       )
@@ -1494,7 +1498,7 @@ contract("DecoProjects", async (accounts) => {
       expect(projectArray[0]).to.not.be.empty
       let newProject = new Project(projectArray)
       expect(newProject.milestonesCount.toNumber()).to.be.equal(mock.milestonesCount.toNumber())
-      expect(newProject.paymentWindow.toNumber()).to.be.equal(mock.paymentWindow.toNumber())
+      expect(newProject.milestoneStartWindow.toNumber()).to.be.equal(mock.milestoneStartWindow.toNumber())
       expect(newProject.feedbackWindow.toNumber()).to.be.equal(mock.feedbackWindow.toNumber())
 
       let supplementalAgreementId = await decoProjects.getSupplementalAgreementId(testAgreementHash, 0)
@@ -1519,14 +1523,14 @@ contract("DecoProjects", async (accounts) => {
       let messageForSigning = web3.sha3(supplementalAgreementDocId)
       signature = web3.eth.sign(mock.maker, messageForSigning)
       mock.milestonesCount = mock.milestonesCount.plus(1)
-      mock.paymentWindow = mock.paymentWindow.plus(2)
+      mock.milestoneStartWindow = mock.milestoneStartWindow.plus(2)
       mock.feedbackWindow = mock.feedbackWindow.plus(3)
       await decoProjects.saveSupplementalAgreement(
         testAgreementHash,
         supplementalAgreementDocId,
         signature,
         mock.milestonesCount.toNumber(),
-        mock.paymentWindow.toNumber(),
+        mock.milestoneStartWindow.toNumber(),
         mock.feedbackWindow.toNumber(),
         { from: mock.client, gasPrice: 1 }
       ).catch(async (err) => {
@@ -1754,5 +1758,121 @@ contract("DecoProjects", async (accounts) => {
     let fees = await decoProjects.getProjectArbitrationFees(testAgreementHash)
     expect(fees[0].toNumber()).to.be.equal(0)
     expect(fees[1].toNumber()).to.be.equal(0)
-  }) 
+  })
+
+  it("should correctly validate project for dispute and return required information.", async () => {
+    let arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
+
+    let decoTest = await DecoTest.new({from: accounts[0], gasPrice: 1})
+
+    mock.arbiter = arbitrationStub.address
+    RefreshSignatureAndHashes()
+    let fixedFee = web3.toWei(1)
+    let shareFee = 5 // %
+    await arbitrationStub.setStubFees(fixedFee, shareFee)
+
+    let checkFail = async (respondent, initiator, arbiter) => {
+      await decoTest.testGetInfoAndValidateForDispute(
+        testAgreementHash,
+        respondent,
+        initiator,
+        arbiter,
+        fixedFee,
+        shareFee,
+        "0x0",
+        decoProjects.address
+      ).catch(async (err) => {
+        assert.isOk(err, "Expected crash")
+      }).then(async (txn) => {
+        if(txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+    }
+
+    let checkSuccess = async (respondent, initiator, arbiter) => {
+      let projectArray = await decoProjects.projects.call(testAgreementHash)
+      expect(projectArray[0]).to.not.be.undefined
+      let project = new Project(projectArray)
+      await decoTest.testGetInfoAndValidateForDispute(
+        testAgreementHash,
+        respondent,
+        initiator,
+        arbiter,
+        fixedFee,
+        shareFee,
+        project.escrowContractAddress,
+        decoProjects.address
+      )
+    }
+
+    await checkFail(accounts[3], accounts[4], accounts[5])
+    await checkFail(mock.maker, mock.client, mock.arbiter)
+
+    await StartProject(signature, mock.client)
+
+    await checkFail(accounts[3], accounts[4], accounts[5])
+    await checkFail(mock.client, accounts[4], accounts[5])
+    await checkFail(accounts[3], mock.client, accounts[5])
+    await checkFail(mock.maker, accounts[4], accounts[5])
+    await checkFail(accounts[3], mock.maker, accounts[5])
+    await checkFail(accounts[3], accounts[4], mock.arbiter)
+    await checkFail(mock.client, accounts[4], mock.arbiter)
+    await checkFail(accounts[3], mock.maker, mock.arbiter)
+
+    await checkSuccess(mock.client, mock.maker, mock.arbiter)
+    await checkSuccess(mock.maker, mock.client, mock.arbiter)
+  })
+
+  it("should return correct project information.", async () => {
+    let check = async (
+      projectExist,
+      escrow,
+      client,
+      maker,
+      arbiter,
+      feedbackWindow,
+      milestoneStartWindow,
+      startDate,
+      endDate,
+      milestonesCount
+    ) => {
+      let value = await decoProjects.checkIfProjectExists(testAgreementHash)
+      expect(value).to.be.equal(projectExist)
+      value = await decoProjects.getProjectEscrowAddress(testAgreementHash)
+      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(escrow).toNumber())
+      value = await decoProjects.getProjectClient(testAgreementHash)
+      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(client).toNumber())
+      value = await decoProjects.getProjectMaker(testAgreementHash)
+      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(maker).toNumber())
+      value = await decoProjects.getProjectArbiter(testAgreementHash)
+      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(arbiter).toNumber())
+      value = await decoProjects.getProjectFeedbackWindow(testAgreementHash)
+      expect(value.toNumber()).to.be.equal(feedbackWindow)
+      value = await decoProjects.getProjectMilestoneStartWindow(testAgreementHash)
+      expect(value.toNumber()).to.be.equal(milestoneStartWindow)
+      value = await decoProjects.getProjectStartDate(testAgreementHash)
+      expect(value.toNumber()).to.be.equal(startDate)
+      value = await decoProjects.getProjectEndDate(testAgreementHash)
+      expect(value.toNumber()).to.be.equal(endDate)
+      value = await decoProjects.getProjectMilestonesCount(testAgreementHash)
+      expect(value.toNumber()).to.be.equal(milestonesCount)
+    }
+    await check(false, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    await StartProject(signature, mock.client)
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.not.be.undefined
+    let project = new Project(projectArray)
+    await check(
+      true,
+      project.escrowContractAddress,
+      project.client,
+      project.maker,
+      project.arbiter,
+      project.feedbackWindow.toNumber(),
+      project.milestoneStartWindow.toNumber(),
+      project.startDate.toNumber(),
+      project.endDate.toNumber(),
+      project.milestonesCount.toNumber())
+  })
 })

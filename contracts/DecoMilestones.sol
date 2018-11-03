@@ -39,8 +39,6 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
     // enumeration to describe possible milestone states. 
     enum MilestoneState { Active, Delivered, Accepted, Rejected, Terminated, Paused }
 
-    enum DurationAdjustmentType { Rejected, Unpaused }
-
     // map agreement id hash to milestones list.
     mapping (bytes32 => Milestone[]) public projectMilestones;
 
@@ -57,8 +55,7 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
         bytes32 indexed agreementHash,
         address indexed sender,
         uint32 amountAdded,
-        uint8 milestoneNumber,
-        DurationAdjustmentType indexed adjustmentType
+        uint8 milestoneNumber
     );
 
     /**
@@ -224,8 +221,7 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
                 _agreementHash,
                 msg.sender,
                 timeToAdd,
-                milestonesCount,
-                DurationAdjustmentType.Rejected
+                milestonesCount
             );
         }
         milestone.deliveredTime = 0;
@@ -485,6 +481,7 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
     )
         internal
     {
+        if (_amount == 0) return;
         DecoEscrow escrow = DecoEscrow(_projectEscrowContractAddress);
         if (_tokenAddress == ETH_TOKEN_ADDRESS) {
             escrow.blockFunds(_amount);

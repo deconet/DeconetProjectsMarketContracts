@@ -71,4 +71,13 @@ contract("DecoBaseProjectsMarketplace", async (accounts) => {
       }
     })
   })
+
+  it("should return correct status of ownership.", async () => {
+    let isOwner = await base.isOwner({from: accounts[0], gasPrice: 1})
+    expect(isOwner).to.be.true
+    isOwner = await base.isOwner({from: accounts[1], gasPrice: 1})
+    expect(isOwner).to.be.false
+    isOwner = await base.isOwner({from: accounts[2], gasPrice: 1})
+    expect(isOwner).to.be.false
+  })
 })

@@ -149,7 +149,7 @@ contract("DecoMilestones", async (accounts) => {
   })
 
   it("should start a new milestone for the existing project.", async () => {
-    maxNumberOfMilestones = 10
+    maxNumberOfMilestones = 12
     await decoProjectsStub.setProjectMilestonesCountConfig(maxNumberOfMilestones)
 
     await decoEscrowStub.sendTransaction({from: accounts[7], value: web3.toWei(9), gasPrice: 1})
@@ -197,12 +197,14 @@ contract("DecoMilestones", async (accounts) => {
       await decoMilestonesMock.markMilestoneAsCompletedAndAccepted(testAgreementHash)
     }
 
+    await startAndCheck(0, "0x0")
     await startAndCheck(1, "0x0")
     await startAndCheck(3.33, "0x0")
     await startAndCheck(0.1, "0x0")
     await startAndCheck(0.7566, "0x0")
     await startAndCheck(3.7566, "0x0")
     await decoEscrowStub.depositErc20(decoTestToken.address, web3.toWei(1800), {from: accounts[0], gasPrice: 1})
+    await startAndCheck(0, decoTestToken.address)
     await startAndCheck(366, decoTestToken.address)
     await startAndCheck(6, decoTestToken.address)
     await startAndCheck(1, decoTestToken.address)
@@ -694,7 +696,7 @@ contract("DecoMilestones", async (accounts) => {
     let escrowEthBalance = await decoEscrowStub.balance.call()
 
     let milestoneId = 0
-    let acceptAndCheckState = async () => {
+    let acceptAndCheckState = async (shouldBeZeroAmount) => {
 
       if(milestoneId % 2 == 0) {
         let amount = Math.floor(tokenBalance.div(maxNumberOfMilestones).toNumber())
@@ -704,6 +706,9 @@ contract("DecoMilestones", async (accounts) => {
         let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
         mock.depositAmount = new BigNumber(amount)
         mock.tokenAddress = "0x0"
+      }
+      if(shouldBeZeroAmount) {
+        mock.depositAmount = new BigNumber(0)
       }
 
       await decoMilestonesMock.startMilestone(
@@ -780,7 +785,7 @@ contract("DecoMilestones", async (accounts) => {
     }
 
     for(var i = 0; i < maxNumberOfMilestones; i++) {
-      await acceptAndCheckState()
+      await acceptAndCheckState(i < maxNumberOfMilestones - 2)
     }
   })
 
@@ -1077,7 +1082,6 @@ contract("DecoMilestones", async (accounts) => {
         expect(emittedEvent.args.sender).to.be.equal(client)
         expect(emittedEvent.args.amountAdded.toNumber()).to.be.equal(timeAmountAdded.toNumber())
         expect(emittedEvent.args.milestoneNumber.toNumber()).to.be.equal(mock.milestoneNumber.toNumber())
-        expect(emittedEvent.args.adjustmentType.toNumber()).to.be.equal(0)
         emittedEvent = txn.logs[1]
       }
       expect(milestone.adjustedDuration.toNumber()).to.be.equal(
@@ -1318,6 +1322,7 @@ contract("DecoMilestones", async (accounts) => {
 
     await terminateAndCheckState(maker)
     await terminateAndCheckState(client)
+    mock.depositAmount = new BigNumber(0)
     await terminateAndCheckState(maker)
     await terminateAndCheckState(client)
   })
@@ -1774,51 +1779,6 @@ contract("DecoMilestones", async (accounts) => {
     await startDisputeAndCheck(accounts[13])
   })
 
-  // it(
-  //   "should fail putting milestone on hold when a dispute can't be started because of milestone state.",
-  //   async () => {
-  //     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
-  //     let escrowEthBalance = await decoEscrowStub.balance.call()
-
-  //     let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
-  //     mock.depositAmount = new BigNumber(amount)
-  //     mock.tokenAddress = "0x0"
-
-  //     await decoMilestonesMock.startMilestone(
-  //       testAgreementHash,
-  //       mock.depositAmount.toNumber(),
-  //       mock.tokenAddress,
-  //       mock.duration.toNumber(),
-  //       {from: client, gasPrice: 1}
-  //     )
-
-  //     let startDisputeAndCheck = async () => {
-  //       await decoMilestonesMock.disputeStartedFreeze(
-  //         testAgreementHash,
-  //         {from: arbiter, gasPrice: 1}
-  //       ).catch(async (err) => {
-  //         assert.isOk(err, "Expected crash.")
-
-  //         let milestoneArray = await decoMilestonesMock.projectMilestones.call(
-  //           testAgreementHash,
-  //           mock.milestoneNumber.minus(1).toNumber()
-  //         )
-  //         expect(milestoneArray[0].toNumber()).to.not.be.equal(0)
-  //         let milestone = new Milestone(milestoneArray)
-
-  //         expect(milestone.isOnHold).to.be.false
-  //       }).then(async (txn) => {
-  //         if(txn) {
-  //           assert.fail("Should have failed above.")
-  //         }
-  //       })
-  //     }
-
-  //     await startDisputeAndCheck()
-  //     await startDisputeAndCheck()
-  //   }
-  // )
-
   it("should correctly indicate if dispute can be started.", async () => {
     await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
     let escrowEthBalance = await decoEscrowStub.balance.call()
@@ -1925,6 +1885,8 @@ contract("DecoMilestones", async (accounts) => {
     let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
     mock.depositAmount = new BigNumber(amount)
     mock.tokenAddress = "0x0"
+    await decoEscrowStub.depositErc20(decoTestToken.address, 1000000, {from: accounts[0], gasPrice: 1})
+    let tokenBalance = await decoEscrowStub.tokensBalance.call(decoTestToken.address)
 
     let fixedFee = new BigNumber(1)
     let shareFee = new BigNumber(5)
@@ -1993,6 +1955,9 @@ contract("DecoMilestones", async (accounts) => {
               mock.depositAmount.times(shareFee).div(100).toNumber()
             )
         )
+        if(mock.tokenAddress != "0x0") {
+          arbiterFinalFeeAmount = arbiterFinalFeeAmount.minus(fixedFee)
+        }
         expect(actualArbiterBalance.toNumber()).to.be.at.least(
           arbiterBalance.plus(arbiterFinalFeeAmount).toNumber()
         )
@@ -2019,6 +1984,9 @@ contract("DecoMilestones", async (accounts) => {
     await settleDisputeAndCheckState(
       maker, 1, client, 99, true, arbiter
     )
+    amount = Math.floor(tokenBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = decoTestToken.address
     await settleDisputeAndCheckState(
       client, 29, maker, 71, true, arbiter
     )
@@ -2224,5 +2192,68 @@ contract("DecoMilestones", async (accounts) => {
       await settleDisputeAndCheckState(
         client, 30, maker, 75, true, arbiter
       )
+  })
+
+  it("should correctly return true and # if last milestone is accepted.", async () => {
+    let checkIfActiveAndMilestoneNumber = async (isActive, milestoneNumber) => {
+      let [actualActiveStatus, actualMilestoneNumber] = await decoMilestonesMock.isLastMilestoneAccepted(
+        testAgreementHash
+      )
+      expect(actualActiveStatus).to.be.equal(isActive)
+      expect(actualMilestoneNumber.toNumber()).to.be.equal(milestoneNumber)
+    }
+
+    await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+    let escrowEthBalance = await decoEscrowStub.balance.call()
+
+    let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+    mock.depositAmount = new BigNumber(amount)
+    mock.tokenAddress = "0x0"
+
+    await checkIfActiveAndMilestoneNumber(false, 0)
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      { from: client, gasPrice: 1 }
+    )
+    await checkIfActiveAndMilestoneNumber(false, 1)
+
+    await decoMilestonesMock.deliverLastMilestone(
+      testAgreementHash, {from: maker, gasPrice: 1}
+    )
+    await checkIfActiveAndMilestoneNumber(false, 1)
+
+    await IncreaseTime()
+
+    await decoMilestonesMock.acceptLastMilestone(
+      testAgreementHash,
+      {from: client, gasPrice: 1}
+    )
+    await checkIfActiveAndMilestoneNumber(true, 1)
+
+    await decoMilestonesMock.startMilestone(
+      testAgreementHash,
+      mock.depositAmount.toNumber(),
+      mock.tokenAddress,
+      mock.duration.toNumber(),
+      { from: client, gasPrice: 1 }
+    )
+    await checkIfActiveAndMilestoneNumber(false, 2)
+
+    await decoMilestonesMock.deliverLastMilestone(
+      testAgreementHash, {from: maker, gasPrice: 1}
+    )
+    await checkIfActiveAndMilestoneNumber(false, 2)
+
+    await IncreaseTime()
+
+    await decoMilestonesMock.acceptLastMilestone(
+      testAgreementHash,
+      {from: client, gasPrice: 1}
+    )
+    await checkIfActiveAndMilestoneNumber(true, 2)
   })
 })

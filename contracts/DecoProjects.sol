@@ -487,6 +487,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         view
         returns(uint, uint8, address)
     {
+        require(checkIfProjectExists(_agreementHash), "Project must exist.");
         Project memory project = projects[_agreementHash];
         address client = project.client;
         address maker = project.maker;
