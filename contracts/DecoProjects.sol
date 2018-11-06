@@ -65,6 +65,9 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // maps the agreement`s unique hash to the project details.
     mapping (bytes32 => Project) public projects;
 
+    // maps the project`s agreement hash to the array of all made by the team documented changes.
+    mapping (bytes32 => string[]) public projectChangesDocumentsIds;
+
     // maps hashes of all maker's projects to the maker's address.
     mapping (address => bytes32[]) public makerProjects;
 
@@ -262,6 +265,57 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     /**
+     * @dev Save supplement agreement id linked to the existing project agreement. All parameters are required.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @param _supplementalAgreementHash A `string` unique id of a supplemental agreement doc.
+     * @param _makersSignature A `bytes` digital signature of the maker to proof the acceptance of
+     *                         the new supplemental agreement.
+     * @param _milestonesCount An `uint8` number of planned milestones for the project.
+     * @param _milestoneStartWindow An `uint8` number of days project`s owner has to start the next milestone.
+     *        If this time is exceeded then maker can terminate the project.
+     * @param _feedbackWindow An `uint8` number of days project`s owner has to provide feedback for the last milestone.
+     *                        If the time is exceeded then maker can terminate the project and get paid for
+     *                        the awaited milestone.
+     */
+    function saveSupplementalAgreement(
+        bytes32 _agreementHash,
+        string _supplementalAgreementHash,
+        bytes _makersSignature,
+        uint8 _milestonesCount,
+        uint8 _milestoneStartWindow,
+        uint8 _feedbackWindow
+    )
+        external
+        onlyProjectOwner(_agreementHash)
+    {
+        bytes32 hash = keccak256(_supplementalAgreementHash);
+        Project storage project = projects[_agreementHash];
+        require(project.client != address(0x0), "Only allowed for existing projects.");
+        require(
+            hash.toEthSignedMessageHash().recover(_makersSignature) == project.maker,
+            "Maker should sign the hash of immutable agreement doc."
+        );
+        DecoMilestones milestonesContract = DecoMilestones(
+            DecoRelay(relayContractAddress).milestonesContractAddress()
+        );
+        bool isLastMilestoneAccepted;
+        uint8 milestoneNumber;
+        (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
+            _agreementHash
+        );
+        require(
+            milestoneNumber < projects[_agreementHash].milestonesCount,
+            "Supplemental agreement can be added only before the last milestone start."
+        );
+        require(isLastMilestoneAccepted, "Supplemental agreement can't be added when there is an active milestone.");
+        projectChangesDocumentsIds[_agreementHash].push(_supplementalAgreementHash);
+        project.milestonesCount = _milestonesCount;
+        project.milestoneStartWindow = _milestoneStartWindow;
+        project.feedbackWindow = _feedbackWindow;
+        emit NewSupplementalAgreement(_agreementHash, _supplementalAgreementHash, now);
+    }
+
+    /**
      * @dev Query for getting the address of Escrow contract clone deployed for the given project.
      * @param _agreementHash A `bytes32` hash of the project`s agreement id.
      * @return An `address` of a clone.
@@ -385,6 +439,30 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     */
     function getProjectMilestonesCount(bytes32 _agreementHash) public view returns(uint8) {
         return projects[_agreementHash].milestonesCount;
+    }
+
+    /**
+     * @dev Returns count of already added agreements for a project with the given hash.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @return An `uint` count of project`s supplemental agreements.
+    */
+    function getSupplementalAgreementsCount(bytes32 _agreementHash) public view returns(uint) {
+        return projectChangesDocumentsIds[_agreementHash].length;
+    }
+
+    /**
+     * @dev Returns id of a supplemental agreement for a project with the given hash and at the given  position.
+     * @param _agreementHash A `bytes32` hash of the project`s agreement id.
+     * @param _position An `uint` offset in supplemental agreements array.
+     * @return A `string` id of the agreement.
+    */
+    function getSupplementalAgreementId(bytes32 _agreementHash, uint _position) public view returns(string) {
+        string[] storage additionalAgreements = projectChangesDocumentsIds[_agreementHash];
+        if (additionalAgreements.length > 0) {
+            return additionalAgreements[_position];
+        } else {
+            return "";
+        }
     }
 
     /**
