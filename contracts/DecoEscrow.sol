@@ -130,25 +130,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
      * @param _amount Amount to withdraw.
      */
     function withdraw(uint _amount) external {
-        require(
-            _amount <= address(this).balance,
-            "Amount to withdraw should be less or equal than balance."
-        );
-        if (msg.sender == owner) {
-            balance = balance.sub(_amount);
-        } else {
-            uint withdrawalAllowance = withdrawalAllowanceForAddress[msg.sender];
-            withdrawalAllowanceForAddress[msg.sender] = withdrawalAllowance.sub(_amount);
-        }
-        msg.sender.transfer(_amount);
-        emit FundsOperation (
-            address(this),
-            msg.sender,
-            address(0x0),
-            _amount,
-            PaymentType.Ether,
-            OperationType.Send
-        );
+        withdrawForAddress(msg.sender, _amount);
     }
 
     /**
@@ -157,26 +139,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
      * @param _amount Amount to withdraw.
      */
     function withdrawErc20(address _tokenAddress, uint _amount) external {
-        ERC20 token = ERC20(_tokenAddress);
-        require(
-            _amount <= token.balanceOf(this),
-            "Token amount to withdraw should be less or equal than balance."
-        );
-        if (msg.sender == owner) {
-            tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].sub(_amount);
-        } else {
-            uint tokenWithdrawalAllowance = getTokenWithdrawalAllowance(msg.sender, _tokenAddress);
-            tokensWithdrawalAllowanceForAddress[msg.sender][_tokenAddress] = tokenWithdrawalAllowance.sub(_amount);
-        }
-        token.transfer(msg.sender, _amount);
-        emit FundsOperation (
-            address(this),
-            msg.sender,
-            _tokenAddress,
-            _amount,
-            PaymentType.Erc20,
-            OperationType.Send
-        );
+        withdrawErc20ForAddress(msg.sender, _tokenAddress, _amount);
     }
 
     /**
@@ -328,6 +291,53 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             amount,
             PaymentType.Erc20,
             OperationType.Distribute
+        );
+    }
+
+    function withdrawForAddress(address _targetAddress, uint _amount) public {
+        require(
+            _amount <= address(this).balance,
+            "Amount to withdraw should be less or equal than balance."
+        );
+        if (_targetAddress == owner) {
+            balance = balance.sub(_amount);
+        } else {
+            uint withdrawalAllowance = withdrawalAllowanceForAddress[_targetAddress];
+            withdrawalAllowanceForAddress[_targetAddress] = withdrawalAllowance.sub(_amount);
+        }
+        _targetAddress.transfer(_amount);
+        emit FundsOperation (
+            address(this),
+            _targetAddress,
+            address(0x0),
+            _amount,
+            PaymentType.Ether,
+            OperationType.Send
+        );
+    }
+
+    function withdrawErc20ForAddress(address _targetAddress, address _tokenAddress, uint _amount) public {
+        ERC20 token = ERC20(_tokenAddress);
+        require(
+            _amount <= token.balanceOf(this),
+            "Token amount to withdraw should be less or equal than balance."
+        );
+        if (_targetAddress == owner) {
+            tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].sub(_amount);
+        } else {
+            uint tokenWithdrawalAllowance = getTokenWithdrawalAllowance(_targetAddress, _tokenAddress);
+            tokensWithdrawalAllowanceForAddress[_targetAddress][_tokenAddress] = tokenWithdrawalAllowance.sub(
+                _amount
+            );
+        }
+        token.transfer(_targetAddress, _amount);
+        emit FundsOperation (
+            address(this),
+            _targetAddress,
+            _tokenAddress,
+            _amount,
+            PaymentType.Erc20,
+            OperationType.Send
         );
     }
 

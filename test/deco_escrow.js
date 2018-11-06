@@ -367,9 +367,17 @@ contract("DecoEscrow", async (accounts) => {
     let decoEscrow = await DecoEscrow.deployed()
     await decoEscrow.sendTransaction({from: accounts[6], gasPrice: 1, value: web3.toWei(3)})
 
-    let withdrawAndCheckBalance = async (amountToWithdraw) => {
+    let withdrawAndCheckBalance = async (
+      amountToWithdraw, withdrawTargetAccount, withdrawAccount
+    ) => {
       let initialEscrowBalance = await decoEscrow.balance.call()
-      await decoEscrow.withdraw(amountToWithdraw.toString(), {from: accounts[0], gasPrice: 1})
+      if (withdrawAccount == undefined) {
+        await decoEscrow.withdraw(amountToWithdraw.toString(), {from: withdrawTargetAccount, gasPrice: 1})
+      } else {
+        await decoEscrow.withdrawForAddress(
+          withdrawTargetAccount, amountToWithdraw.toString(), {from: withdrawAccount, gasPrice: 1}
+        )
+      }
       let resultingEscrowBalance = await decoEscrow.balance.call()
 
       expect(amountToWithdraw.toString()).to.be.equal(
@@ -377,15 +385,17 @@ contract("DecoEscrow", async (accounts) => {
       )
     }
 
-    await withdrawAndCheckBalance(new BigNumber(web3.toWei(0.5)))
-    await withdrawAndCheckBalance(new BigNumber(web3.toWei(1)))
+    await withdrawAndCheckBalance(new BigNumber(web3.toWei(0.5)), accounts[0])
+    await withdrawAndCheckBalance(new BigNumber(web3.toWei(1)), accounts[0])
+    await withdrawAndCheckBalance(new BigNumber(web3.toWei(0.5)), accounts[0], accounts[12])
+    await withdrawAndCheckBalance(new BigNumber(web3.toWei(1)), accounts[0], accounts[13])
   })
 
   it("should allow withdraw available ETH funds for the account with sufficient allowance.", async () => {
     let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
     await decoEscrowMock.sendTransaction({from: accounts[6], gasPrice: 1, value: web3.toWei(3)})
 
-    let withdrawAndCheckBalance = async (to, amountToWithdraw) => {
+    let withdrawAndCheckBalance = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
         amountToWithdraw.times(1.1).toString(),
         {from: to, gasPrice: 1}
@@ -393,7 +403,14 @@ contract("DecoEscrow", async (accounts) => {
       let initialAllowance = await decoEscrowMock.withdrawalAllowanceForAddress(to)
       let initialAddressBalance = await web3.eth.getBalance(to)
       let initialEscrowBalance = await decoEscrowMock.balance.call()
-      let txn = await decoEscrowMock.withdraw(amountToWithdraw.toString(), {from: to, gasPrice: 1})
+      let txn
+      if(withdrawAddress == undefined) {
+        txn = await decoEscrowMock.withdraw(amountToWithdraw.toString(), {from: to, gasPrice: 1})
+      } else {
+        txn = await decoEscrowMock.withdrawForAddress(
+          to, amountToWithdraw.toString(), {from: withdrawAddress, gasPrice: 1}
+        )
+      }
       let resultingEscrowBalance = await decoEscrowMock.balance.call()
       let resultingAllowance = await decoEscrowMock.withdrawalAllowanceForAddress(to)
       let resultingAddressBalance = await web3.eth.getBalance(to)
@@ -405,7 +422,7 @@ contract("DecoEscrow", async (accounts) => {
       expect(resultingAddressBalance.toString()).to.be.equal(
         initialAddressBalance
           .plus(amountToWithdraw)
-          .minus(new BigNumber(txn.receipt.gasUsed))
+          .minus(withdrawAddress == undefined ? new BigNumber(txn.receipt.gasUsed) : 0)
           .toString()
       )
     }
@@ -413,8 +430,8 @@ contract("DecoEscrow", async (accounts) => {
     await withdrawAndCheckBalance(accounts[1], new BigNumber(web3.toWei(0.5)))
     await withdrawAndCheckBalance(accounts[2], new BigNumber(web3.toWei(0.1)))
     await withdrawAndCheckBalance(accounts[3], new BigNumber(web3.toWei(0.3)))
-    await withdrawAndCheckBalance(accounts[4], new BigNumber(web3.toWei(0.8)))
-    await withdrawAndCheckBalance(accounts[5], new BigNumber(web3.toWei(0.0001)))
+    await withdrawAndCheckBalance(accounts[4], new BigNumber(web3.toWei(0.8)), accounts[3])
+    await withdrawAndCheckBalance(accounts[5], new BigNumber(web3.toWei(0.0001)), accounts[4])
   })
 
   it("should fail withdrawal if accounted limit aka allowance or available escrow balance is exceeded.", async () => {
@@ -423,7 +440,7 @@ contract("DecoEscrow", async (accounts) => {
     await decoEscrowMock.sendTransaction({from: accounts[9], gasPrice: 1, value: depositAmount.toString()})
     let escrowAccountedBalance = await decoEscrowMock.balance.call()
 
-    let tryWithdrawAndCheckException = async (to, amountToWithdraw) => {
+    let tryWithdrawAndCheckException = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
         amountToWithdraw.times(0.5).toString(),
         {from: to, gasPrice: 1}
@@ -431,10 +448,16 @@ contract("DecoEscrow", async (accounts) => {
       let initialAddressBalance = await web3.eth.getBalance(to)
       let initialEscrowBalance = await decoEscrowMock.balance.call()
       let initialAllowance = await decoEscrowMock.withdrawalAllowanceForAddress(to)
-      await decoEscrowMock.withdraw(
-        amountToWithdraw.toString(),
-        {from: to, gasPrice: 1}
-      ).catch(async (err) => {
+      let withdraw = async () => {
+        if(withdrawAddress == undefined) {
+          return await decoEscrowMock.withdraw(amountToWithdraw.toString(), {from: to, gasPrice: 1})
+        } else {
+          return await decoEscrowMock.withdrawForAddress(
+            to, amountToWithdraw.toString(), {from: withdrawAddress, gasPrice: 1}
+          )
+        }
+      }
+      await withdraw().catch(async (err) => {
         assert.isOk(err,"Expected exception here.")
         let resultingEscrowBalance = await decoEscrowMock.balance.call()
         let resultingAllowance = await decoEscrowMock.withdrawalAllowanceForAddress(to)
@@ -443,7 +466,9 @@ contract("DecoEscrow", async (accounts) => {
         expect(resultingEscrowBalance.toString()).to.be.equal(initialEscrowBalance.toString())
         expect(resultingAllowance.toString()).to.be.equal(initialAllowance.toString())
         expect(resultingAddressBalance.toString()).to.be.equal(
-          initialAddressBalance.minus(new BigNumber(err.receipt.gasUsed)).toString()
+          initialAddressBalance.minus(
+            withdrawAddress == undefined ? new BigNumber(err.receipt.gasUsed) : 0
+          ).toString()
         )
       }).then(async (txn) => {
         if(txn) {
@@ -453,18 +478,19 @@ contract("DecoEscrow", async (accounts) => {
     }
 
     await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(1000))
+    await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(1000), accounts[11])
     await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(web3.toWei(1)))
     await tryWithdrawAndCheckException(accounts[1], new BigNumber(web3.toWei(0.04)))
-    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.toWei(0.02)))
+    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.toWei(0.02)), accounts[1])
     await tryWithdrawAndCheckException(accounts[3], new BigNumber(web3.toWei(0.05)))
-    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.toWei(0.000001)))
+    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.toWei(0.000001)), accounts[3])
   })
 
   it("should fail withdrawal if requested amount is greater than actual contract balance.", async () => {
     let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
     await decoEscrowMock.setEscrowBalanceValueToAlmostMaximum()
 
-    let tryWithdrawAndCheckException = async (to, amountToWithdraw) => {
+    let tryWithdrawAndCheckException = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
         amountToWithdraw.toString(),
         {from: to, gasPrice: 1}
@@ -472,10 +498,16 @@ contract("DecoEscrow", async (accounts) => {
       let initialAddressBalance = await web3.eth.getBalance(to)
       let initialEscrowBalance = await decoEscrowMock.balance.call()
       let initialAllowance = await decoEscrowMock.withdrawalAllowanceForAddress(to)
-      await decoEscrowMock.withdraw(
-        amountToWithdraw.toString(),
-        {from: to, gasPrice: 1}
-      ).catch(async (err) => {
+      let withdraw = async () => {
+        if(withdrawAddress == undefined) {
+          return await decoEscrowMock.withdraw(amountToWithdraw.toString(), {from: to, gasPrice: 1})
+        } else {
+          return await decoEscrowMock.withdrawForAddress(
+            to, amountToWithdraw.toString(), {from: withdrawAddress, gasPrice: 1}
+          )
+        }
+      }
+      await withdraw().catch(async (err) => {
         assert.isOk(err,"Expected exception here.")
         let resultingEscrowBalance = await decoEscrowMock.balance.call()
         let resultingAllowance = await decoEscrowMock.withdrawalAllowanceForAddress(to)
@@ -484,7 +516,9 @@ contract("DecoEscrow", async (accounts) => {
         expect(resultingEscrowBalance.toString()).to.be.equal(initialEscrowBalance.toString())
         expect(resultingAllowance.toString()).to.be.equal(initialAllowance.toString())
         expect(resultingAddressBalance.toString()).to.be.equal(
-          initialAddressBalance.minus(new BigNumber(err.receipt.gasUsed)).toString()
+          initialAddressBalance.minus(
+            withdrawAddress == undefined ? new BigNumber(err.receipt.gasUsed) : 0
+          ).toString()
         )
       }).then(async (txn) => {
         if(txn) {
@@ -494,25 +528,33 @@ contract("DecoEscrow", async (accounts) => {
     }
 
     await tryWithdrawAndCheckException(accounts[0], new BigNumber(web3.toWei(1)))
+    await tryWithdrawAndCheckException(accounts[0], new BigNumber(web3.toWei(1)), accounts[11])
     await tryWithdrawAndCheckException(accounts[1], new BigNumber(web3.toWei(0.4)))
-    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.toWei(0.2)))
+    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.toWei(0.2)), accounts[1])
     await tryWithdrawAndCheckException(accounts[3], new BigNumber(web3.toWei(0.5)))
-    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.toWei(0.000001)))
+    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.toWei(0.000001)), accounts[3])
   })
 
   it("should emit the event about outgoing ETH funds.", async () => {
     let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
     await decoEscrowMock.sendTransaction({from: accounts[10], gasPrice: 1, value: web3.toWei(3)})
 
-    let withdrawAndCheckEmittedEvent = async (to, amountToWithdraw) => {
+    let withdrawAndCheckEmittedEvent = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
         amountToWithdraw.toString(),
         {from: to, gasPrice: 1}
       )
-      let txn = await decoEscrowMock.withdraw(
-        amountToWithdraw.toString(),
-        {from: to, gasPrice: 1}
-      )
+      let txn
+      if(withdrawAddress == undefined) {
+        txn = await decoEscrowMock.withdraw(
+          amountToWithdraw.toString(),
+          {from: to, gasPrice: 1}
+        )
+      } else {
+        txn = await decoEscrowMock.withdrawForAddress(
+          to, amountToWithdraw.toString(), {from: withdrawAddress, gasPrice: 1}
+        )
+      }
       let emittedEvent = txn.logs[0]
       expect(emittedEvent.event).to.be.equal("FundsOperation")
       expect(emittedEvent.args.sender).to.be.equal(decoEscrowMock.address)
@@ -526,8 +568,10 @@ contract("DecoEscrow", async (accounts) => {
     await withdrawAndCheckEmittedEvent(accounts[0], new BigNumber(web3.toWei(1)))
     await withdrawAndCheckEmittedEvent(accounts[1], new BigNumber(web3.toWei(0.4)))
     await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(web3.toWei(0.2)))
+    await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(web3.toWei(0.7)), accounts[13])
     await withdrawAndCheckEmittedEvent(accounts[3], new BigNumber(web3.toWei(0.5)))
     await withdrawAndCheckEmittedEvent(accounts[4], new BigNumber(web3.toWei(0.000001)))
+    await withdrawAndCheckEmittedEvent(accounts[7], new BigNumber(web3.toWei(0.001)), accounts[14])
   })
 
   it(
@@ -541,7 +585,7 @@ contract("DecoEscrow", async (accounts) => {
         {from: accounts[0], gasPrice: 1}
       )
 
-      let withdrawAndCheckBalance = async (to, amountToWithdraw) => {
+      let withdrawAndCheckBalance = async (to, amountToWithdraw, withdrawAddress) => {
         await decoEscrowMock.setTokensWithdrawalAllowance(
           decoTestToken.address,
           decoTestToken.tokensValueAsBigNumber(amountToWithdraw.times(1.1).toString()).toString(),
@@ -555,11 +599,20 @@ contract("DecoEscrow", async (accounts) => {
           to,
           decoTestToken.address
         )
-        await decoEscrowMock.withdrawErc20(
-          decoTestToken.address,
-          tokensAmount.toString(),
-          {from: to, gasPrice: 1}
-        )
+        if(withdrawAddress == undefined) {
+          await decoEscrowMock.withdrawErc20(
+            decoTestToken.address,
+            tokensAmount.toString(),
+            {from: to, gasPrice: 1}
+          )
+        } else {
+          await decoEscrowMock.withdrawErc20ForAddress(
+            to,
+            decoTestToken.address,
+            tokensAmount.toString(),
+            {from: withdrawAddress, gasPrice: 1}
+          )
+        }
 
         let resultingTokensBalance = await decoEscrowMock.tokensBalance.call(decoTestToken.address);
         let resultingAddressTokensBalance = await decoTestToken.balanceOf(to)
@@ -591,11 +644,11 @@ contract("DecoEscrow", async (accounts) => {
       }
 
       await withdrawAndCheckBalance(accounts[0], new BigNumber(10))
-      await withdrawAndCheckBalance(accounts[1], new BigNumber(30))
+      await withdrawAndCheckBalance(accounts[1], new BigNumber(30), accounts[11])
       await withdrawAndCheckBalance(accounts[2], new BigNumber(400))
-      await withdrawAndCheckBalance(accounts[3], new BigNumber(14))
+      await withdrawAndCheckBalance(accounts[3], new BigNumber(14), accounts[12])
       await withdrawAndCheckBalance(accounts[4], new BigNumber(0.001))
-      await withdrawAndCheckBalance(accounts[5], new BigNumber(0.1))
+      await withdrawAndCheckBalance(accounts[5], new BigNumber(0.1), accounts[15])
     }
   )
 
@@ -611,7 +664,7 @@ contract("DecoEscrow", async (accounts) => {
       )
       let tokensContractBalance = await decoEscrowMock.tokensBalance.call(decoTestToken.address)
 
-      let withdrawAndCheckException = async (to, amountToWithdraw) => {
+      let withdrawAndCheckException = async (to, amountToWithdraw, withdrawAddress) => {
         await decoEscrowMock.setTokensWithdrawalAllowance(
           decoTestToken.address,
           decoTestToken.tokensValueAsBigNumber(amountToWithdraw.times(0.9).toString()).toString(),
@@ -625,18 +678,30 @@ contract("DecoEscrow", async (accounts) => {
           to,
           decoTestToken.address
         )
-        await decoEscrowMock.withdrawErc20(
-          decoTestToken.address,
-          tokensAmount.toString(),
-          {from: to, gasPrice: 1}
-        ).catch(async (err) => {
+        let withdraw = async () => {
+          if(withdrawAddress == undefined) {
+            return await decoEscrowMock.withdrawErc20(
+              decoTestToken.address,
+              tokensAmount.toString(),
+              {from: to, gasPrice: 1}
+            )
+          } else {
+            return await decoEscrowMock.withdrawErc20ForAddress(
+              to,
+              decoTestToken.address,
+              tokensAmount.toString(),
+              {from: withdrawAddress, gasPrice: 1}
+            )
+          }
+        }
+        await withdraw().catch(async (err) => {
           assert.isOk(err, "Expected exception here.")
           let resultingTokensBalance = await decoEscrowMock.tokensBalance.call(decoTestToken.address);
           let resultingAddressTokensBalance = await decoTestToken.balanceOf(to)
           let resultingAllowance = await decoEscrowMock.getTokenWithdrawalAllowance(
-          to,
-          decoTestToken.address
-        )
+            to,
+            decoTestToken.address
+          )
 
           expect(initialTokensBalance.toString()).to.be.equal(
             resultingTokensBalance.toString()
@@ -657,13 +722,18 @@ contract("DecoEscrow", async (accounts) => {
       await withdrawAndCheckException(accounts[0], tokensContractBalance.plus(new BigNumber(10)))
       await withdrawAndCheckException(
         accounts[0],
+        tokensContractBalance.plus(new BigNumber(1)),
+        accounts[10]
+      )
+      await withdrawAndCheckException(
+        accounts[0],
         tokensContractBalance.plus(decoTestToken.tokensValueAsBigNumber(10))
       )
-      await withdrawAndCheckException(accounts[1], new BigNumber(30))
+      await withdrawAndCheckException(accounts[1], new BigNumber(30), accounts[11])
       await withdrawAndCheckException(accounts[2], new BigNumber(400))
-      await withdrawAndCheckException(accounts[3], new BigNumber(14))
+      await withdrawAndCheckException(accounts[3], new BigNumber(14), accounts[12])
       await withdrawAndCheckException(accounts[4], new BigNumber(0.001))
-      await withdrawAndCheckException(accounts[5], new BigNumber(0.1))
+      await withdrawAndCheckException(accounts[5], new BigNumber(0.1), accounts[14])
     }
   )
 
@@ -679,7 +749,7 @@ contract("DecoEscrow", async (accounts) => {
       )
       await decoEscrowMock.setTokensBalanceValueToAlmostMaximum(decoTestToken.address)
 
-      let withdrawAndCheckException = async (to, amountToWithdraw) => {
+      let withdrawAndCheckException = async (to, amountToWithdraw, withdrawAddress) => {
         await decoEscrowMock.setTokensWithdrawalAllowance(
           decoTestToken.address,
           decoTestToken.tokensValueAsBigNumber(amountToWithdraw.times(1.1).toString()).toString(),
@@ -693,18 +763,30 @@ contract("DecoEscrow", async (accounts) => {
           to,
           decoTestToken.address
         )
-        await decoEscrowMock.withdrawErc20(
-          decoTestToken.address,
-          tokensAmount.toString(),
-          {from: to, gasPrice: 1}
-        ).catch(async (err) => {
+        let withdraw = async () => {
+          if(withdrawAddress == undefined) {
+            return await decoEscrowMock.withdrawErc20(
+              decoTestToken.address,
+              tokensAmount.toString(),
+              {from: to, gasPrice: 1}
+            )
+          } else {
+            return await decoEscrowMock.withdrawErc20ForAddress(
+              to,
+              decoTestToken.address,
+              tokensAmount.toString(),
+              {from: withdrawAddress, gasPrice: 1}
+            )
+          }
+        }
+        await withdraw().catch(async (err) => {
           assert.isOk(err, "Expected exception here.")
           let resultingTokensBalance = await decoEscrowMock.tokensBalance.call(decoTestToken.address);
           let resultingAddressTokensBalance = await decoTestToken.balanceOf(to)
           let resultingAllowance = await decoEscrowMock.getTokenWithdrawalAllowance(
-          to,
-          decoTestToken.address
-        )
+            to,
+            decoTestToken.address
+          )
 
           expect(initialTokensBalance.toString()).to.be.equal(
             resultingTokensBalance.toString()
@@ -723,10 +805,11 @@ contract("DecoEscrow", async (accounts) => {
       }
 
       await withdrawAndCheckException(accounts[0], new BigNumber(10))
+      await withdrawAndCheckException(accounts[0], new BigNumber(10), accounts[10])
       await withdrawAndCheckException(accounts[1], new BigNumber(300))
-      await withdrawAndCheckException(accounts[2], new BigNumber(400))
+      await withdrawAndCheckException(accounts[2], new BigNumber(400), accounts[10])
       await withdrawAndCheckException(accounts[3], new BigNumber(140))
-      await withdrawAndCheckException(accounts[4], new BigNumber(10001))
+      await withdrawAndCheckException(accounts[4], new BigNumber(10001), accounts[10])
       await withdrawAndCheckException(accounts[5], new BigNumber(1234))
     }
   )
@@ -742,7 +825,7 @@ contract("DecoEscrow", async (accounts) => {
         {from: accounts[0], gasPrice: 1}
       )
 
-      let withdrawAndCheckEmittedEvent = async (to, amountToWithdraw) => {
+      let withdrawAndCheckEmittedEvent = async (to, amountToWithdraw, withdrawAddress) => {
         await decoEscrowMock.setTokensWithdrawalAllowance(
           decoTestToken.address,
           decoTestToken.tokensValueAsBigNumber(amountToWithdraw.times(1.1).toString()).toString(),
@@ -750,11 +833,21 @@ contract("DecoEscrow", async (accounts) => {
         )
 
         let tokensAmount = decoTestToken.tokensValueAsBigNumber(amountToWithdraw.toString())
-        let txn = await decoEscrowMock.withdrawErc20(
-          decoTestToken.address,
-          tokensAmount.toString(),
-          {from: to, gasPrice: 1}
-        )
+        let txn
+        if(withdrawAddress == undefined) {
+          txn = await decoEscrowMock.withdrawErc20(
+            decoTestToken.address,
+            tokensAmount.toString(),
+            {from: to, gasPrice: 1}
+          )
+        } else {
+          txn = await decoEscrowMock.withdrawErc20ForAddress(
+            to,
+            decoTestToken.address,
+            tokensAmount.toString(),
+            {from: withdrawAddress, gasPrice: 1}
+          )
+        }
 
         let emittedEvent = txn.logs[0]
         expect(emittedEvent.event).to.be.equal("FundsOperation")
@@ -767,10 +860,11 @@ contract("DecoEscrow", async (accounts) => {
       }
 
       await withdrawAndCheckEmittedEvent(accounts[0], new BigNumber(10))
+      await withdrawAndCheckEmittedEvent(accounts[0], new BigNumber(10), accounts[12])
       await withdrawAndCheckEmittedEvent(accounts[1], new BigNumber(30))
-      await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(400))
+      await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(400), accounts[12])
       await withdrawAndCheckEmittedEvent(accounts[3], new BigNumber(14))
-      await withdrawAndCheckEmittedEvent(accounts[4], new BigNumber(0.001))
+      await withdrawAndCheckEmittedEvent(accounts[4], new BigNumber(0.001), accounts[12])
       await withdrawAndCheckEmittedEvent(accounts[5], new BigNumber(0.1))
     }
   )
