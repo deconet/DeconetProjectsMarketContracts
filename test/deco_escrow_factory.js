@@ -3,6 +3,7 @@ var DecoEscrowFactory = artifacts.require("./DecoEscrowFactory.sol")
 var DecoEscrowStub = artifacts.require("./DecoEscrowStub.sol")
 var DecoMilestones = artifacts.require("./DecoMilestones.sol")
 var DecoProjects = artifacts.require("./DecoProjects.sol")
+var DecoRelay = artifacts.require("./DecoRelay.sol")
 
 contract("DecoEscrowFactory", async (accounts) => {
   it("should save provided library address during the contract deployment.", async () => {
@@ -82,17 +83,25 @@ contract("DecoEscrowFactory", async (accounts) => {
     let decoEscrowFactory = await DecoEscrowFactory.new(decoEscrowStub.address, {from: accounts[0], gasPrice: 1})
     let decoMilestones = await DecoMilestones.deployed()
     let decoProjects = await DecoProjects.deployed()
+    let decoRelay = await DecoRelay.deployed()
+    await decoEscrowFactory.setRelayContractAddress(decoRelay.address, {from: accounts[0], gasPrice: 1})
     let address = decoMilestones.address
     let newEscrowCloneTxn = await decoEscrowFactory.createEscrow(
       accounts[1],
       address,
       {from: accounts[8], gasPrice: 1}
     )
-    expect(newEscrowCloneTxn.logs[0].event).to.be.equal("EscrowCreated")
-    decoEscrowStub = await DecoEscrowStub.at(newEscrowCloneTxn.logs[0].args.newEscrowAddress)
+    let emittedEvent = newEscrowCloneTxn.logs[0]
+    expect(emittedEvent.event).to.be.equal("EscrowCreated")
+    decoEscrowStub = await DecoEscrowStub.at(emittedEvent.args.newEscrowAddress)
     let newContractOwner = await decoEscrowStub.newOwner.call()
     let authorizedAddress = await decoEscrowStub.authorizedAddress.call()
+    let newFeesValue = await decoEscrowStub.shareFee.call()
+    let relayFeesValue = await decoRelay.shareFee.call()
+    let newRelayAddress = await decoEscrowStub.relayContractAddress.call()
     expect(newContractOwner).to.be.equal(accounts[1])
     expect(address).to.be.equal(authorizedAddress)
+    expect(newFeesValue.toNumber()).to.be.equal(relayFeesValue.toNumber())
+    expect(newRelayAddress).to.be.equal(decoRelay.address)
   })
 })

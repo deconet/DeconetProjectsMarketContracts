@@ -18,18 +18,18 @@ contract DecoBaseProjectsMarketplace is Ownable {
     }
 
     /**
-     * @return A `bool` indicating if sender is the owner of the current contract.
-     */
-    function isOwner() public view returns(bool) {
-        return msg.sender == owner;
-    }
-
-    /**
      * @dev Set the new address of the `DecoRelay` contract.
      * @param _newAddress An address of the new contract.
      */
     function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Relay address must be not 0x0.");
+        require(_newAddress != address(0x0), "Relay address must not be 0x0.");
         relayContractAddress = _newAddress;
+    }
+
+    /**
+     * @return A `bool` indicating if sender is the owner of the current contract.
+     */
+    function isOwner() public view returns(bool) {
+        return msg.sender == owner;
     }
 }

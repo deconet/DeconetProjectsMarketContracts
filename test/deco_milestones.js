@@ -79,6 +79,7 @@ contract("DecoMilestones", async (accounts) => {
   let maxNumberOfMilestones = 4
   let feedbackWindow = 1
   let milestoneStartWindow = 1
+  let deconetShareFee = 12
 
   const DeployProjectsStubContract = async (ownerAddress) => {
     decoProjectsStub = await DecoProjectsStub.new({ from: ownerAddress, gasPrice: 1 })
@@ -94,8 +95,14 @@ contract("DecoMilestones", async (accounts) => {
     if(decoProjectsStub.address != undefined) {
       await decoProjectsStub.setEscrowContractStubAddress(decoEscrowStub.address)
     }
-    if (decoMilestonesMock.address != undefined) {
-      await decoEscrowStub.initialize(ownerAddress, decoMilestonesMock.address, {from: ownerAddress, gasPrice: 1})
+    if (decoMilestonesMock.address != undefined && decoRelay.address != undefined) {
+      await decoEscrowStub.initialize(
+        ownerAddress,
+        decoMilestonesMock.address,
+        deconetShareFee,
+        decoRelay.address,
+        {from: ownerAddress, gasPrice: 1}
+      )
     }
   }
 
@@ -742,6 +749,7 @@ contract("DecoMilestones", async (accounts) => {
         testAgreementHash,
         {from: client, gasPrice: 1}
       )
+      let fee = Math.floor(mock.depositAmount.times(deconetShareFee).div(100).toNumber())
 
       let actualBlockedAmount = undefined
       let actualMakerWithdrawalAllowance = undefined
@@ -758,7 +766,7 @@ contract("DecoMilestones", async (accounts) => {
 
       expect(actualBlockedAmount.toNumber()).to.be.equal(blockedAmount.minus(mock.depositAmount).toNumber())
       expect(actualMakerWithdrawalAllowance.toNumber()).to.be.equal(
-        makerWithdrawalAllowance.plus(mock.depositAmount).toNumber()
+        makerWithdrawalAllowance.plus(mock.depositAmount.minus(fee)).toNumber()
       )
 
       let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
@@ -1288,6 +1296,7 @@ contract("DecoMilestones", async (accounts) => {
       let observer = decoMilestonesMock.LogMilestoneStateUpdated()
 
       let txn = await decoProjectsStub.terminateProject(testAgreementHash, {from: sender, gasPrice: 1})
+      let fee = Math.floor(mock.depositAmount.times(deconetShareFee).div(100).toNumber())
 
       let events = await observer.get()
       let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
@@ -1298,7 +1307,7 @@ contract("DecoMilestones", async (accounts) => {
 
       if(sender == maker) {
         expect(actualMakerWithdrawalAllowance.toNumber()).to.be.equal(
-          makerWithdrawalAllowance.plus(mock.depositAmount).toNumber()
+          makerWithdrawalAllowance.plus(mock.depositAmount.minus(fee)).toNumber()
         )
         expect(actualBlockedAmount.toNumber()).to.be.equal(
           blockedAmount.minus(mock.depositAmount).toNumber()
@@ -1958,20 +1967,25 @@ contract("DecoMilestones", async (accounts) => {
         if(mock.tokenAddress != "0x0") {
           arbiterFinalFeeAmount = arbiterFinalFeeAmount.minus(fixedFee)
         }
+        distributedDepositAmount = distributedDepositAmount.minus(arbiterFinalFeeAmount)
+        arbiterFinalFeeAmount = arbiterFinalFeeAmount.minus(
+          Math.floor(arbiterFinalFeeAmount.times(deconetShareFee).div(100).toNumber())
+        )
         expect(actualArbiterBalance.toNumber()).to.be.at.least(
           arbiterBalance.plus(arbiterFinalFeeAmount).toNumber()
         )
-        distributedDepositAmount = distributedDepositAmount.minus(arbiterFinalFeeAmount)
       }
+      let expectedAmount = distributedDepositAmount.times(initiatorShare).div(100).times(
+        100 - deconetShareFee
+      ).div(100).toNumber()
       expect(actualInitiatorBalance.toNumber()).to.be.at.least(
-        initiatorBalance.plus(
-          Math.floor(distributedDepositAmount.times(initiatorShare).div(100).toNumber())
-        ).toNumber()
+        initiatorBalance.plus(Math.floor(expectedAmount)).toNumber()
       )
+      expectedAmount = distributedDepositAmount.times(respondentShare).div(100).times(
+        100 - deconetShareFee
+      ).div(100).toNumber()
       expect(actualRespondentBalance.toNumber()).to.be.at.least(
-        respondentBalance.plus(
-          Math.floor(distributedDepositAmount.times(respondentShare).div(100).toNumber())
-        ).toNumber()
+        respondentBalance.plus(Math.floor(expectedAmount)).toNumber()
       )
 
       BumpProjectId()

@@ -388,12 +388,20 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
         if (milestonesCount > 0) {
             Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
             address projectEscrowContractAddress = projectsContract.getProjectEscrowAddress(_agreementHash);
-            distributeFundsInEscrow(
-                projectEscrowContractAddress,
-                _initiator,
-                lastMilestone.depositAmount,
-                lastMilestone.tokenAddress
-            );
+            if (_initiator == projectClient) {
+                unblockFundsInEscrow(
+                    projectEscrowContractAddress,
+                    lastMilestone.depositAmount,
+                    lastMilestone.tokenAddress
+                );
+            } else {
+                distributeFundsInEscrow(
+                    projectEscrowContractAddress,
+                    _initiator,
+                    lastMilestone.depositAmount,
+                    lastMilestone.tokenAddress
+                );
+            }
         }
         emit LogMilestoneStateUpdated(
             _agreementHash,
@@ -468,7 +476,7 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
             nowTimestamp.sub(feedbackWindow) > lastMilestone.deliveredTime;
     }
 
-    /**
+    /*
      * @dev Block funds in escrow from balance to the blocked balance.
      * @param _projectEscrowContractAddress An `address` of project`s escrow.
      * @param _amount An `uint` amount to distribute.
@@ -487,6 +495,28 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
             escrow.blockFunds(_amount);
         } else {
             escrow.blockTokenFunds(_tokenAddress, _amount);
+        }
+    }
+
+    /*
+     * @dev Unblock funds in escrow from blocked balance to the balance.
+     * @param _projectEscrowContractAddress An `address` of project`s escrow.
+     * @param _amount An `uint` amount to distribute.
+     * @param _tokenAddress An `address` of a token.
+     */
+    function unblockFundsInEscrow(
+        address _projectEscrowContractAddress,
+        uint _amount,
+        address _tokenAddress
+    )
+        internal
+    {
+        if (_amount == 0) return;
+        DecoEscrow escrow = DecoEscrow(_projectEscrowContractAddress);
+        if (_tokenAddress == ETH_TOKEN_ADDRESS) {
+            escrow.unblockFunds(_amount);
+        } else {
+            escrow.unblockTokenFunds(_tokenAddress, _amount);
         }
     }
 

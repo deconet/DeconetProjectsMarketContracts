@@ -5,7 +5,7 @@ var DecoMilestones = artifacts.require('./DecoMilestones.sol')
 var DecoRelay = artifacts.require('./DecoRelay.sol')
 var DecoArbitration = artifacts.require('./DecoArbitration.sol')
 
-module.exports = function (deployer) {
+module.exports = function (deployer, network, accounts) {
   let decoRelay, decoEscrowFactory, decoEscrow, decoProjects, decoMilestones, decoArbitration
 
   console.log('Deploying DecoRelay contract.')
@@ -56,5 +56,19 @@ module.exports = function (deployer) {
   }).then(() => {
     console.log('Setting DecoRelay contract address on DecoArbitration to ' + decoRelay.address)
     return decoArbitration.setRelayContractAddress(decoRelay.address)
+  }).then(() => {
+    console.log('Setting DecoRelay contract address on DecoEscrowFactory to ' + decoRelay.address)
+    return decoEscrowFactory.setRelayContractAddress(decoRelay.address)
+  }).then(() => {
+    let fee = 0
+    console.log('Setting Deconet fee on DecoRelay to ' + fee)
+    return decoRelay.setShareFee(fee)
+  }).then(() => {
+    let withdrawalAddress = accounts[0]
+    console.log('Setting Deconet fee withdrawal address on DecoRelay to ' + withdrawalAddress)
+    return decoRelay.setFeesWithdrawalAddress(withdrawalAddress)
   })
+
+
+
 }

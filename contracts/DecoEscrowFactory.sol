@@ -1,11 +1,13 @@
 pragma solidity 0.4.24;
 
 import "./DecoEscrow.sol";
+import "./DecoBaseProjectsMarketplace.sol";
+import "./DecoRelay.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@optionality.io/clone-factory/contracts/CloneFactory.sol";
 
 
-contract DecoEscrowFactory is Ownable, CloneFactory {
+contract DecoEscrowFactory is DecoBaseProjectsMarketplace, CloneFactory {
 
     // Escrow master-contract address.
     address public libraryAddress;
@@ -45,7 +47,13 @@ contract DecoEscrowFactory is Ownable, CloneFactory {
         returns(address)
     {
         address clone = createClone(libraryAddress);
-        DecoEscrow(clone).initialize(_ownerAddress, _authorizedAddress);
+        DecoRelay relay = DecoRelay(relayContractAddress);
+        DecoEscrow(clone).initialize(
+            _ownerAddress,
+            _authorizedAddress,
+            relay.shareFee(),
+            relayContractAddress
+        );
         emit EscrowCreated(clone);
         return clone;
     }

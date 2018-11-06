@@ -1,16 +1,21 @@
 pragma solidity 0.4.24;
 
 import "./DecoMilestones.sol";
+import "./DecoRelay.sol";
+import "./DecoBaseProjectsMarketplace.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 
-contract DecoEscrow is Ownable {
+contract DecoEscrow is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
 
     // Indicates if the current clone has been initialized.
     bool internal isInitialized;
+
+    // Stores share fee that should apply on any successfull distribution.
+    uint8 public shareFee;
 
     // Authorized party for executing funds distribution operations.
     address public authorizedAddress;
@@ -80,12 +85,21 @@ contract DecoEscrow is Ownable {
      * @param _newOwner An address of a new escrow owner.
      * @param _authorizedAddress An address that will be stored as authorized.
      */
-    function initialize(address _newOwner, address _authorizedAddress) external {
+    function initialize(
+        address _newOwner,
+        address _authorizedAddress,
+        uint8 _shareFee,
+        address _relayContractAddress
+    )
+        external
+    {
         require(!isInitialized, "Only uninitialized contracts allowed.");
         isInitialized = true;
         authorizedAddress = _authorizedAddress;
         emit FundsDistributionAuthorization(_authorizedAddress, true);
         _transferOwnership(_newOwner);
+        shareFee = _shareFee;
+        relayContractAddress = _relayContractAddress;
     }
 
     /**
@@ -211,6 +225,7 @@ contract DecoEscrow is Ownable {
      *  Deposit may be returned back to the contract address, i.e. to the escrow owner.
      *  Or deposit may flow to the allowance for an address as a result of an evidence
      *  given by an authorized party about fullfilled obligations.
+     *  **IMPORTANT** This operation includes fees deduction.
      * @param _destination Destination address for funds distribution.
      * @param _amount Amount to distribute in favor of a destination address.
      */
@@ -221,21 +236,41 @@ contract DecoEscrow is Ownable {
         external
         onlyAuthorized
     {
-        if (_destination == owner) {
-            unblockFunds(_amount);
-            return;
-        }
         require(
             _amount <= blockedBalance,
             "Amount to distribute should be less or equal than blocked balance."
         );
-        blockedBalance = blockedBalance.sub(_amount);
-        withdrawalAllowanceForAddress[_destination] = withdrawalAllowanceForAddress[_destination].add(_amount);
+        uint amount = _amount;
+        if (shareFee > 0 && relayContractAddress != address(0x0)) {
+            DecoRelay relayContract = DecoRelay(relayContractAddress);
+            address feeDestination = relayContract.feesWithdrawalAddress();
+            if (feeDestination != address(0x0)) {
+                uint fee = amount.mul(shareFee).div(100);
+                amount = amount.sub(fee);
+                blockedBalance = blockedBalance.sub(fee);
+                withdrawalAllowanceForAddress[feeDestination] =
+                    withdrawalAllowanceForAddress[feeDestination].add(fee);
+                emit FundsOperation(
+                    msg.sender,
+                    feeDestination,
+                    address(0x0),
+                    fee,
+                    PaymentType.Ether,
+                    OperationType.Distribute
+                );
+            }
+        }
+        if (_destination == owner) {
+            unblockFunds(amount);
+            return;
+        }
+        blockedBalance = blockedBalance.sub(amount);
+        withdrawalAllowanceForAddress[_destination] = withdrawalAllowanceForAddress[_destination].add(amount);
         emit FundsOperation(
             msg.sender,
             _destination,
             address(0x0),
-            _amount,
+            amount,
             PaymentType.Ether,
             OperationType.Distribute
         );
@@ -243,9 +278,10 @@ contract DecoEscrow is Ownable {
 
     /**
      * @dev Distribute ERC20 token funds between contract`s balance and allowanc for some address.
-     *      Deposit may be returned back to the contract address, i.e. to the escrow owner.
-     *      Or deposit may flow to the allowance for an address as a result of an evidence
-     *      given by authorized party about fullfilled obligations.
+     *  Deposit may be returned back to the contract address, i.e. to the escrow owner.
+     *  Or deposit may flow to the allowance for an address as a result of an evidence
+     *  given by authorized party about fullfilled obligations.
+     *  **IMPORTANT** This operation includes fees deduction.
      * @param _destination Destination address for funds distribution.
      * @param _tokenAddress ERC20 Token address.
      * @param _amount Amount to distribute in favor of a destination address.
@@ -258,18 +294,42 @@ contract DecoEscrow is Ownable {
         external
         onlyAuthorized
     {
+        require(
+            _amount <= blockedTokensBalance[_tokenAddress],
+            "Amount to distribute should be less or equal than blocked balance."
+        );
+        uint amount = _amount;
+        if (shareFee > 0 && relayContractAddress != address(0x0)) {
+            DecoRelay relayContract = DecoRelay(relayContractAddress);
+            address feeDestination = relayContract.feesWithdrawalAddress();
+            if (feeDestination != address(0x0)) {
+                uint fee = amount.mul(shareFee).div(100);
+                amount = amount.sub(fee);
+                blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].sub(fee);
+                uint allowance = tokensWithdrawalAllowanceForAddress[feeDestination][_tokenAddress];
+                tokensWithdrawalAllowanceForAddress[feeDestination][_tokenAddress] = allowance.add(fee);
+                emit FundsOperation(
+                    msg.sender,
+                    feeDestination,
+                    _tokenAddress,
+                    fee,
+                    PaymentType.Erc20,
+                    OperationType.Distribute
+                );
+            }
+        }
         if (_destination == owner) {
-            unblockTokenFunds(_tokenAddress, _amount);
+            unblockTokenFunds(_tokenAddress, amount);
             return;
         }
-        blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].sub(_amount);
+        blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].sub(amount);
         uint allowanceForSender = tokensWithdrawalAllowanceForAddress[_destination][_tokenAddress];
-        tokensWithdrawalAllowanceForAddress[_destination][_tokenAddress] = allowanceForSender.add(_amount);
+        tokensWithdrawalAllowanceForAddress[_destination][_tokenAddress] = allowanceForSender.add(amount);
         emit FundsOperation(
             msg.sender,
             _destination,
             _tokenAddress,
-            _amount,
+            amount,
             PaymentType.Erc20,
             OperationType.Distribute
         );
@@ -342,5 +402,4 @@ contract DecoEscrow is Ownable {
             OperationType.Unblock
         );
     }
-
 }
