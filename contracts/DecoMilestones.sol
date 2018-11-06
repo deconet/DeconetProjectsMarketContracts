@@ -381,27 +381,26 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
         );
         if (_initiator == projectClient) {
             require(canClientTerminate(_agreementHash));
-        } else if (_initiator == projectMaker) {
+        } else {
             require(canMakerTerminate(_agreementHash));
         }
         uint milestonesCount = projectMilestones[_agreementHash].length;
-        if (milestonesCount > 0) {
-            Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
-            address projectEscrowContractAddress = projectsContract.getProjectEscrowAddress(_agreementHash);
-            if (_initiator == projectClient) {
-                unblockFundsInEscrow(
-                    projectEscrowContractAddress,
-                    lastMilestone.depositAmount,
-                    lastMilestone.tokenAddress
-                );
-            } else {
-                distributeFundsInEscrow(
-                    projectEscrowContractAddress,
-                    _initiator,
-                    lastMilestone.depositAmount,
-                    lastMilestone.tokenAddress
-                );
-            }
+        if (milestonesCount == 0) return;
+        Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
+        address projectEscrowContractAddress = projectsContract.getProjectEscrowAddress(_agreementHash);
+        if (_initiator == projectClient) {
+            unblockFundsInEscrow(
+                projectEscrowContractAddress,
+                lastMilestone.depositAmount,
+                lastMilestone.tokenAddress
+            );
+        } else {
+            distributeFundsInEscrow(
+                projectEscrowContractAddress,
+                _initiator,
+                lastMilestone.depositAmount,
+                lastMilestone.tokenAddress
+            );
         }
         emit LogMilestoneStateUpdated(
             _agreementHash,

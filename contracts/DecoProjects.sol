@@ -290,11 +290,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     {
         bytes32 hash = keccak256(_supplementalAgreementHash);
         Project storage project = projects[_agreementHash];
+        require(project.client != address(0x0), "Only allowed for existing projects.");
         require(
             hash.toEthSignedMessageHash().recover(_makersSignature) == project.maker,
             "Maker should sign the hash of immutable agreement doc."
         );
-        require(project.client != address(0x0), "Only allowed for existing projects.");
         DecoMilestones milestonesContract = DecoMilestones(
             DecoRelay(relayContractAddress).milestonesContractAddress()
         );

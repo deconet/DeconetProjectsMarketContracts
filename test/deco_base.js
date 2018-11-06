@@ -10,8 +10,8 @@ contract("DecoBaseProjectsMarketplace", async (accounts) => {
     base = await DecoBaseProjectsMarketplace.new({from: accounts[0], gasPrice: 1})
   })
 
-  it("should revert any incoming ETH.", async () => {
-    let txn = await base.sendTransaction(
+  it("should revert any incoming ETH and accept zero-txns.", async () => {
+    await base.sendTransaction(
       { from: accounts[0], value: web3.toWei(1) }
     ).catch(async (err) => {
       assert.isOk(err, "Exception should be thrown for any incoming ETH transaction.")
@@ -22,6 +22,10 @@ contract("DecoBaseProjectsMarketplace", async (accounts) => {
         assert.fail(txn, "Should have failed above.")
       }
     })
+
+    await base.sendTransaction(
+      { from: accounts[10], value: 0, gasPrice: 1 }
+    )
   })
 
   it("should let setting relay contract address by the contract owner.", async () => {

@@ -36,9 +36,9 @@ contract("DecoRelay", async (accounts) => {
         expect(newWithdrawal).to.be.equal(withdrawalAddress)
       }
 
-      setAndCheck(accounts[1], accounts[2], accounts[3], accounts[10], accounts[13])
-      setAndCheck(accounts[4], accounts[5], accounts[6], accounts[11], accounts[14])
-      setAndCheck(accounts[7], accounts[8], accounts[9], accounts[12], accounts[15])
+      await setAndCheck(accounts[1], accounts[2], accounts[3], accounts[10], accounts[13])
+      await setAndCheck(accounts[4], accounts[5], accounts[6], accounts[11], accounts[14])
+      await setAndCheck(accounts[7], accounts[8], accounts[9], accounts[12], accounts[15])
     }
   )
 
@@ -110,16 +110,16 @@ contract("DecoRelay", async (accounts) => {
         })
       }
 
-      setAndCheck(accounts[10], accounts[11], accounts[12], accounts[19], accounts[22])
-      setAndCheck(accounts[13], accounts[14], accounts[15], accounts[20], accounts[23])
-      setAndCheck(accounts[16], accounts[17], accounts[18], accounts[21], accounts[24])
+      await setAndCheck(accounts[10], accounts[11], accounts[12], accounts[19], accounts[22])
+      await setAndCheck(accounts[13], accounts[14], accounts[15], accounts[20], accounts[23])
+      await setAndCheck(accounts[16], accounts[17], accounts[18], accounts[21], accounts[24])
     }
   )
 
   it(
     "should fail setting addresses to 0x0.",
     async () => {
-      let setAndCheck = async (decoProjects, decoMilestones, decoEscrowFactory, decoArbitration) => {
+      let setAndCheck = async (decoProjects, decoMilestones, decoEscrowFactory, decoArbitration, withdrawalAddress) => {
         await decoRelay.setProjectsContractAddress(
           "0x0",
           {from: accounts[0], gasPrice: 1}
@@ -169,7 +169,7 @@ contract("DecoRelay", async (accounts) => {
           }
         })
         await decoRelay.setFeesWithdrawalAddress(
-          withdrawalAddress,
+          "0x0",
           {from: accounts[0], gasPrice: 1}
         ).catch(async (err) => {
           assert.isOk(err, "Expected exception.")
@@ -182,9 +182,9 @@ contract("DecoRelay", async (accounts) => {
         })
       }
 
-      setAndCheck(accounts[10], accounts[11], accounts[12], accounts[19], accounts[22])
-      setAndCheck(accounts[13], accounts[14], accounts[15], accounts[20], accounts[23])
-      setAndCheck(accounts[16], accounts[17], accounts[18], accounts[21], accounts[24])
+      await setAndCheck(accounts[10], accounts[11], accounts[12], accounts[19], accounts[22])
+      await setAndCheck(accounts[13], accounts[14], accounts[15], accounts[20], accounts[23])
+      await setAndCheck(accounts[16], accounts[17], accounts[18], accounts[21], accounts[24])
     }
   )
 

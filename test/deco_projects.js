@@ -939,6 +939,35 @@ contract("DecoProjects", async (accounts) => {
     expect(project.customerSatisfaction.toNumber()).to.be.equal(0)
   })
 
+  it("should fail giving a score to another party if a project doesn't exist.", async () => {
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      3,
+      { from: mock.client, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    await decoProjects.rateProjectSecondParty(
+      testAgreementHash,
+      5,
+      { from: mock.maker, gasPrice: 1}
+    ).catch(async (err) => {
+      assert.isOk(err, "Exception should be thrown for that transaction.")
+    }).then((txn) => {
+      if(txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+
+    let projectArray = await decoProjects.projects.call(testAgreementHash)
+    expect(projectArray[0]).to.be.empty
+  })
+
   it("should fail giving a score to another party if raiting is out of the range from 1 to 10.", async () => {
     await StartProject(signature, mock.client)
     await decoMilestonesStub.setIfMakerCanTerminate(true)

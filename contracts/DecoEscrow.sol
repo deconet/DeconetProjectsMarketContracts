@@ -244,21 +244,19 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
         if (shareFee > 0 && relayContractAddress != address(0x0)) {
             DecoRelay relayContract = DecoRelay(relayContractAddress);
             address feeDestination = relayContract.feesWithdrawalAddress();
-            if (feeDestination != address(0x0)) {
-                uint fee = amount.mul(shareFee).div(100);
-                amount = amount.sub(fee);
-                blockedBalance = blockedBalance.sub(fee);
-                withdrawalAllowanceForAddress[feeDestination] =
-                    withdrawalAllowanceForAddress[feeDestination].add(fee);
-                emit FundsOperation(
-                    msg.sender,
-                    feeDestination,
-                    address(0x0),
-                    fee,
-                    PaymentType.Ether,
-                    OperationType.Distribute
-                );
-            }
+            uint fee = amount.mul(shareFee).div(100);
+            amount = amount.sub(fee);
+            blockedBalance = blockedBalance.sub(fee);
+            withdrawalAllowanceForAddress[feeDestination] =
+                withdrawalAllowanceForAddress[feeDestination].add(fee);
+            emit FundsOperation(
+                msg.sender,
+                feeDestination,
+                address(0x0),
+                fee,
+                PaymentType.Ether,
+                OperationType.Distribute
+            );
         }
         if (_destination == owner) {
             unblockFunds(amount);
@@ -302,21 +300,19 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
         if (shareFee > 0 && relayContractAddress != address(0x0)) {
             DecoRelay relayContract = DecoRelay(relayContractAddress);
             address feeDestination = relayContract.feesWithdrawalAddress();
-            if (feeDestination != address(0x0)) {
-                uint fee = amount.mul(shareFee).div(100);
-                amount = amount.sub(fee);
-                blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].sub(fee);
-                uint allowance = tokensWithdrawalAllowanceForAddress[feeDestination][_tokenAddress];
-                tokensWithdrawalAllowanceForAddress[feeDestination][_tokenAddress] = allowance.add(fee);
-                emit FundsOperation(
-                    msg.sender,
-                    feeDestination,
-                    _tokenAddress,
-                    fee,
-                    PaymentType.Erc20,
-                    OperationType.Distribute
-                );
-            }
+            uint fee = amount.mul(shareFee).div(100);
+            amount = amount.sub(fee);
+            blockedTokensBalance[_tokenAddress] = blockedTokensBalance[_tokenAddress].sub(fee);
+            uint allowance = tokensWithdrawalAllowanceForAddress[feeDestination][_tokenAddress];
+            tokensWithdrawalAllowanceForAddress[feeDestination][_tokenAddress] = allowance.add(fee);
+            emit FundsOperation(
+                msg.sender,
+                feeDestination,
+                _tokenAddress,
+                fee,
+                PaymentType.Erc20,
+                OperationType.Distribute
+            );
         }
         if (_destination == owner) {
             unblockTokenFunds(_tokenAddress, amount);

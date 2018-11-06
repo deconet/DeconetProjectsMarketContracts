@@ -347,7 +347,7 @@ contract("DecoEscrow", async (accounts) => {
     let depositAndCheckException = async (tokenAddress) => {
       await decoEscrow.depositErc20(
         tokenAddress,
-        new BigNumber("1000000000000000000"),
+        new BigNumber("1000000000000000000").toString(),
         {from: accounts[0], gasPrice: 1}
       ).catch(async (err) => {
         assert.isOk(err, "Expected exception.")
@@ -358,9 +358,9 @@ contract("DecoEscrow", async (accounts) => {
       })
     }
 
-    depositAndCheckException(accounts[1])
-    depositAndCheckException(decoEscrow.address)
-    depositAndCheckException("0x0")
+    await depositAndCheckException(accounts[1])
+    await depositAndCheckException(decoEscrow.address)
+    await depositAndCheckException("0x0")
   })
 
   it("should allow withdraw available ETH funds for the escrow owner.", async () => {
@@ -974,7 +974,7 @@ contract("DecoEscrow", async (accounts) => {
 
       let amountInWei = web3.toWei(amount)
       await decoEscrow.unblockFunds(
-        amountInWei,
+        amountInWei.toNumber(),
         {from: sender, gasPrice: 1}
       ).catch(async (err) => {
         assert.isOk(err, "Expected exception.")
