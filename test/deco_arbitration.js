@@ -1012,7 +1012,7 @@ contract("DecoArbitration", async (accounts) => {
     await setFeeAndCheck(web3.toWei(0.002), 9, owner)
   })
 
-  it("should fail setting fees from not contract's owner address", async () => {
+  it("should fail setting fees from not contract's owner address or if share fee is out of range", async () => {
     let owner = await arbitration.owner()
 
     let setFeeAndCheck = async (fixedFee, shareFee, sender) => {
@@ -1030,6 +1030,10 @@ contract("DecoArbitration", async (accounts) => {
     await setFeeAndCheck(web3.toWei(9), 11, accounts[10])
     await setFeeAndCheck(web3.toWei(0.3), 89, accounts[11])
     await setFeeAndCheck(web3.toWei(0.004), 19, accounts[12])
+    await setFeeAndCheck(web3.toWei(1), 110, owner)
+    await setFeeAndCheck(web3.toWei(0.2), 255, owner)
+    await setFeeAndCheck(web3.toWei(0.002), 259, owner)
+    await setFeeAndCheck(web3.toWei(0.002), 1209, owner)
   })
 })
 

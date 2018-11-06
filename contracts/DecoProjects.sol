@@ -100,15 +100,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         _;
     }
 
-    // Modifier to restrict method to be called by project`s owner
-    modifier onlyProjectOwner(bytes32 _agreementHash) {
-        require(
-            projects[_agreementHash].client == msg.sender,
-            "Only project owner can perform this operation."
-        );
-        _;
-    }
-
     // Modifier to restrict method to be called by the milestones contract.
     modifier onlyMilestonesContract(bytes32 _agreementHash) {
         DecoRelay relay = DecoRelay(relayContractAddress);
@@ -249,7 +240,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     {
         require(_rating >= 1 && _rating <= 10, "Project rating should be in the range 1-10.");
         Project storage project = projects[_agreementHash];
-        require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate != 0, "Only allowed for active projects.");
         if (msg.sender == project.client) {
             require(project.customerSatisfaction == 0, "CSAT is allowed to provide only once.");

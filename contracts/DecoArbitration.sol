@@ -183,14 +183,14 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      * @param _fixedFee An `uint` fixed fee in Wei.
      * @param _shareFee An `uint8` share fee.
      */
-    function setFees(uint _fixedFee, uint8 _shareFee) external onlyOwner {
+    function setFees(uint _fixedFee, uint _shareFee) external onlyOwner {
         fixedFee = _fixedFee;
         require(
             _shareFee <= 100, 
             "Share fee should be in 0-100% range."
         );
-        shareFee = _shareFee;
-        emit LogFeesUpdated(now, _fixedFee, _shareFee);
+        shareFee = uint8(_shareFee);
+        emit LogFeesUpdated(now, fixedFee, shareFee);
     }
 
     /**
