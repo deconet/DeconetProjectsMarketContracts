@@ -40,7 +40,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     enum ScoreType { CustomerSatisfaction, MakerSatisfaction }
 
     // Logged when a project state changes.
-    event ProjectStateUpdate (
+    event LogProjectStateUpdate (
         bytes32 indexed agreementHash,
         address updatedBy,
         uint timestamp,
@@ -48,17 +48,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     );
 
     // Logged when either party sets satisfaction score after the completion of a project.
-    event ProjectRated (
+    event LogProjectRated (
         bytes32 indexed agreementHash,
-        address ratedBy,
+        address indexed ratedBy,
+        address indexed ratingTarget,
         uint8 rating,
-        uint timestamp
-    );
-
-    // Logged when a new supplemental agreement is added.
-    event NewSupplementalAgreement(
-        bytes32 indexed agreementHash,
-        string supplementalAgreementHash,
         uint timestamp
     );
 
@@ -171,7 +165,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         );
         makerProjects[_maker].push(hash);
         clientProjects[_client].push(hash);
-        emit ProjectStateUpdate(hash, msg.sender, now, ProjectState.Active);
+        emit LogProjectStateUpdate(hash, msg.sender, now, ProjectState.Active);
     }
 
     /**
@@ -192,7 +186,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         }
 
         project.endDate = now;
-        emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Terminated);
+        emit LogProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Terminated);
     }
 
     /**
@@ -222,7 +216,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             "The last milestone should be the last for that project."
         );
         require(isLastMilestoneAccepted, "Only allowed when all milestones are completed.");
-        emit ProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Completed);
+        emit LogProjectStateUpdate(_agreementHash, msg.sender, now, ProjectState.Completed);
     }
 
     /**
@@ -241,14 +235,17 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         require(_rating >= 1 && _rating <= 10, "Project rating should be in the range 1-10.");
         Project storage project = projects[_agreementHash];
         require(project.endDate != 0, "Only allowed for active projects.");
+        address ratingTarget;
         if (msg.sender == project.client) {
             require(project.customerSatisfaction == 0, "CSAT is allowed to provide only once.");
             project.customerSatisfaction = _rating;
+            ratingTarget = project.maker;
         } else {
             require(project.makerSatisfaction == 0, "MSAT is allowed to provide only once.");
             project.makerSatisfaction = _rating;
+            ratingTarget = project.client;
         }
-        emit ProjectRated(_agreementHash, msg.sender, _rating, now);
+        emit LogProjectRated(_agreementHash, msg.sender, ratingTarget, _rating, now);
     }
 
     /**

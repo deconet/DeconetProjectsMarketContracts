@@ -371,7 +371,7 @@ contract("DecoProjects", async (accounts) => {
     let blockNumInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(txn.logs).to.have.lengthOf.at.least(1)
     let emittedEvent = txn.logs[txn.logs.length - 1]
-    expect(emittedEvent.event).to.be.equal("ProjectStateUpdate")
+    expect(emittedEvent.event).to.be.equal("LogProjectStateUpdate")
     expect(emittedEvent.args.agreementHash).to.be.equal(testAgreementHash)
     expect(emittedEvent.args.updatedBy).to.be.equal(mock.client)
     expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockNumInfo.timestamp)
@@ -524,7 +524,7 @@ contract("DecoProjects", async (accounts) => {
 
     let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(txn.logs).to.have.lengthOf.at.least(1)
-    expect(txn.logs[0].event).to.be.equal("ProjectStateUpdate")
+    expect(txn.logs[0].event).to.be.equal("LogProjectStateUpdate")
     expect(txn.logs[0].args.agreementHash).to.be.equal(testAgreementHash)
     expect(txn.logs[0].args.updatedBy).to.be.equal(mock.maker)
     expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
@@ -541,7 +541,7 @@ contract("DecoProjects", async (accounts) => {
 
     blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(txn.logs).to.have.lengthOf.at.least(1)
-    expect(txn.logs[0].event).to.be.equal("ProjectStateUpdate")
+    expect(txn.logs[0].event).to.be.equal("LogProjectStateUpdate")
     expect(txn.logs[0].args.agreementHash).to.be.equal(testAgreementHash)
     expect(txn.logs[0].args.updatedBy).to.be.equal(mock.client)
     expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
@@ -550,7 +550,7 @@ contract("DecoProjects", async (accounts) => {
     GenerateNewAgreementId()
     RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
-    let observer = decoProjects.ProjectStateUpdate()
+    let observer = decoProjects.LogProjectStateUpdate()
     txn = await decoMilestonesStub.terminateProjectAsDisputeResult(
       testAgreementHash,
       {from: mock.client, gasPrice: 1}
@@ -559,7 +559,7 @@ contract("DecoProjects", async (accounts) => {
     let logs = await observer.get()
     blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(logs).to.have.lengthOf.at.least(1)
-    expect(logs[0].event).to.be.equal("ProjectStateUpdate")
+    expect(logs[0].event).to.be.equal("LogProjectStateUpdate")
     expect(logs[0].args.agreementHash).to.be.equal(testAgreementHash)
     expect(logs[0].args.updatedBy).to.be.equal(decoMilestonesStub.address)
     expect(logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
@@ -1075,9 +1075,10 @@ contract("DecoProjects", async (accounts) => {
     )
     let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(txn.logs).to.have.length(1)
-    expect(txn.logs[0].event).to.be.equal("ProjectRated")
+    expect(txn.logs[0].event).to.be.equal("LogProjectRated")
     expect(txn.logs[0].args.agreementHash).to.be.equal(testAgreementHash)
     expect(txn.logs[0].args.ratedBy).to.be.equal(mock.client)
+    expect(txn.logs[0].args.ratingTarget).to.be.equal(mock.maker)
     expect(txn.logs[0].args.rating.toNumber()).to.be.equal(rating)
     expect(txn.logs[0].args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
   })
