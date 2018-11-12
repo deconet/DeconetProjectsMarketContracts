@@ -1,7 +1,9 @@
+var BigNumber = require("bignumber.js")
 let DecoProjects = artifacts.require("./DecoProjects.sol")
 let DecoMilestones = artifacts.require("./DecoMilestones.sol")
 let DecoRelay = artifacts.require("./DecoRelay.sol")
 let DecoBaseProjectsMarketplace = artifacts.require("./DecoBaseProjectsMarketplace.sol")
+let DecoTestToken = artifacts.require("./DecoTestToken.sol")
 
 contract("DecoBaseProjectsMarketplace", async (accounts) => {
   let base = undefined
@@ -83,5 +85,60 @@ contract("DecoBaseProjectsMarketplace", async (accounts) => {
     expect(isOwner).to.be.false
     isOwner = await base.isOwner({from: accounts[2], gasPrice: 1})
     expect(isOwner).to.be.false
+  })
+
+  it("should transfer out ERC20 tokens or fail for invalid sender and invalid amount.", async () => {
+    let testToken = await DecoTestToken.new({from: accounts[1], gasPrice: 1})
+    let initialBalance = (new BigNumber(10)).pow(18).times(1000)
+    await testToken.transfer(base.address, initialBalance.toString(), {from: accounts[1], gasPrice: 1})
+    let transferAndTest = async (sender, amount) => {
+      let initialSenderBalance = await testToken.balanceOf.call(sender)
+      let initialContractBalance = await testToken.balanceOf.call(base.address)
+      await base.transferAnyERC20Token(
+        testToken.address,
+        amount.toNumber(),
+        {from: sender, gasPrice: 1}
+      ).catch(async (err) => {
+        assert.isOk(err, "Error is expected, balance should not changed.")
+        expect(sender == accounts[0] && initialBalance.gt(amount)).to.be.false
+        let senderBalance = await testToken.balanceOf.call(sender)
+        let contractBalance = await testToken.balanceOf.call(base.address)
+        expect(senderBalance.toNumber()).to.be.equal(initialSenderBalance.toNumber())
+        expect(contractBalance.toNumber()).to.be.equal(initialContractBalance.toNumber())
+      }).then(async (txn) => {
+        if(txn) {
+          expect(sender == accounts[0] && initialBalance.gt(amount)).to.be.true
+          let senderBalance = await testToken.balanceOf.call(sender)
+          let contractBalance = await testToken.balanceOf.call(base.address)
+          expect(senderBalance.toNumber()).to.be.equal(initialSenderBalance.plus(amount).toNumber())
+          expect(contractBalance.toNumber()).to.be.equal(initialContractBalance.minus(amount).toNumber())
+          initialBalance = initialBalance.minus(amount)
+        }
+      })
+    }
+    await transferAndTest(
+      accounts[0],
+      initialBalance.div(4)
+    )
+    await transferAndTest(
+      accounts[0],
+      initialBalance.div(5)
+    )
+    await transferAndTest(
+      accounts[3],
+      initialBalance.div(5)
+    )
+    await transferAndTest(
+      accounts[0],
+      initialBalance.div(5)
+    )
+    await transferAndTest(
+      accounts[0],
+      initialBalance.times(2)
+    )
+    await transferAndTest(
+      accounts[7],
+      initialBalance.times(2)
+    )
   })
 })

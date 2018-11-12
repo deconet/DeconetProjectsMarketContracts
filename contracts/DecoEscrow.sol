@@ -294,6 +294,11 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
         );
     }
 
+    /**
+     * @dev Withdraws ETH amount from the contract's balance to the provided address.
+     * @param _targetAddress An `address` for transfer ETH to.
+     * @param _amount An `uint` amount to be transfered.
+     */
     function withdrawForAddress(address _targetAddress, uint _amount) public {
         require(
             _amount <= address(this).balance,
@@ -316,6 +321,12 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
         );
     }
 
+    /**
+     * @dev Withdraws ERC20 token amount from the contract's balance to the provided address.
+     * @param _targetAddress An `address` for transfer tokens to.
+     * @param _tokenAddress An `address` of ERC20 token.
+     * @param _amount An `uint` amount of ERC20 tokens to be transfered.
+     */
     function withdrawErc20ForAddress(address _targetAddress, address _tokenAddress, uint _amount) public {
         ERC20 token = ERC20(_tokenAddress);
         require(
@@ -407,5 +418,22 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             PaymentType.Erc20,
             OperationType.Unblock
         );
+    }
+
+    /**
+     * @dev Override base contract logic to block this operation for Escrow contract.
+     * @param _tokenAddress An `address` of an ERC20 token.
+     * @param _tokens An `uint` tokens amount.
+     * @return A `bool` operation result state.
+     */
+    function transferAnyERC20Token(
+        address _tokenAddress,
+        uint _tokens
+    )
+        public
+        onlyOwner
+        returns (bool success)
+    {
+        return false;
     }
 }

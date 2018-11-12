@@ -1721,4 +1721,36 @@ contract("DecoEscrow", async (accounts) => {
     await setAllowanceAndCheckState(accounts[13], 4)
     await setAllowanceAndCheckState(accounts[14], 5)
   })
+
+  it("should not change ERC20 tokens balance with transferAnyErc20Token function.", async () => {
+    let authorizedAddress = accounts[19]
+    let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
+    let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
+    let initialTokensBalance = decoTestToken.tokensValueAsBigNumber(10000)
+    await decoEscrow.depositErc20(
+      decoTestToken.address,
+      initialTokensBalance.toString(),
+      {from: accounts[0], gasPrice: 1}
+    )
+
+    let transferAndCheck = async (sender, amount) => {
+      await decoEscrow.transferAnyERC20Token(
+        decoTestToken.address,
+        amount.toNumber(),
+        {from: accounts[1], gasPrice: 1}
+      ).catch(async (err) => {
+        let actualBalance = await decoTestToken.balanceOf(decoEscrow.address)
+        expect(actualBalance.toNumber()).to.be.equal(initialTokensBalance.toNumber())
+      }).then(async (txn) => {
+        if(txn) {
+          let actualBalance = await decoTestToken.balanceOf(decoEscrow.address)
+          expect(actualBalance.toNumber()).to.be.equal(initialTokensBalance.toNumber())
+        }
+      })
+    }
+
+    await transferAndCheck(accounts[1], initialTokensBalance)
+    await transferAndCheck(accounts[0], initialTokensBalance.div(10))
+    await transferAndCheck(accounts[5], initialTokensBalance.div(2))
+  })
 })
