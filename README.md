@@ -15,5 +15,5 @@ to connect, sign an agreement and start working right away with the help of smar
 
 [Diagrams presentation](https://drive.google.com/open?id=1QluDdnGflzvk6488LqC4hczw0HmZ2ggY) showing v1 of all aspects of Projects marketplace contracts work.
 
-[Short description doc](https://docs.google.com/document/d/1eG1irrilkSHj99uVN_J0rLfQ3yCfSsuDJeott-_To6Q/edit?usp=sharing) for the v1 of smart contracts.
+[Short description doc](https://drive.google.com/open?id=14VT2CmdJr9CfX2YkpNYVJ1zVTUyCe4L_gA15qEEXWaI) for the v1 of smart contracts.
 
