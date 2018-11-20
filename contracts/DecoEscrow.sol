@@ -5,7 +5,7 @@ import "./DecoRelay.sol";
 import "./DecoBaseProjectsMarketplace.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 
 /**
@@ -113,7 +113,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
      */
     function depositErc20(address _tokenAddress, uint _amount) external {
         require(_tokenAddress != address(0x0), "Token Address shouldn't be 0x0.");
-        ERC20 token = ERC20(_tokenAddress);
+        IERC20 token = IERC20(_tokenAddress);
         require(
             token.transferFrom(msg.sender, address(this), _amount),
             "Transfer operation should be successful."
@@ -225,7 +225,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
                 OperationType.Distribute
             );
         }
-        if (_destination == owner) {
+        if (_destination == owner()) {
             unblockFunds(amount);
             return;
         }
@@ -281,7 +281,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
                 OperationType.Distribute
             );
         }
-        if (_destination == owner) {
+        if (_destination == owner()) {
             unblockTokenFunds(_tokenAddress, amount);
             return;
         }
@@ -308,7 +308,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             _amount <= address(this).balance,
             "Amount to withdraw should be less or equal than balance."
         );
-        if (_targetAddress == owner) {
+        if (_targetAddress == owner()) {
             balance = balance.sub(_amount);
         } else {
             uint withdrawalAllowance = withdrawalAllowanceForAddress[_targetAddress];
@@ -332,12 +332,12 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
      * @param _amount An `uint` amount of ERC20 tokens to be transfered.
      */
     function withdrawErc20ForAddress(address _targetAddress, address _tokenAddress, uint _amount) public {
-        ERC20 token = ERC20(_tokenAddress);
+        IERC20 token = IERC20(_tokenAddress);
         require(
             _amount <= token.balanceOf(this),
             "Token amount to withdraw should be less or equal than balance."
         );
-        if (_targetAddress == owner) {
+        if (_targetAddress == owner()) {
             tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].sub(_amount);
         } else {
             uint tokenWithdrawalAllowance = getTokenWithdrawalAllowance(_targetAddress, _tokenAddress);

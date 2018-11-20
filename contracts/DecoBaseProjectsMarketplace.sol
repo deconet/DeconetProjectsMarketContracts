@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 
 /// @title Base projects marketplace contract that contains shared logic.
@@ -29,13 +29,6 @@ contract DecoBaseProjectsMarketplace is Ownable {
     }
 
     /**
-     * @return A `bool` indicating if sender is the owner of the current contract.
-     */
-    function isOwner() public view returns(bool) {
-        return msg.sender == owner;
-    }
-
-    /**
      * @dev Allows to trasnfer any ERC20 tokens from the contract balance to owner's address.
      * @param _tokenAddress An `address` of an ERC20 token.
      * @param _tokens An `uint` tokens amount.
@@ -49,6 +42,7 @@ contract DecoBaseProjectsMarketplace is Ownable {
         onlyOwner
         returns (bool success)
     {
-        return ERC20(_tokenAddress).transfer(owner, _tokens);
+        IERC20 token = IERC20(_tokenAddress);
+        return token.transfer(owner(), _tokens);
     }
 }

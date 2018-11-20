@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/ECRecovery.sol";
+import "openzeppelin-solidity/contracts/cryptography/ECDSA.sol";
 import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoMilestones.sol";
 import "./DecoEscrowFactory.sol";
@@ -13,7 +13,7 @@ import "./IDecoArbitration.sol";
 /// @title Contract for Project events and actions handling.
 contract DecoProjects is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
-    using ECRecovery for bytes32;
+    using ECDSA for bytes32;
 
     // struct for project details
     struct Project {
