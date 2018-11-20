@@ -1,6 +1,8 @@
 pragma solidity 0.4.24;
 
 
+/// @title Interface that an arbitration target contract is expected to conform.
+/// @notice `DecoMilestones` contract implements `IDecoArbitrationTarget` interface.
 contract IDecoArbitrationTarget {
 
     /**

@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 
+/// @title Interface that an arbitration contract is expected to conform.
 interface IDecoArbitration {
 
     /**

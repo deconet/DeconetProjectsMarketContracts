@@ -8,6 +8,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
+/// @title Contract for Arbitration role and hanlding its events and actions.
 contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
 

@@ -7,6 +7,10 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@optionality.io/clone-factory/contracts/CloneFactory.sol";
 
 
+/**
+ * @title Utility contract that provides a way to execute cheap clone deployment of the DecoEscrow contract
+ *        on chain.
+ */
 contract DecoEscrowFactory is DecoBaseProjectsMarketplace, CloneFactory {
 
     // Escrow master-contract address.

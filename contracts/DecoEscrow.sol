@@ -8,6 +8,10 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 
+/**
+ * @title Escrow contract, every project deploys a clone and transfer ownership to the project client, so all
+ *        funds not reserved to pay for a milestone can be safely moved in/out.
+ */
 contract DecoEscrow is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
 

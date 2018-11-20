@@ -3,6 +3,7 @@ pragma solidity 0.4.24;
 import "./DecoBaseProjectsMarketplace.sol";
 
 
+/// @title Contract to store other contracts newest versions addresses and service information.
 contract DecoRelay is DecoBaseProjectsMarketplace {
     address public projectsContractAddress;
     address public milestonesContractAddress;

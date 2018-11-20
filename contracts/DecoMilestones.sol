@@ -8,6 +8,7 @@ import "./DecoProjects.sol";
 import "./IDecoArbitrationTarget.sol";
 
 
+/// @title Contract for Milesotone events and actions handling.
 contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
 
     address public constant ETH_TOKEN_ADDRESS = address(0x0);

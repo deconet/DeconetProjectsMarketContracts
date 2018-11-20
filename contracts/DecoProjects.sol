@@ -10,6 +10,7 @@ import "./DecoRelay.sol";
 import "./IDecoArbitration.sol";
 
 
+/// @title Contract for Project events and actions handling.
 contract DecoProjects is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
     using ECRecovery for bytes32;

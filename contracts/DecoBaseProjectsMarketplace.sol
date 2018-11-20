@@ -5,6 +5,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 
+/// @title Base projects marketplace contract that contains shared logic.
 contract DecoBaseProjectsMarketplace is Ownable {
     using SafeMath for uint256;
 
