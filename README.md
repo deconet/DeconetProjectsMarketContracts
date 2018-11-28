@@ -17,3 +17,13 @@ to connect, sign an agreement and start working right away with the help of smar
 
 [Short description doc](https://drive.google.com/open?id=14VT2CmdJr9CfX2YkpNYVJ1zVTUyCe4L_gA15qEEXWaI) for the v1 of smart contracts.
 
+
+## Scripts
+
+Please use scripts from `package.json` in order to leverage locally installed dependencies:
+
+- Launch `ganache-cli`: `yarn run ganache-cli` or `npm run ganache-cli`.
+
+- Run tests: `yarn run test` or `npm run test`.
+
+- Run tests code coverage measurements: `yarn run coverage` or `npm run coverage`.
