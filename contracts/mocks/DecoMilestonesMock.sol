@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 import "../DecoMilestones.sol";
 
@@ -57,7 +57,15 @@ contract DecoMilestonesMock is DecoMilestones {
         if (shouldSkipContractCanTerminateCall) {
             return canMakerTerminateConfig;
         } else {
-            return super.canMakerTerminate(_agreementHash);
+            if (super.canMakerTerminate(_agreementHash) == false) {
+                return false;
+            } else {
+                return true;
+            }
         }
+    }
+
+    function countOfMilestones(bytes32 _agreementHash) public view returns(uint) {
+        return projectMilestones[_agreementHash].length;
     }
 }

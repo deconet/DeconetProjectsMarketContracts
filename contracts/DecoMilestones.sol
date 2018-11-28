@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 
 import "./DecoBaseProjectsMarketplace.sol";
@@ -463,7 +463,7 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
         )).mul(24 hours);
         uint projectStartDate = projectsContract.getProjectStartDate(_agreementHash);
         uint milestonesCount = projectMilestones[_agreementHash].length;
-        if (milestonesCount == 0 && now.sub(projectStartDate) > milestoneStartWindow) return true;
+        if (milestonesCount == 0) return now.sub(projectStartDate) > milestoneStartWindow;
         Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
         uint nowTimestamp = now;
         if (!lastMilestone.isOnHold &&
