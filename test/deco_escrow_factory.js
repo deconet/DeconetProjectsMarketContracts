@@ -5,6 +5,8 @@ var DecoMilestones = artifacts.require("./DecoMilestones.sol")
 var DecoProjects = artifacts.require("./DecoProjects.sol")
 var DecoRelay = artifacts.require("./DecoRelay.sol")
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
 contract("DecoEscrowFactory", async (accounts) => {
   it("should save provided library address during the contract deployment.", async () => {
     let test = async (libraryAddress) => {
@@ -15,7 +17,7 @@ contract("DecoEscrowFactory", async (accounts) => {
     test(accounts[1])
     test(accounts[2])
     test(accounts[3])
-    test("0x0000000000000000000000000000000000000000")
+    test(ZERO_ADDRESS)
   })
 
   it("should successfully update library address with a valid address from the owner address.", async () => {
@@ -65,7 +67,7 @@ contract("DecoEscrowFactory", async (accounts) => {
   it("should fail to update library address with 0x0 contract address.", async () => {
     let decoEscrowFactory = await DecoEscrowFactory.new(accounts[1], {from: accounts[0], gasPrice: 1})
     await decoEscrowFactory.setLibraryAddress(
-      "0x0",
+      ZERO_ADDRESS,
       {from: accounts[0], gasPrice: 1}
     ).catch(async (err) => {
       assert.isOk(err, "Should throw exception here.")

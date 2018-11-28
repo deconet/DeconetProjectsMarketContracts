@@ -4,6 +4,8 @@ var DecoMilestones = artifacts.require("./DecoMilestones.sol")
 var DecoEscrowFactory = artifacts.require("./DecoEscrowFactory.sol")
 var DecoArbitration = artifacts.require("./DecoArbitration.sol")
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
 contract("DecoRelay", async (accounts) => {
   let decoRelay = undefined
 
@@ -121,7 +123,7 @@ contract("DecoRelay", async (accounts) => {
     async () => {
       let setAndCheck = async (decoProjects, decoMilestones, decoEscrowFactory, decoArbitration, withdrawalAddress) => {
         await decoRelay.setProjectsContractAddress(
-          "0x0",
+          ZERO_ADDRESS,
           {from: accounts[0], gasPrice: 1}
         ).catch(async (err) => {
           assert.isOk(err, "Expected exception.")
@@ -133,7 +135,7 @@ contract("DecoRelay", async (accounts) => {
           }
         })
         await decoRelay.setMilestonesContractAddress(
-          "0x0",
+          ZERO_ADDRESS,
           {from: accounts[0], gasPrice: 1}
         ).catch(async (err) => {
           assert.isOk(err, "Expected exception.")
@@ -145,7 +147,7 @@ contract("DecoRelay", async (accounts) => {
           }
         })
         await decoRelay.setEscrowFactoryContractAddress(
-          "0x0",
+          ZERO_ADDRESS,
           {from: accounts[0], gasPrice: 1}
         ).catch(async (err) => {
           assert.isOk(err, "Expected exception.")
@@ -157,7 +159,7 @@ contract("DecoRelay", async (accounts) => {
           }
         })
         await decoRelay.setArbitrationContractAddress(
-          "0x0",
+          ZERO_ADDRESS,
           {from: accounts[0], gasPrice: 1}
         ).catch(async (err) => {
           assert.isOk(err, "Expected exception.")
@@ -169,7 +171,7 @@ contract("DecoRelay", async (accounts) => {
           }
         })
         await decoRelay.setFeesWithdrawalAddress(
-          "0x0",
+          ZERO_ADDRESS,
           {from: accounts[0], gasPrice: 1}
         ).catch(async (err) => {
           assert.isOk(err, "Expected exception.")
@@ -194,13 +196,13 @@ contract("DecoRelay", async (accounts) => {
 
       let newFee = await decoRelay.shareFee.call()
 
-      expect(newFee).to.be.equal(fee)
+      expect(newFee.toString()).to.be.equal(fee)
     }
 
-    setAndCheck(10)
-    setAndCheck(20)
-    setAndCheck(30)
-    setAndCheck(40)
+    await setAndCheck("10")
+    await setAndCheck("20")
+    await setAndCheck("30")
+    await setAndCheck("40")
   })
 
   it("should fail setting share fee.", async () => {
@@ -208,7 +210,7 @@ contract("DecoRelay", async (accounts) => {
       await decoRelay.setShareFee(fee, {from: sender, gasPrice: 1}).catch(async (err) => {
         assert.isOk(err, "Expected exception.")
         let newFee = await decoRelay.shareFee.call()
-        expect(newFee).to.not.be.equal(fee)
+        expect(newFee.toString()).to.not.be.equal(fee)
       }).then(async (txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
@@ -216,9 +218,9 @@ contract("DecoRelay", async (accounts) => {
       })
     }
 
-    setAndCheck(101, accounts[0])
-    setAndCheck(20, accounts[1])
-    setAndCheck(300, accounts[0])
-    setAndCheck(40, accounts[2])
+    await setAndCheck("101", accounts[0])
+    await setAndCheck("20", accounts[1])
+    await setAndCheck("200", accounts[0])
+    await setAndCheck("50", accounts[2])
   })
 })

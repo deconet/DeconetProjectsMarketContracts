@@ -1,4 +1,3 @@
-var web3NewUtils = require("web3-utils")
 var BigNumber = require("bignumber.js")
 var DecoProjects = artifacts.require("./DecoProjects.sol")
 var DecoMilestonesStub = artifacts.require("./DecoMilestonesStub.sol")
@@ -10,6 +9,8 @@ var DecoArbitration = artifacts.require("./DecoArbitration.sol")
 var DecoArbitrationStub = artifacts.require("./DecoArbitrationStub.sol")
 var DecoTest = artifacts.require("./DecoTest.sol")
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+BigNumber.config({ EXPONENTIAL_AT: 1e+9 })
 
 class Project {
   constructor(contractStructArray) {
@@ -18,13 +19,13 @@ class Project {
     this.maker = contractStructArray[2]
     this.arbiter = contractStructArray[3]
     this.escrowContractAddress = contractStructArray[4]
-    this.startDate = contractStructArray[5]
-    this.endDate = contractStructArray[6]
-    this.milestoneStartWindow = contractStructArray[7]
-    this.feedbackWindow = contractStructArray[8]
-    this.milestonesCount = contractStructArray[9]
-    this.customerSatisfaction = contractStructArray[10]
-    this.makerSatisfaction = contractStructArray[11]
+    this.startDate = new BigNumber(contractStructArray[5])
+    this.endDate = new BigNumber(contractStructArray[6])
+    this.milestoneStartWindow = new BigNumber(contractStructArray[7])
+    this.feedbackWindow = new BigNumber(contractStructArray[8])
+    this.milestonesCount = new BigNumber(contractStructArray[9])
+    this.customerSatisfaction = new BigNumber(contractStructArray[10])
+    this.makerSatisfaction = new BigNumber(contractStructArray[11])
     this.agreementsEncrypted = contractStructArray[12]
   }
 
@@ -142,18 +143,18 @@ contract("DecoProjects", async (accounts) => {
       mock.arbiter,
       mock.maker,
       sign,
-      mock.milestonesCount.toNumber(),
-      mock.milestoneStartWindow.toNumber(),
-      mock.feedbackWindow.toNumber(),
+      mock.milestonesCount.toString(),
+      mock.milestoneStartWindow.toString(),
+      mock.feedbackWindow.toString(),
       mock.agreementsEncrypted,
       { from: sender, gasPrice: 1 }
     )
   }
 
   const RefreshSignatureAndHashes = async () => {
-    testAgreementHash = web3.sha3(mock.agreementId)
-    signatureHash = web3NewUtils.soliditySha3(mock.agreementId, mock.arbiter)
-    signature = web3.eth.sign(mock.maker, signatureHash)
+    testAgreementHash = web3.utils.soliditySha3(mock.agreementId)
+    signatureHash = web3.utils.soliditySha3(mock.agreementId, mock.arbiter)
+    signature = await web3.eth.sign(signatureHash, mock.maker)
   }
 
   const GenerateNewAgreementId = async () => {
@@ -179,14 +180,16 @@ contract("DecoProjects", async (accounts) => {
       decoArbitration.address
     )
     await DeployMilestonesContractStub(mock.client)
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
   })
 
   it("should start the project with maker address and matching signature.", async () => {
-    let listener = decoEscrowFactory.EscrowCreated()
     let txn = await StartProject(signature, mock.client)
     expect(txn.logs).to.have.lengthOf.at.least(1)
-    let events = await listener.get()
+    let events = await decoEscrowFactory.getPastEvents(
+      "EscrowCreated",
+      {fromBlock: "latest", toBlock: "latest"}
+    )
     let escrowCreatedEvent = events[events.length - 1]
     expect(escrowCreatedEvent.event).to.be.equal("EscrowCreated")
     expect((new BigNumber(escrowCreatedEvent.args.newEscrowAddress)).toNumber()).to.not.be.equal(0)
@@ -208,9 +211,9 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail project creation if makers signature isn't valid.", async () => {
-    signature = web3.eth.sign(mock.client, signatureHash)
+    signature = await web3.eth.sign(signatureHash, mock.client)
 
-    await StartProject(signature, mock.client).catch((err) => {
+    await StartProject(signature, mock.client).catch(async (err) => {
       assert.isOk(err, "Exception should be thrown for the transaction.")
     }).then((txn) => {
       if(txn) {
@@ -236,11 +239,11 @@ contract("DecoProjects", async (accounts) => {
       let client = mock.client
       let maker = mock.maker
       mock.maker = client
-      RefreshSignatureAndHashes()
-      await StartProject(signature, mock.client).catch((err) => {
+      await RefreshSignatureAndHashes()
+      await StartProject(signature, mock.client).catch(async (err) => {
         assert.isOk(err, "Exception should be thrown for the transaction.")
         mock.maker = maker
-        RefreshSignatureAndHashes()
+        await RefreshSignatureAndHashes()
       }).then((txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
@@ -276,7 +279,7 @@ contract("DecoProjects", async (accounts) => {
 
     mock.milestonesCount = new BigNumber("0")
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
@@ -285,10 +288,9 @@ contract("DecoProjects", async (accounts) => {
       }
     })
 
-    
     mock.milestonesCount = new BigNumber("25")
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
@@ -332,21 +334,20 @@ contract("DecoProjects", async (accounts) => {
     let makersProjectsBefore = await decoProjects.getMakerProjects(mock.maker)
     let clientsProjectsBefore = await decoProjects.getClientProjects(mock.client)
 
-    
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     let testAgreementHash1 = testAgreementHash
     let signature1 = signature
     await StartProject(signature1, mock.client)
 
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     let testAgreementHash2 = testAgreementHash
     let signature2 = signature
     await StartProject(signature2, mock.client)
 
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     let testAgreementHash3 = testAgreementHash
     let signature3 = signature
     await StartProject(signature3, mock.client)
@@ -376,21 +377,6 @@ contract("DecoProjects", async (accounts) => {
     expect(emittedEvent.args.updatedBy).to.be.equal(mock.client)
     expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockNumInfo.timestamp)
     expect(emittedEvent.args.state.toNumber()).to.be.equal(0)
-  })
-
-  it("shouldn't emit the event when creation of a new project fails.", async () => {
-    // A signature below is created by not a maker, should cause an exception in contract.
-    signature = web3.eth.sign(accounts[4], signatureHash)
-    await StartProject(signature, mock.client).catch(async (err) => {
-      assert.isOk(err, "Exception should be thrown for that transaction.")
-      let projectArray = await decoProjects.projects.call(testAgreementHash)
-      expect(projectArray[0]).to.be.empty
-      expect(err.receipt.logs).to.have.length(0)
-    }).then((txn) => {
-      if(txn) {
-        assert.fail("Should have failed above.")
-      }
-    })
   })
 
   it(
@@ -531,7 +517,7 @@ contract("DecoProjects", async (accounts) => {
     expect(txn.logs[0].args.state.toNumber()).to.be.equal(2)
 
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
 
     txn = await decoProjects.terminateProject(
@@ -548,15 +534,17 @@ contract("DecoProjects", async (accounts) => {
     expect(txn.logs[0].args.state.toNumber()).to.be.equal(2)
 
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
-    let observer = decoProjects.LogProjectStateUpdate()
     txn = await decoMilestonesStub.terminateProjectAsDisputeResult(
       testAgreementHash,
       {from: mock.client, gasPrice: 1}
     )
 
-    let logs = await observer.get()
+    let logs = await decoProjects.getPastEvents(
+      "LogProjectStateUpdate",
+      {fromBlock: "latest", toBlock: "latest"}
+    )
     blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
     expect(logs).to.have.lengthOf.at.least(1)
     expect(logs[0].event).to.be.equal("LogProjectStateUpdate")
@@ -1134,10 +1122,9 @@ contract("DecoProjects", async (accounts) => {
 
   it("should calculate correctly average MSAT for the client", async () => {
     const validateScoreCalculations = async (expectedRating) => {
-      let actualRating
-      let endedProjectsCount
-      [actualRating, endedProjectsCount] = await decoProjects.clientsAverageRating(mock.client)
-      actualRating = actualRating.dividedBy(endedProjectsCount)
+      let { '0': actualRating, '1': endedProjectsCount } = await decoProjects.clientsAverageRating(mock.client)
+      actualRating = new BigNumber(actualRating).div(endedProjectsCount)
+      endedProjectsCount = new BigNumber(endedProjectsCount)
       expect(actualRating.toNumber()).to.be.equal(expectedRating)
     }
 
@@ -1159,7 +1146,7 @@ contract("DecoProjects", async (accounts) => {
     
     mock.maker = accounts[6]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1175,7 +1162,7 @@ contract("DecoProjects", async (accounts) => {
     // Third completed and rated project
     mock.maker = accounts[7]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1191,7 +1178,7 @@ contract("DecoProjects", async (accounts) => {
     // Fourth completed and rated project
     mock.maker = accounts[8]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1207,7 +1194,7 @@ contract("DecoProjects", async (accounts) => {
     // Fifth completed but not rated project
     mock.maker = accounts[9]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1218,7 +1205,7 @@ contract("DecoProjects", async (accounts) => {
     // Sixth active project
     mock.maker = accounts[10]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
 
     await validateScoreCalculations((1 + 2 + 3 + 4) / 4)
@@ -1226,16 +1213,15 @@ contract("DecoProjects", async (accounts) => {
 
   it("should calculate correctly average CSAT for the maker", async () => {
     const validateScoreCalculations = async (expectedRating) => {
-      let actualRating
-      let endedProjectsCount
-      [actualRating, endedProjectsCount] = await decoProjects.makersAverageRating(mock.maker)
-      actualRating = actualRating.dividedBy(endedProjectsCount)
+      let { '0': actualRating, '1': endedProjectsCount } = await decoProjects.makersAverageRating(mock.maker)
+      actualRating = new BigNumber(actualRating).div(endedProjectsCount)
+      endedProjectsCount = new BigNumber(endedProjectsCount)
       expect(actualRating.toNumber()).to.be.equal(expectedRating)
     }
 
     // First completed and rated project
     mock.maker = accounts[5]
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1251,7 +1237,7 @@ contract("DecoProjects", async (accounts) => {
     // Second completed and rated project
     mock.client = accounts[6]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1267,7 +1253,7 @@ contract("DecoProjects", async (accounts) => {
     // Third completed and rated project
     mock.client = accounts[7]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1283,7 +1269,7 @@ contract("DecoProjects", async (accounts) => {
     // Fourth completed and rated project
     mock.client = accounts[8]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1299,7 +1285,7 @@ contract("DecoProjects", async (accounts) => {
     // Fifth completed but not rated project
     mock.client = accounts[9]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1310,7 +1296,7 @@ contract("DecoProjects", async (accounts) => {
     // Sixth active project
     mock.client = accounts[10]
     GenerateNewAgreementId()
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
     await StartProject(signature, mock.client)
     await validateScoreCalculations((1 + 2 + 3 + 4) / 4)
   })
@@ -1321,7 +1307,7 @@ contract("DecoProjects", async (accounts) => {
     await StartProject(signature, mock.client)
     projectExists = await decoProjects.checkIfProjectExists(testAgreementHash)
     expect(projectExists).to.be.true
-    testAgreementHash = web3.sha3(notExistingAgreementId)
+    testAgreementHash = web3.utils.soliditySha3(notExistingAgreementId)
     projectExists = await decoProjects.checkIfProjectExists(testAgreementHash)
     expect(projectExists).to.be.false
   })
@@ -1332,7 +1318,7 @@ contract("DecoProjects", async (accounts) => {
     await StartProject(signature, mock.client)
     milestonesCount = await decoProjects.getProjectMilestonesCount(testAgreementHash)
     expect(milestonesCount.toNumber()).to.be.equal(mock.milestonesCount.toNumber())
-    testAgreementHash = web3.sha3(notExistingAgreementId)
+    testAgreementHash = web3.utils.soliditySha3(notExistingAgreementId)
     milestonesCount = await decoProjects.getProjectMilestonesCount(testAgreementHash)
     expect(milestonesCount.toNumber()).to.be.equal(0)
   })
@@ -1385,7 +1371,7 @@ contract("DecoProjects", async (accounts) => {
       let decoProjectsMock = await DecoProjectsMock.new({from: decoProjectsMockOwner, gasPrice: 1})
 
       GenerateNewAgreementId()
-      RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes()
       let result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker, 
         signature,
@@ -1405,7 +1391,7 @@ contract("DecoProjects", async (accounts) => {
 
       expect(result).to.be.false
 
-      RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes()
       mock.maker = accounts[10]
       result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker, 
@@ -1416,9 +1402,9 @@ contract("DecoProjects", async (accounts) => {
 
       expect(result).to.be.false
 
-      RefreshSignatureAndHashes()
-      signatureHash = web3NewUtils.soliditySha3(mock.agreementId, accounts[12])
-      signature = web3.eth.sign(mock.maker, signatureHash)
+      await RefreshSignatureAndHashes()
+      signatureHash = web3.utils.soliditySha3(mock.agreementId, accounts[12])
+      signature = await web3.eth.sign(signatureHash, mock.maker)
       result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker, 
         signature,
@@ -1428,9 +1414,9 @@ contract("DecoProjects", async (accounts) => {
 
       expect(result).to.be.false
 
-      RefreshSignatureAndHashes()
-      signatureHash = web3NewUtils.soliditySha3(mock.agreementId, mock.arbiter)
-      signature = web3.eth.sign(accounts[0], signatureHash)
+      await RefreshSignatureAndHashes()
+      signatureHash = web3.utils.soliditySha3(mock.agreementId, mock.arbiter)
+      signature = await web3.eth.sign(signatureHash, accounts[0])
       result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker, 
         signature,
@@ -1445,10 +1431,10 @@ contract("DecoProjects", async (accounts) => {
     let arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
 
     mock.arbiter = arbitrationStub.address
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
 
     let startProjectAndCheckFees = async (fixedFeeEther, shareFee) => {
-      let fixedFee = web3.toWei(fixedFeeEther)
+      let fixedFee = web3.utils.toWei(fixedFeeEther)
       await arbitrationStub.setStubFees(fixedFee, shareFee)
 
       await StartProject(signature, mock.client)
@@ -1460,20 +1446,20 @@ contract("DecoProjects", async (accounts) => {
       expect(actualShareFee.toNumber()).to.be.equal(shareFee)
 
       GenerateNewAgreementId()
-      RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes()
     }
 
-    await startProjectAndCheckFees(1, 90)
-    await startProjectAndCheckFees(4, 80)
-    await startProjectAndCheckFees(0.0001, 80)
-    await startProjectAndCheckFees(0.000001, 1)
+    await startProjectAndCheckFees("1", 90)
+    await startProjectAndCheckFees("4", 80)
+    await startProjectAndCheckFees("0.0001", 80)
+    await startProjectAndCheckFees("0.000001", 1)
   })
 
   it("should fail storing fees and fail project start if arbiter contract is invalid.", async () => {
     let arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
 
     let startProjectAndCheckFees = async (fixedFeeEther, shareFee, arbiter) => {
-      let fixedFee = web3.toWei(fixedFeeEther)
+      let fixedFee = web3.utils.toWei(fixedFeeEther)
       await arbitrationStub.setStubFees(fixedFee, shareFee)
 
       mock.arbiter = arbiter
@@ -1483,8 +1469,8 @@ contract("DecoProjects", async (accounts) => {
         let actualFixedFee = await decoProjects.projectArbiterFixedFee.call(testAgreementHash)
         let actualShareFee = await decoProjects.projectArbiterShareFee.call(testAgreementHash)
 
-        expect(actualFixedFee.toNumber()).to.be.equal(0)
-        expect(actualShareFee.toNumber()).to.be.equal(0)
+        expect(actualFixedFee.toString()).to.be.equal("0")
+        expect(actualShareFee.toString()).to.be.equal("0")
       }).then(async (txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
@@ -1492,20 +1478,20 @@ contract("DecoProjects", async (accounts) => {
       })
     }
 
-    await startProjectAndCheckFees(1, 90, accounts[9])
-    await startProjectAndCheckFees(4, 80, accounts[10])
-    await startProjectAndCheckFees(0.0001, 80, accounts[8])
-    await startProjectAndCheckFees(0.000001, 1, accounts[5])
+    await startProjectAndCheckFees("1", 90, accounts[9])
+    await startProjectAndCheckFees("4", 80, accounts[10])
+    await startProjectAndCheckFees("0.0001", 80, accounts[8])
+    await startProjectAndCheckFees("0.000001", 1, accounts[5])
   })
 
   it("should return fees for the given project", async () => {
     let arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
 
     mock.arbiter = arbitrationStub.address
-    RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes()
 
     let startProjectAndCheckFees = async (fixedFeeEther, shareFee) => {
-      let fixedFee = web3.toWei(fixedFeeEther)
+      let fixedFee = web3.utils.toWei(fixedFeeEther)
       await arbitrationStub.setStubFees(fixedFee, shareFee)
 
       await StartProject(signature, mock.client)
@@ -1516,18 +1502,18 @@ contract("DecoProjects", async (accounts) => {
       expect(fees[1].toNumber()).to.be.equal(shareFee)
 
       GenerateNewAgreementId()
-      RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes()
     }
 
-    await startProjectAndCheckFees(1, 90)
-    await startProjectAndCheckFees(4, 80)
-    await startProjectAndCheckFees(0.0001, 80)
-    await startProjectAndCheckFees(0.000001, 1)
+    await startProjectAndCheckFees("1", 90)
+    await startProjectAndCheckFees("4", 80)
+    await startProjectAndCheckFees("0.0001", 80)
+    await startProjectAndCheckFees("0.000001", 1)
 
 
     let fees = await decoProjects.getProjectArbitrationFees(testAgreementHash)
-    expect(fees[0].toNumber()).to.be.equal(0)
-    expect(fees[1].toNumber()).to.be.equal(0)
+    expect(fees[0].toString()).to.be.equal("0")
+    expect(fees[1].toString()).to.be.equal("0")
   })
 
   it("should correctly validate project for dispute and return required information.", async () => {
@@ -1536,8 +1522,8 @@ contract("DecoProjects", async (accounts) => {
     let decoTest = await DecoTest.new({from: accounts[0], gasPrice: 1})
 
     mock.arbiter = arbitrationStub.address
-    RefreshSignatureAndHashes()
-    let fixedFee = web3.toWei(1)
+    await RefreshSignatureAndHashes()
+    let fixedFee = web3.utils.toWei("1")
     let shareFee = 5 // %
     await arbitrationStub.setStubFees(fixedFee, shareFee)
 
@@ -1549,7 +1535,7 @@ contract("DecoProjects", async (accounts) => {
         arbiter,
         fixedFee,
         shareFee,
-        "0x0",
+        ZERO_ADDRESS,
         decoProjects.address
       ).catch(async (err) => {
         assert.isOk(err, "Expected crash")
@@ -1610,13 +1596,13 @@ contract("DecoProjects", async (accounts) => {
       let value = await decoProjects.checkIfProjectExists(testAgreementHash)
       expect(value).to.be.equal(projectExist)
       value = await decoProjects.getProjectEscrowAddress(testAgreementHash)
-      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(escrow).toNumber())
+      expect(value).to.be.equal(escrow)
       value = await decoProjects.getProjectClient(testAgreementHash)
-      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(client).toNumber())
+      expect(value).to.be.equal(client)
       value = await decoProjects.getProjectMaker(testAgreementHash)
-      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(maker).toNumber())
+      expect(value).to.be.equal(maker)
       value = await decoProjects.getProjectArbiter(testAgreementHash)
-      expect(new BigNumber(value).toNumber()).to.be.equal(new BigNumber(arbiter).toNumber())
+      expect(value).to.be.equal(arbiter)
       value = await decoProjects.getProjectFeedbackWindow(testAgreementHash)
       expect(value.toNumber()).to.be.equal(feedbackWindow)
       value = await decoProjects.getProjectMilestoneStartWindow(testAgreementHash)
@@ -1628,7 +1614,7 @@ contract("DecoProjects", async (accounts) => {
       value = await decoProjects.getProjectMilestonesCount(testAgreementHash)
       expect(value.toNumber()).to.be.equal(milestonesCount)
     }
-    await check(false, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    await check(false, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0, 0, 0, 0, 0)
     await StartProject(signature, mock.client)
     let projectArray = await decoProjects.projects.call(testAgreementHash)
     expect(projectArray[0]).to.not.be.undefined
