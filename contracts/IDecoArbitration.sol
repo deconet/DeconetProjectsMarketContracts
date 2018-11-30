@@ -61,7 +61,11 @@ interface IDecoArbitration {
     );
 
     /**
-     * @dev Start dispute for the given project.
+     * @notice Start dispute for the given project.
+     * @dev This call should log event and save dispute information and notify `IDecoArbitrationTarget` object
+     *      about started dispute. Dipsute can be started only if target instance call of
+     *      `canStartDispute` method confirms that state is valid. Also, txn sender and respondent addresses
+     *      eligibility must be confirmed by arbitation target `checkEligibility` method call.
      * @param _idHash A `bytes32` hash of a project id.
      * @param _respondent An `address` of the second paty involved in the dispute.
      * @param _respondentShareProposal An `int` value indicating percentage of disputed funds 
@@ -72,23 +76,31 @@ interface IDecoArbitration {
     function startDispute(bytes32 _idHash, address _respondent, int _respondentShareProposal) external;
 
     /**
-     * @dev Accept active dispute proposal, sender should be the respondent.
+     * @notice Accept active dispute proposal, sender should be the respondent.
+     * @dev Respondent of a dispute can accept existing proposal and if proposal exists then `settleDispute`
+     *      method should be called with proposal value. Time limit for respondent to accept/reject proposal
+     *      must not be exceeded.
      * @param _idHash A `bytes32` hash of a project id.
      */
     function acceptProposal(bytes32 _idHash) external;
 
     /**
-     * @dev Reject active dispute proposal, sender should be the respondent. 
-     *  Dispute automatically gets escalated to the project owner arbiter.
+     * @notice Reject active dispute proposal and escalate dispute.
+     * @dev Txn sender should be dispute's respondent. Dispute automatically gets escalated to this contract
+     *      owner aka arbiter. Proposal must exist, otherwise this method should do nothing. When respondent
+     *      rejects proposal then it should get removed and corresponding event should be logged.
+     *      There should be a time limit for a respondent to reject a given proposal, and if it is overdue
+     *      then arbiter should take on a dispute to settle it.
      * @param _idHash A `bytes32` hash of a project id.
      */
     function rejectProposal(bytes32 _idHash) external;
 
     /**
-     * @dev Settle active dispute, sender should be the current contract or its owner. 
-     *  Action is possible only when there is no active proposal or time to accept the proposal is over.
-     *  Sum of shares should be 100%.
-     *  Should notify target contract about the dispute is settled.
+     * @notice Settle active dispute.
+     * @dev Sender should be the current contract or its owner(arbiter). Action is possible only when there is no active
+     *      proposal or time to accept the proposal is over. Sum of shares should be 100%. Should notify target
+     *      instance about a dispute settlement via `disputeSettledTerminate` method call. Also corresponding
+     *      event must be emitted.
      * @param _idHash A `bytes32` hash of a project id.
      * @param _respondentShare An `uint` percents of respondent share.
      * @param _initiatorShare An `uint` percents of initiator share.
@@ -106,7 +118,7 @@ interface IDecoArbitration {
     function getFixedAndShareFees() external view returns(uint, uint8);
 
     /**
-     * @return An `uint` time limit for replying on proposal.
+     * @return An `uint` time limit for accepting/rejecting a proposal by respondent.
      */
     function getTimeLimitForReplyOnProposal() external view returns(uint);
 
