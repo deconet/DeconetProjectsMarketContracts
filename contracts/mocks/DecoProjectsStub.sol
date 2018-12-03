@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 import "../DecoProjects.sol";
 import "../DecoRelay.sol";
@@ -18,8 +18,8 @@ contract DecoProjectsStub is DecoProjects {
     address public maker;
     address public arbiter;
 
-    uint8 public feedbackWindow;
-    uint8 public milestoneStartWindow;
+    uint8 public feedbackWindow = 0;
+    uint8 public milestoneStartWindow = 0;
 
     uint public arbiterFixedFee;
     uint8 public arbiterShareFee;
@@ -136,7 +136,7 @@ contract DecoProjectsStub is DecoProjects {
     }
 
     function getInfoForDisputeAndValidate(
-        bytes32 _agreementHash,
+        bytes32,
         address _respondent,
         address _initiator,
         address _arbiter

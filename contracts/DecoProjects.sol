@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -134,7 +134,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     )
         external
     {
-        require(msg.sender == _client, "Only the client can kick of the project.");
+        require(msg.sender == _client, "Only the client can kick off the project.");
         require(_client != _maker, "Client can`t be a maker on her own project.");
         require(_arbiter != _maker && _arbiter != _client, "Arbiter must not be a client nor a maker.");
 

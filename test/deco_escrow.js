@@ -1,8 +1,11 @@
 var BigNumber = require("bignumber.js")
+BigNumber.config({ EXPONENTIAL_AT: 1e+9 })
 var DecoTestToken = artifacts.require("./DecoTestToken.sol")
 var DecoEscrow = artifacts.require("./DecoEscrow.sol")
 var DecoEscrowMock = artifacts.require("./DecoEscrowMock.sol")
 var DecoRelay = artifacts.require("./DecoRelay.sol")
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 class Erc20Token {
   constructor() {
@@ -24,7 +27,7 @@ class Erc20Token {
   async approveAllowance(sender, to, amount) {
     return this.contract.approve(
       to,
-      this.tokensValueAsBigNumber(amount).toString(),
+      web3.utils.toBN(this.tokensValueAsBigNumber(amount).toString()),
       {from: sender, gasPrice: 1}
     )
   }
@@ -33,7 +36,7 @@ class Erc20Token {
     return this.contract.transferFrom(
       from,
       to,
-      this.tokensValueAsBigNumber(amount).toString(),
+      web3.utils.toBN(this.tokensValueAsBigNumber(amount).toString()),
       {from: sender, gasPrice: 1}
     )
   }
@@ -41,7 +44,7 @@ class Erc20Token {
   async transfer(sender, to, amount) {
     return this.contract.transfer(
       to,
-      this.tokensValueAsBigNumber(amount).toString(),
+      web3.utils.toBN(this.tokensValueAsBigNumber(amount).toString()),
       {from: sender, gasPrice: 1}
     )
   }
@@ -52,7 +55,7 @@ class Erc20Token {
 
   tokensValueAsBigNumber(amount) {
     let amountBigNumber = new BigNumber(amount)
-    let decimalsAppendixBigNumber = (new BigNumber(10)).exponentiatedBy(this.decimals)
+    let decimalsAppendixBigNumber = (new BigNumber(10)).pow(this.decimals)
     return amountBigNumber.times(decimalsAppendixBigNumber)
   }
 }
@@ -79,6 +82,7 @@ contract("DecoEscrow", async (accounts) => {
 
   const DeployEscrowAndInit = async (deployFrom, newOwner, authorizedAddress) => {
     let escrow = await DecoEscrow.new({from: deployFrom, gasPrice: 1})
+    let relayAddress = await escrow.relayContractAddress()
     await escrow.initialize(
       newOwner,
       authorizedAddress,
@@ -94,7 +98,7 @@ contract("DecoEscrow", async (accounts) => {
     async () => {
       let decoEscrow = await DecoEscrow.deployed()
       let sendEthAndValidateBalance = async (senderAddress, amountToSendInETH, directSending) => {
-        let weiValueToSend = web3.toWei(amountToSendInETH)
+        let weiValueToSend = web3.utils.toWei(amountToSendInETH)
         let initialBalance = await decoEscrow.balance.call()
         let txn
         if(directSending) {
@@ -103,25 +107,25 @@ contract("DecoEscrow", async (accounts) => {
           txn = await decoEscrow.deposit({from: senderAddress, gasPrice: 1, value: weiValueToSend})
         }
         let resultingBalance = await decoEscrow.balance.call()
-        expect(resultingBalance.toNumber()).to.be.equal(
-          initialBalance.plus(weiValueToSend).toNumber()
+        expect(resultingBalance.toString()).to.be.equal(
+          new BigNumber(initialBalance).plus(weiValueToSend).toString()
         )
 
         let emittedEvent = txn.logs[0]
-        let sentValueNumber = (new BigNumber(weiValueToSend)).toNumber()
+        let sentValueString = (new BigNumber(weiValueToSend)).toString()
         expect(emittedEvent.event).to.be.equal("FundsOperation")
         expect(emittedEvent.args.sender).to.be.equal(senderAddress)
         expect(emittedEvent.args.target).to.be.equal(decoEscrow.address)
-        expect(emittedEvent.args.amount.toNumber()).to.be.equal(sentValueNumber)
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(0)
-        expect((new BigNumber(emittedEvent.args.tokenAddress)).toNumber()).to.be.equal(0)
-        expect(emittedEvent.args.operationType.toNumber()).to.be.equal(0)
+        expect(emittedEvent.args.amount.toString()).to.be.equal(sentValueString)
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("0")
+        expect((new BigNumber(emittedEvent.args.tokenAddress)).toString()).to.be.equal("0")
+        expect(emittedEvent.args.operationType.toString()).to.be.equal("0")
       }
 
-      await sendEthAndValidateBalance(accounts[0], 0.5, false)
-      await sendEthAndValidateBalance(accounts[1], 0.6, false)
-      await sendEthAndValidateBalance(accounts[2], 0.3, true)
-      await sendEthAndValidateBalance(accounts[3], 0.4, true)
+      await sendEthAndValidateBalance(accounts[0], "0.5", false)
+      await sendEthAndValidateBalance(accounts[1], "0.6", false)
+      await sendEthAndValidateBalance(accounts[2], "0.3", true)
+      await sendEthAndValidateBalance(accounts[3], "0.4", true)
     }
   )
 
@@ -157,7 +161,7 @@ contract("DecoEscrow", async (accounts) => {
     await decoEscrowMock.setEscrowBalanceValueToAlmostMaximum()
 
     let checkExceptionThrown = async (senderAddress, ethAmount, runTransaction) => {
-      let weiAmount = web3.toWei(ethAmount)
+      let weiAmount = web3.utils.toWei(ethAmount)
       return runTransaction(senderAddress, weiAmount).catch(async (err) => {
         assert.isOk(err, "Deposit transaction with 0 ETH sent should fail.")
         expect(err.receipt.logs).to.be.empty
@@ -174,12 +178,12 @@ contract("DecoEscrow", async (accounts) => {
       return decoEscrowMock.deposit({from: senderAddress, gasPrice: 1, value: amount})
     }
 
-    checkExceptionThrown(accounts[0], 0.1, sendEthDirectly)
-    checkExceptionThrown(accounts[1], 0.15, sendEthDirectly)
-    checkExceptionThrown(accounts[2], 0.2, sendEthDirectly)
-    checkExceptionThrown(accounts[0], 0.1, sendEthIndirectly)
-    checkExceptionThrown(accounts[1], 0.15, sendEthIndirectly)
-    checkExceptionThrown(accounts[2], 0.2, sendEthIndirectly)
+    checkExceptionThrown(accounts[0], "0.1", sendEthDirectly)
+    checkExceptionThrown(accounts[1], "0.15", sendEthDirectly)
+    checkExceptionThrown(accounts[2], "0.2", sendEthDirectly)
+    checkExceptionThrown(accounts[0], "0.1", sendEthIndirectly)
+    checkExceptionThrown(accounts[1], "0.15", sendEthIndirectly)
+    checkExceptionThrown(accounts[2], "0.2", sendEthIndirectly)
   })
 
   it(
@@ -194,7 +198,7 @@ contract("DecoEscrow", async (accounts) => {
       let txn = await decoEscrow.initialize(
         accounts[1],
         authorizedAccount,
-        shareFee.toNumber(),
+        shareFee.toString(),
         relay.address,
         {from: accounts[0], gasPrice: 1}
       )
@@ -250,32 +254,32 @@ contract("DecoEscrow", async (accounts) => {
 
         let realContractTokensBalance = await decoTestToken.balanceOf(decoEscrow.address)
         expect(realContractTokensBalance.toString()).to.be.equal(
-          initialRealContractTokensBalance.plus(amountToWithdraw).toString()
+          new BigNumber(initialRealContractTokensBalance).plus(amountToWithdraw).toString()
         )
 
         let accountedTokensBalance = await decoEscrow.tokensBalance.call(decoTestToken.address)
         expect(accountedTokensBalance.toString()).to.be.equal(
-          initialAccountedTokensBalance.plus(amountToWithdraw).toString()
+          new BigNumber(initialAccountedTokensBalance).plus(amountToWithdraw).toString()
         )
 
         let emittedEvent = txn.logs[0]
         expect(emittedEvent.event).to.be.equal("FundsOperation")
         expect(emittedEvent.args.sender).to.be.equal(sender)
         expect(emittedEvent.args.target).to.be.equal(decoEscrow.address)
-        expect(emittedEvent.args.amount.toNumber()).to.be.equal(amountToWithdraw.toNumber())
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
+        expect(emittedEvent.args.amount.toString()).to.be.equal(amountToWithdraw.toString())
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("1")
         expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
-        expect(emittedEvent.args.operationType.toNumber()).to.be.equal(0)
+        expect(emittedEvent.args.operationType.toString()).to.be.equal("0")
       }
 
       await depositErc20TokenAndCheckState(accounts[0], new BigNumber(13))
-      await decoTestToken.transfer(accounts[0], accounts[1], 35)
+      await decoTestToken.transfer(accounts[0], accounts[1], "35")
       await depositErc20TokenAndCheckState(accounts[1], new BigNumber(17))
-      await decoTestToken.transfer(accounts[0], accounts[2], 39)
+      await decoTestToken.transfer(accounts[0], accounts[2], "39")
       await depositErc20TokenAndCheckState(accounts[2], new BigNumber(19))
-      await decoTestToken.transfer(accounts[0], accounts[3], 47)
+      await decoTestToken.transfer(accounts[0], accounts[3], "47")
       await depositErc20TokenAndCheckState(accounts[3], new BigNumber(23))
-      await decoTestToken.transfer(accounts[0], accounts[4], 200003)
+      await decoTestToken.transfer(accounts[0], accounts[4], "200003")
       await depositErc20TokenAndCheckState(accounts[4], new BigNumber(100001))
     }
   )
@@ -360,12 +364,12 @@ contract("DecoEscrow", async (accounts) => {
 
     await depositAndCheckException(accounts[1])
     await depositAndCheckException(decoEscrow.address)
-    await depositAndCheckException("0x0")
+    await depositAndCheckException(ZERO_ADDRESS)
   })
 
   it("should allow withdraw available ETH funds for the escrow owner.", async () => {
     let decoEscrow = await DecoEscrow.deployed()
-    await decoEscrow.sendTransaction({from: accounts[6], gasPrice: 1, value: web3.toWei(3)})
+    await decoEscrow.sendTransaction({from: accounts[6], gasPrice: 1, value: web3.utils.toWei("3")})
 
     let withdrawAndCheckBalance = async (
       amountToWithdraw, withdrawTargetAccount, withdrawAccount
@@ -381,19 +385,19 @@ contract("DecoEscrow", async (accounts) => {
       let resultingEscrowBalance = await decoEscrow.balance.call()
 
       expect(amountToWithdraw.toString()).to.be.equal(
-        initialEscrowBalance.minus(resultingEscrowBalance).toString()
+        new BigNumber(initialEscrowBalance).minus(resultingEscrowBalance).toString()
       )
     }
 
-    await withdrawAndCheckBalance(new BigNumber(web3.toWei(0.5)), accounts[0])
-    await withdrawAndCheckBalance(new BigNumber(web3.toWei(1)), accounts[0])
-    await withdrawAndCheckBalance(new BigNumber(web3.toWei(0.5)), accounts[0], accounts[12])
-    await withdrawAndCheckBalance(new BigNumber(web3.toWei(1)), accounts[0], accounts[13])
+    await withdrawAndCheckBalance(new BigNumber(web3.utils.toWei("0.5")), accounts[0])
+    await withdrawAndCheckBalance(new BigNumber(web3.utils.toWei("1")), accounts[0])
+    await withdrawAndCheckBalance(new BigNumber(web3.utils.toWei("0.5")), accounts[0], accounts[12])
+    await withdrawAndCheckBalance(new BigNumber(web3.utils.toWei("1")), accounts[0], accounts[13])
   })
 
   it("should allow withdraw available ETH funds for the account with sufficient allowance.", async () => {
     let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-    await decoEscrowMock.sendTransaction({from: accounts[6], gasPrice: 1, value: web3.toWei(3)})
+    await decoEscrowMock.sendTransaction({from: accounts[6], gasPrice: 1, value: web3.utils.toWei("3")})
 
     let withdrawAndCheckBalance = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
@@ -417,28 +421,29 @@ contract("DecoEscrow", async (accounts) => {
 
       expect(resultingEscrowBalance.toString()).to.be.equal(initialEscrowBalance.toString())
       expect(resultingAllowance.toString()).to.be.equal(
-        initialAllowance.minus(amountToWithdraw).toString()
+        new BigNumber(initialAllowance).minus(amountToWithdraw).toString()
       )
       expect(resultingAddressBalance.toString()).to.be.equal(
-        initialAddressBalance
-          .plus(amountToWithdraw)
+        amountToWithdraw
+          .plus(initialAddressBalance)
           .minus(withdrawAddress == undefined ? new BigNumber(txn.receipt.gasUsed) : 0)
           .toString()
       )
     }
 
-    await withdrawAndCheckBalance(accounts[1], new BigNumber(web3.toWei(0.5)))
-    await withdrawAndCheckBalance(accounts[2], new BigNumber(web3.toWei(0.1)))
-    await withdrawAndCheckBalance(accounts[3], new BigNumber(web3.toWei(0.3)))
-    await withdrawAndCheckBalance(accounts[4], new BigNumber(web3.toWei(0.8)), accounts[3])
-    await withdrawAndCheckBalance(accounts[5], new BigNumber(web3.toWei(0.0001)), accounts[4])
+    await withdrawAndCheckBalance(accounts[1], new BigNumber(web3.utils.toWei("0.5")))
+    await withdrawAndCheckBalance(accounts[2], new BigNumber(web3.utils.toWei("0.1")))
+    await withdrawAndCheckBalance(accounts[3], new BigNumber(web3.utils.toWei("0.3")))
+    await withdrawAndCheckBalance(accounts[4], new BigNumber(web3.utils.toWei("0.8")), accounts[3])
+    await withdrawAndCheckBalance(accounts[5], new BigNumber(web3.utils.toWei("0.0001")), accounts[4])
   })
 
   it("should fail withdrawal if accounted limit aka allowance or available escrow balance is exceeded.", async () => {
     let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-    let depositAmount = new BigNumber(web3.toWei(1))
+    let depositAmount = new BigNumber(web3.utils.toWei("1"))
     await decoEscrowMock.sendTransaction({from: accounts[9], gasPrice: 1, value: depositAmount.toString()})
     let escrowAccountedBalance = await decoEscrowMock.balance.call()
+    escrowAccountedBalance = new BigNumber(escrowAccountedBalance)
 
     let tryWithdrawAndCheckException = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
@@ -466,7 +471,7 @@ contract("DecoEscrow", async (accounts) => {
         expect(resultingEscrowBalance.toString()).to.be.equal(initialEscrowBalance.toString())
         expect(resultingAllowance.toString()).to.be.equal(initialAllowance.toString())
         expect(resultingAddressBalance.toString()).to.be.equal(
-          initialAddressBalance.minus(
+          new BigNumber(initialAddressBalance).minus(
             withdrawAddress == undefined ? new BigNumber(err.receipt.gasUsed) : 0
           ).toString()
         )
@@ -479,11 +484,11 @@ contract("DecoEscrow", async (accounts) => {
 
     await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(1000))
     await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(1000), accounts[11])
-    await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(web3.toWei(1)))
-    await tryWithdrawAndCheckException(accounts[1], new BigNumber(web3.toWei(0.04)))
-    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.toWei(0.02)), accounts[1])
-    await tryWithdrawAndCheckException(accounts[3], new BigNumber(web3.toWei(0.05)))
-    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.toWei(0.000001)), accounts[3])
+    await tryWithdrawAndCheckException(accounts[0], escrowAccountedBalance.plus(web3.utils.toWei("1")))
+    await tryWithdrawAndCheckException(accounts[1], new BigNumber(web3.utils.toWei("0.04")))
+    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.utils.toWei("0.02")), accounts[1])
+    await tryWithdrawAndCheckException(accounts[3], new BigNumber(web3.utils.toWei("0.05")))
+    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.utils.toWei("0.000001")), accounts[3])
   })
 
   it("should fail withdrawal if requested amount is greater than actual contract balance.", async () => {
@@ -516,7 +521,7 @@ contract("DecoEscrow", async (accounts) => {
         expect(resultingEscrowBalance.toString()).to.be.equal(initialEscrowBalance.toString())
         expect(resultingAllowance.toString()).to.be.equal(initialAllowance.toString())
         expect(resultingAddressBalance.toString()).to.be.equal(
-          initialAddressBalance.minus(
+          new BigNumber(initialAddressBalance).minus(
             withdrawAddress == undefined ? new BigNumber(err.receipt.gasUsed) : 0
           ).toString()
         )
@@ -527,17 +532,17 @@ contract("DecoEscrow", async (accounts) => {
       })
     }
 
-    await tryWithdrawAndCheckException(accounts[0], new BigNumber(web3.toWei(1)))
-    await tryWithdrawAndCheckException(accounts[0], new BigNumber(web3.toWei(1)), accounts[11])
-    await tryWithdrawAndCheckException(accounts[1], new BigNumber(web3.toWei(0.4)))
-    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.toWei(0.2)), accounts[1])
-    await tryWithdrawAndCheckException(accounts[3], new BigNumber(web3.toWei(0.5)))
-    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.toWei(0.000001)), accounts[3])
+    await tryWithdrawAndCheckException(accounts[0], new BigNumber(web3.utils.toWei("1")))
+    await tryWithdrawAndCheckException(accounts[0], new BigNumber(web3.utils.toWei("1")), accounts[11])
+    await tryWithdrawAndCheckException(accounts[1], new BigNumber(web3.utils.toWei("0.4")))
+    await tryWithdrawAndCheckException(accounts[2], new BigNumber(web3.utils.toWei("0.2")), accounts[1])
+    await tryWithdrawAndCheckException(accounts[3], new BigNumber(web3.utils.toWei("0.5")))
+    await tryWithdrawAndCheckException(accounts[4], new BigNumber(web3.utils.toWei("0.000001")), accounts[3])
   })
 
   it("should emit the event about outgoing ETH funds.", async () => {
     let decoEscrowMock = await DecoEscrowMock.new({from: accounts[0], gasPrice: 1})
-    await decoEscrowMock.sendTransaction({from: accounts[10], gasPrice: 1, value: web3.toWei(3)})
+    await decoEscrowMock.sendTransaction({from: accounts[10], gasPrice: 1, value: web3.utils.toWei("3")})
 
     let withdrawAndCheckEmittedEvent = async (to, amountToWithdraw, withdrawAddress) => {
       await decoEscrowMock.setEthWithdrawalAllowance(
@@ -560,18 +565,18 @@ contract("DecoEscrow", async (accounts) => {
       expect(emittedEvent.args.sender).to.be.equal(decoEscrowMock.address)
       expect(emittedEvent.args.target).to.be.equal(to)
       expect(emittedEvent.args.amount.toString()).to.be.equal(amountToWithdraw.toString())
-      expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(0)
-      expect(emittedEvent.args.operationType.toNumber()).to.be.equal(1)
-      expect((new BigNumber(emittedEvent.args.tokenAddress)).toNumber()).to.be.equal(0)
+      expect(emittedEvent.args.paymentType.toString()).to.be.equal("0")
+      expect(emittedEvent.args.operationType.toString()).to.be.equal("1")
+      expect((new BigNumber(emittedEvent.args.tokenAddress)).toString()).to.be.equal("0")
     }
 
-    await withdrawAndCheckEmittedEvent(accounts[0], new BigNumber(web3.toWei(1)))
-    await withdrawAndCheckEmittedEvent(accounts[1], new BigNumber(web3.toWei(0.4)))
-    await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(web3.toWei(0.2)))
-    await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(web3.toWei(0.7)), accounts[13])
-    await withdrawAndCheckEmittedEvent(accounts[3], new BigNumber(web3.toWei(0.5)))
-    await withdrawAndCheckEmittedEvent(accounts[4], new BigNumber(web3.toWei(0.000001)))
-    await withdrawAndCheckEmittedEvent(accounts[7], new BigNumber(web3.toWei(0.001)), accounts[14])
+    await withdrawAndCheckEmittedEvent(accounts[0], new BigNumber(web3.utils.toWei("1")))
+    await withdrawAndCheckEmittedEvent(accounts[1], new BigNumber(web3.utils.toWei("0.4")))
+    await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(web3.utils.toWei("0.2")))
+    await withdrawAndCheckEmittedEvent(accounts[2], new BigNumber(web3.utils.toWei("0.7")), accounts[13])
+    await withdrawAndCheckEmittedEvent(accounts[3], new BigNumber(web3.utils.toWei("0.5")))
+    await withdrawAndCheckEmittedEvent(accounts[4], new BigNumber(web3.utils.toWei("0.000001")))
+    await withdrawAndCheckEmittedEvent(accounts[7], new BigNumber(web3.utils.toWei("0.001")), accounts[14])
   })
 
   it(
@@ -623,7 +628,7 @@ contract("DecoEscrow", async (accounts) => {
 
         if(to === accounts[0]) {
           expect(initialTokensBalance.toString()).to.be.equal(
-            resultingTokensBalance.plus(tokensAmount).toString()
+            tokensAmount.plus(resultingTokensBalance).toString()
           )
         } else {
           expect(initialTokensBalance.toString()).to.be.equal(
@@ -631,12 +636,12 @@ contract("DecoEscrow", async (accounts) => {
           )
         }
         expect(initialAddressTokensBalance.toString()).to.be.equal(
-          resultingAddressTokensBalance.minus(tokensAmount).toString()
+          new BigNumber(resultingAddressTokensBalance).minus(tokensAmount).toString()
         )
 
         if(to !== accounts[0]) {
           expect(initialAllowance.toString()).to.be.equal(
-            resultingAllowance.plus(tokensAmount).toString()
+            tokensAmount.plus(resultingAllowance).toString()
           )
         } else {
           expect(initialAllowance.toString()).to.be.equal(resultingAllowance.toString())
@@ -663,6 +668,7 @@ contract("DecoEscrow", async (accounts) => {
         {from: accounts[0], gasPrice: 1}
       )
       let tokensContractBalance = await decoEscrowMock.tokensBalance.call(decoTestToken.address)
+      tokensContractBalance = new BigNumber(tokensContractBalance)
 
       let withdrawAndCheckException = async (to, amountToWithdraw, withdrawAddress) => {
         await decoEscrowMock.setTokensWithdrawalAllowance(
@@ -854,8 +860,8 @@ contract("DecoEscrow", async (accounts) => {
         expect(emittedEvent.args.sender).to.be.equal(decoEscrowMock.address)
         expect(emittedEvent.args.target).to.be.equal(to)
         expect(emittedEvent.args.amount.toString()).to.be.equal(tokensAmount.toString())
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
-        expect(emittedEvent.args.operationType.toNumber()).to.be.equal(1)
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("1")
+        expect(emittedEvent.args.operationType.toString()).to.be.equal("1")
         expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
       }
 
@@ -871,29 +877,31 @@ contract("DecoEscrow", async (accounts) => {
 
   it("should block funds correctly if called from authorized address.", async () => {
     let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
-    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
+    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.utils.toWei("10")})
 
     let blockAndCheckState = async (sender, amountToBlock) => {
       let initialBlockedFundsAmount = await decoEscrow.blockedBalance.call()
       let initialBalance = await decoEscrow.balance.call()
 
-      let amountInWei = web3.toWei(amountToBlock)
+      let amountInWei = web3.utils.toWei(amountToBlock.toString())
       let txn = await decoEscrow.blockFunds(amountInWei.toString(), {from: sender, gasPrice: 1})
 
       let resultingBlockedFundsAmount = await decoEscrow.blockedBalance.call()
       let resultingBalance = await decoEscrow.balance.call()
-      expect(resultingBalance.toString()).to.be.equal(initialBalance.minus(amountInWei).toString())
+      expect(resultingBalance.toString()).to.be.equal(
+        new BigNumber(initialBalance).minus(amountInWei).toString()
+      )
       expect(resultingBlockedFundsAmount.toString()).to.be.equal(
-        initialBlockedFundsAmount.plus(amountInWei).toString()
+        new BigNumber(amountInWei).plus(initialBlockedFundsAmount).toString()
       )
       let emittedEvent = txn.logs[0]
       expect(emittedEvent.event).to.be.equal("FundsOperation")
       expect(emittedEvent.args.sender).to.be.equal(decoEscrow.address)
       expect(emittedEvent.args.target).to.be.equal(sender)
       expect(emittedEvent.args.amount.toString()).to.be.equal(amountInWei.toString())
-      expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(0)
-      expect(emittedEvent.args.operationType.toNumber()).to.be.equal(2)
-      expect((new BigNumber(emittedEvent.args.tokenAddress)).toNumber()).to.be.equal(0)
+      expect(emittedEvent.args.paymentType.toString()).to.be.equal("0")
+      expect(emittedEvent.args.operationType.toString()).to.be.equal("2")
+      expect((new BigNumber(emittedEvent.args.tokenAddress)).toString()).to.be.equal("0")
     }
 
     await blockAndCheckState(accounts[2], new BigNumber(1))
@@ -903,19 +911,19 @@ contract("DecoEscrow", async (accounts) => {
 
     let balance = await decoEscrow.balance.call()
     let blockedBalance = await decoEscrow.blockedBalance.call()
-    expect(balance.toNumber()).to.be.equal(0)
-    expect(blockedBalance.toString()).to.be.equal(web3.toWei(10))
+    expect(balance.toString()).to.be.equal("0")
+    expect(blockedBalance.toString()).to.be.equal(web3.utils.toWei("10").toString())
   })
 
   it("should fail blocking funds if called from unauthorized address.", async () => {
     let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
-    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
+    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.utils.toWei("10")})
 
     let blockAndCheckState = async (sender, amountToBlock) => {
       let initialBlockedFundsAmount = await decoEscrow.blockedBalance.call()
       let initialBalance = await decoEscrow.balance.call()
 
-      let amountInWei = web3.toWei(amountToBlock)
+      let amountInWei = web3.utils.toWei(amountToBlock.toString())
       await decoEscrow.blockFunds(
         amountInWei.toString(), {from: sender, gasPrice: 1}
       ).catch(async (err) => {
@@ -941,19 +949,19 @@ contract("DecoEscrow", async (accounts) => {
 
     let balance = await decoEscrow.balance.call()
     let blockedBalance = await decoEscrow.blockedBalance.call()
-    expect(balance.toString()).to.be.equal(web3.toWei(10))
-    expect(blockedBalance.toNumber()).to.be.equal(0)
+    expect(balance.toString()).to.be.equal(web3.utils.toWei("10").toString())
+    expect(blockedBalance.toString()).to.be.equal("0")
   })
 
   it("should fail blocking if there are not enough funds.", async () => {
     let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
-    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
+    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.utils.toWei("10")})
 
     let blockAndCheckState = async (sender, amountToBlock) => {
       let initialBlockedFundsAmount = await decoEscrow.blockedBalance.call()
       let initialBalance = await decoEscrow.balance.call()
 
-      let amountInWei = web3.toWei(amountToBlock)
+      let amountInWei = web3.utils.toWei(amountToBlock.toString())
       await decoEscrow.blockFunds(
         amountInWei.toString(), {from: sender, gasPrice: 1}
       ).catch(async (err) => {
@@ -979,36 +987,39 @@ contract("DecoEscrow", async (accounts) => {
 
     let balance = await decoEscrow.balance.call()
     let blockedBalance = await decoEscrow.blockedBalance.call()
-    expect(balance.toString()).to.be.equal(web3.toWei(10))
-    expect(blockedBalance.toNumber()).to.be.equal(0)
+    expect(balance.toString()).to.be.equal(web3.utils.toWei("10").toString())
+    expect(blockedBalance.toString()).to.be.equal("0")
   })
 
   it("should unblock funds if called from authorized address and there is enough blocked ether.", async () => {
     let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
-    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: web3.toWei(10)})
-    await decoEscrow.blockFunds(web3.toWei(10), {from: accounts[3], gasPrice: 1})
+    let weiBalance = web3.utils.toWei("10")
+    await decoEscrow.sendTransaction({from: accounts[13], gasPrice: 1, value: weiBalance})
+    await decoEscrow.blockFunds(weiBalance, {from: accounts[3], gasPrice: 1})
 
     let unblockAndCheckState = async (sender, amountToUnblock) => {
       let initialBalance = await decoEscrow.balance.call()
       let initialBlockedBalance = await decoEscrow.blockedBalance.call()
 
-      let amountInWei = web3.toWei(amountToUnblock)
+      let amountInWei = web3.utils.toWei(amountToUnblock.toString())
       let txn = await decoEscrow.unblockFunds(amountInWei.toString(), {from: sender, gasPrice: 1})
 
       let resultingBalance = await decoEscrow.balance.call()
       let resultingBlockedBalance = await decoEscrow.blockedBalance.call()
-      expect(resultingBalance.toString()).to.be.equal(initialBalance.plus(amountInWei).toString())
+      expect(resultingBalance.toString()).to.be.equal(
+        new BigNumber(initialBalance).plus(amountInWei).toString()
+      )
       expect(resultingBlockedBalance.toString()).to.be.equal(
-        initialBlockedBalance.minus(amountInWei).toString()
+        new BigNumber(initialBlockedBalance).minus(amountInWei).toString()
       )
       let emittedEvent = txn.logs[0]
       expect(emittedEvent.event).to.be.equal("FundsOperation")
       expect(emittedEvent.args.sender).to.be.equal(sender)
       expect(emittedEvent.args.target).to.be.equal(decoEscrow.address)
       expect(emittedEvent.args.amount.toString()).to.be.equal(amountInWei.toString())
-      expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(0)
-      expect(emittedEvent.args.operationType.toNumber()).to.be.equal(3)
-      expect((new BigNumber(emittedEvent.args.tokenAddress)).toNumber()).to.be.equal(0)
+      expect(emittedEvent.args.paymentType.toString()).to.be.equal("0")
+      expect(emittedEvent.args.operationType.toString()).to.be.equal("3")
+      expect((new BigNumber(emittedEvent.args.tokenAddress)).toString()).to.be.equal("0")
     }
 
     await unblockAndCheckState(accounts[3], new BigNumber(1))
@@ -1018,19 +1029,21 @@ contract("DecoEscrow", async (accounts) => {
 
     let balance = await decoEscrow.balance.call()
     let blockedBalance = await decoEscrow.blockedBalance.call()
-    expect(balance.toString()).to.be.equal(web3.toWei(10))
-    expect(blockedBalance.toNumber()).to.be.equal(0)
+    expect(balance.toString()).to.be.equal(weiBalance.toString())
+    expect(blockedBalance.toString()).to.be.equal("0")
   })
 
   it("should fail unblocking if called from unauthorized address.", async () => {
     let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[2])
-    await decoEscrow.sendTransaction({from: accounts[0], gasPrice: 1, value: web3.toWei(1)})
-    await decoEscrow.blockFunds(web3.toWei(1), {from: accounts[2], gasPrice: 1})
+    let weiBalance = web3.utils.toWei("1")
+    await decoEscrow.sendTransaction({from: accounts[0], gasPrice: 1, value: weiBalance})
+    await decoEscrow.blockFunds(weiBalance, {from: accounts[2], gasPrice: 1})
+
     let unblockAndCheckState = async (sender) => {
       let initialBalance = await decoEscrow.balance.call()
       let initialBlockedBalance = await decoEscrow.blockedBalance.call()
 
-      let amountInWei = web3.toWei(1)
+      let amountInWei = web3.utils.toWei("1")
       await decoEscrow.unblockFunds(
         amountInWei,
         {from: sender, gasPrice: 1}
@@ -1053,22 +1066,24 @@ contract("DecoEscrow", async (accounts) => {
 
     let balance = await decoEscrow.balance.call()
     let blockedBalance = await decoEscrow.blockedBalance.call()
-    expect(balance.toString()).to.be.equal(web3.toWei(0))
-    expect(blockedBalance.toString()).to.be.equal(web3.toWei(1))
+    expect(balance.toString()).to.be.equal("0")
+    expect(blockedBalance.toString()).to.be.equal(weiBalance)
   })
 
   it("should fail unblocking if amount for being unblocked is greater than blocked in escrow.", async () => {
     let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], accounts[3])
-    await decoEscrow.sendTransaction({from: accounts[0], gasPrice: 1, value: web3.toWei(1)})
+    let weiBalance = web3.utils.toWei("1")
+    await decoEscrow.sendTransaction({from: accounts[0], gasPrice: 1, value: weiBalance})
     let initialContractBalance = await decoEscrow.balance.call()
     await decoEscrow.blockFunds(initialContractBalance.toString(), {from: accounts[3], gasPrice: 1})
+
     let unblockAndCheckState = async (sender, amount) => {
       let initialBalance = await decoEscrow.balance.call()
       let initialBlockedBalance = await decoEscrow.blockedBalance.call()
 
-      let amountInWei = web3.toWei(amount)
+      let amountInWei = web3.utils.toWei(amount.toString())
       await decoEscrow.unblockFunds(
-        amountInWei.toNumber(),
+        amountInWei.toString(),
         {from: sender, gasPrice: 1}
       ).catch(async (err) => {
         assert.isOk(err, "Expected exception.")
@@ -1089,7 +1104,7 @@ contract("DecoEscrow", async (accounts) => {
 
     let balance = await decoEscrow.balance.call()
     let blockedBalance = await decoEscrow.blockedBalance.call()
-    expect(balance.toNumber()).to.be.equal(0)
+    expect(balance.toString()).to.be.equal("0")
     expect(blockedBalance.toString()).to.be.equal(initialContractBalance.toString())
   })
 
@@ -1118,10 +1133,10 @@ contract("DecoEscrow", async (accounts) => {
         let resultingBlockedTokensAmount = await decoEscrow.blockedTokensBalance.call(decoTestToken.address)
         let resultingTokensBalance = await decoEscrow.tokensBalance.call(decoTestToken.address)
         expect(resultingBlockedTokensAmount.toString()).to.be.equal(
-          initialBlockedTokensAmount.plus(tokensAmount).toString()
+          tokensAmount.plus(initialBlockedTokensAmount).toString()
         )
         expect(resultingTokensBalance.toString()).to.be.equal(
-          initialTokensBalance.minus(tokensAmount).toString()
+          new BigNumber(initialTokensBalance).minus(tokensAmount).toString()
         )
 
         let emittedEvent = txn.logs[0]
@@ -1129,8 +1144,8 @@ contract("DecoEscrow", async (accounts) => {
         expect(emittedEvent.args.sender).to.be.equal(decoEscrow.address)
         expect(emittedEvent.args.target).to.be.equal(sender)
         expect(emittedEvent.args.amount.toString()).to.be.equal(tokensAmount.toString())
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
-        expect(emittedEvent.args.operationType.toNumber()).to.be.equal(2)
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("1")
+        expect(emittedEvent.args.operationType.toString()).to.be.equal("2")
         expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
       }
 
@@ -1152,7 +1167,7 @@ contract("DecoEscrow", async (accounts) => {
         ).toString()
       )
 
-      expect(blockedTokensAmount.plus(tokensBalance).toString()).to.be.equal(
+      expect(blockedTokensAmount.add(tokensBalance).toString()).to.be.equal(
         decoTestToken.tokensValueAsBigNumber(10000).toString()
       )
   })
@@ -1213,9 +1228,9 @@ contract("DecoEscrow", async (accounts) => {
       expect(tokensBalance.toString()).to.be.equal(
         decoTestToken.tokensValueAsBigNumber(new BigNumber(10000).toString()).toString()
       )
-      expect(blockedTokensAmount.toNumber()).to.be.equal(0)
+      expect(blockedTokensAmount.toString()).to.be.equal("0")
 
-      expect(blockedTokensAmount.plus(tokensBalance).toString()).to.be.equal(
+      expect(blockedTokensAmount.add(tokensBalance).toString()).to.be.equal(
         decoTestToken.tokensValueAsBigNumber(10000).toString()
       )
   })
@@ -1251,10 +1266,10 @@ contract("DecoEscrow", async (accounts) => {
         let resultingBlockedTokensAmount = await decoEscrow.blockedTokensBalance.call(decoTestToken.address)
         let resultingTokensBalance = await decoEscrow.tokensBalance.call(decoTestToken.address)
         expect(resultingBlockedTokensAmount.toString()).to.be.equal(
-          initialBlockedTokensAmount.minus(tokensAmount).toString()
+          new BigNumber(initialBlockedTokensAmount).minus(tokensAmount).toString()
         )
         expect(resultingTokensBalance.toString()).to.be.equal(
-          initialTokensBalance.plus(tokensAmount).toString()
+          new BigNumber(initialTokensBalance).plus(tokensAmount).toString()
         )
 
         let emittedEvent = txn.logs[0]
@@ -1262,8 +1277,8 @@ contract("DecoEscrow", async (accounts) => {
         expect(emittedEvent.args.sender).to.be.equal(sender)
         expect(emittedEvent.args.target).to.be.equal(decoEscrow.address)
         expect(emittedEvent.args.amount.toString()).to.be.equal(tokensAmount.toString())
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
-        expect(emittedEvent.args.operationType.toNumber()).to.be.equal(3)
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("1")
+        expect(emittedEvent.args.operationType.toString()).to.be.equal("3")
         expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
       }
 
@@ -1285,7 +1300,7 @@ contract("DecoEscrow", async (accounts) => {
         ).toString()
       )
 
-      expect(blockedTokensAmount.plus(tokensBalance).toString()).to.be.equal(
+      expect(blockedTokensAmount.add(tokensBalance).toString()).to.be.equal(
         decoTestToken.tokensValueAsBigNumber(10000).toString()
       )
   })
@@ -1351,9 +1366,9 @@ contract("DecoEscrow", async (accounts) => {
       expect(blockedTokensAmount.toString()).to.be.equal(
         decoTestToken.tokensValueAsBigNumber(new BigNumber(10000).toString()).toString()
       )
-      expect(tokensBalance.toNumber()).to.be.equal(0)
+      expect(tokensBalance.toString()).to.be.equal("0")
 
-      expect(blockedTokensAmount.plus(tokensBalance).toString()).to.be.equal(
+      expect(blockedTokensAmount.add(tokensBalance).toString()).to.be.equal(
         decoTestToken.tokensValueAsBigNumber(10000).toString()
       )
   })
@@ -1366,10 +1381,10 @@ contract("DecoEscrow", async (accounts) => {
       let withdrawalAddress = accounts[15]
       relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
       relay.setFeesWithdrawalAddress(withdrawalAddress, {from: accounts[0], gasPrice: 1})
-      relay = {address: "0x0"}
-      withdrawalAddress = "0x0"
+      relay = {address: ZERO_ADDRESS }
+      withdrawalAddress = ZERO_ADDRESS
       let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
-      let startingBalance = new BigNumber(web3.toWei(10))
+      let startingBalance = new BigNumber(web3.utils.toWei("10"))
       await decoEscrow.sendTransaction({from: accounts[11], value: startingBalance.toString(), gasPrice: 1})
       await decoEscrow.blockFunds(startingBalance.toString(), {from: authorizedAddress, gasPrice: 1})
 
@@ -1382,15 +1397,17 @@ contract("DecoEscrow", async (accounts) => {
           withdrawalAddress
         )
 
-        let amountInWei = web3.toWei(targetAddressAmount)
+        let amountInWei = web3.utils.toWei(targetAddressAmount.toString())
         let txn = await decoEscrow.distributeFunds(
           targetAddress,
           amountInWei.toString(),
           {from: sender, gasPrice: 1}
         )
         expecteFinalBlockedBalance = expecteFinalBlockedBalance.minus(amountInWei)
-        let expectedFeeAmount = Math.floor(amountInWei.times(shareFee).div(100).toNumber())
-        if(shareFee == 0 || withdrawalAddress == "0x0") {
+        let expectedFeeAmount = Math.floor(
+          new BigNumber(amountInWei).times(shareFee).div(100).toString()
+        )
+        if(shareFee == 0 || withdrawalAddress == ZERO_ADDRESS) {
           expectedFeeAmount = 0
         }
 
@@ -1402,19 +1419,19 @@ contract("DecoEscrow", async (accounts) => {
         )
         let resultingBalance = await decoEscrow.balance.call()
         let resultingBlockedBalance = await decoEscrow.blockedBalance.call()
-        let emittedEvent = txn.logs[shareFee > 0 && withdrawalAddress != "0x0" ? 1 : 0]
+        let emittedEvent = txn.logs[shareFee > 0 && withdrawalAddress != ZERO_ADDRESS ? 1 : 0]
         if(targetAddress == accounts[1]) {
           expect(resultingBalance.toString()).to.be.equal(
-            balance.plus(amountInWei).minus(expectedFeeAmount).toString()
+            new BigNumber(balance).plus(amountInWei).minus(expectedFeeAmount).toString()
           )
-          expect(emittedEvent.args.operationType.toNumber()).to.be.equal(3)
+          expect(emittedEvent.args.operationType.toString()).to.be.equal("3")
         } else {
-          let expectedAllowance = allowancesForTargetAddress.plus(amountInWei).minus(expectedFeeAmount)
+          let expectedAllowance = new BigNumber(allowancesForTargetAddress).plus(amountInWei).minus(expectedFeeAmount)
           expect(resultingAllowanceForTargetAddress.toString()).to.be.equal(expectedAllowance.toString())
-          expect(emittedEvent.args.operationType.toNumber()).to.be.equal(4)
+          expect(emittedEvent.args.operationType.toString()).to.be.equal("4")
         }
         expect(resultingBlockedBalance.toString()).to.be.equal(
-          blockedBalance.minus(amountInWei).toString()
+          new BigNumber(blockedBalance).minus(amountInWei).toString()
         )
 
         expect(emittedEvent.event).to.be.equal("FundsOperation")
@@ -1425,16 +1442,16 @@ contract("DecoEscrow", async (accounts) => {
           expect(emittedEvent.args.target).to.be.equal(targetAddress)
         }
         expect(emittedEvent.args.amount.toString()).to.be.equal(
-          amountInWei.minus(expectedFeeAmount).toString()
+          new BigNumber(amountInWei).minus(expectedFeeAmount).toString()
         )
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(0)
-        expect((new BigNumber(emittedEvent.args.tokenAddress)).toNumber()).to.be.equal(0)
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("0")
+        expect((new BigNumber(emittedEvent.args.tokenAddress)).toString()).to.be.equal("0")
 
-        if(shareFee > 0 && withdrawalAddress != "0x0") {
+        if(shareFee > 0 && withdrawalAddress != ZERO_ADDRESS) {
           emittedEvent = txn.logs[0]
-          expect(emittedEvent.args.operationType.toNumber()).to.be.equal(4)
+          expect(emittedEvent.args.operationType.toString()).to.be.equal("4")
           expect(resultingFeeAddressAllowance.toString()).to.be.equal(
-            allowanceForFeeWithdrawalAddress.plus(expectedFeeAmount).toString()
+            new BigNumber(allowanceForFeeWithdrawalAddress).plus(expectedFeeAmount).toString()
           )
           expect(emittedEvent.event).to.be.equal("FundsOperation")
           expect(emittedEvent.args.sender).to.be.equal(sender)
@@ -1461,7 +1478,7 @@ contract("DecoEscrow", async (accounts) => {
     async () => {
       let authorizedAddress = accounts[3]
       let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
-      let startingBalance = new BigNumber(web3.toWei(2))
+      let startingBalance = new BigNumber(web3.utils.toWei("2"))
       await decoEscrow.sendTransaction({from: accounts[11], value: startingBalance.toString(), gasPrice: 1})
       await decoEscrow.blockFunds(startingBalance.toString(), {from: authorizedAddress, gasPrice: 1})
 
@@ -1469,7 +1486,7 @@ contract("DecoEscrow", async (accounts) => {
         let blockedBalance = await decoEscrow.blockedBalance.call()
         let balance = await decoEscrow.balance.call()
         let allowancesForTargetAddress = await decoEscrow.withdrawalAllowanceForAddress.call(targetAddress)
-        let amountInWei = web3.toWei(targetAddressAmount)
+        let amountInWei = web3.utils.toWei(targetAddressAmount.toString())
         await decoEscrow.distributeFunds(
           targetAddress,
           amountInWei.toString(),
@@ -1516,8 +1533,8 @@ contract("DecoEscrow", async (accounts) => {
       let withdrawalAddress = accounts[16]
       relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
       relay.setFeesWithdrawalAddress(withdrawalAddress, {from: accounts[0], gasPrice: 1})
-      relay = {address: "0x0"}
-      withdrawalAddress = "0x0"
+      relay = {address: ZERO_ADDRESS}
+      withdrawalAddress = ZERO_ADDRESS
       let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
       let decoTestToken = await DeployTestTokenAndApproveAllowance(accounts[0], accounts[0], decoEscrow.address, 10000)
       let initialTokensBalance = decoTestToken.tokensValueAsBigNumber(10000)
@@ -1553,8 +1570,10 @@ contract("DecoEscrow", async (accounts) => {
           {from: sender, gasPrice: 1}
         )
         expectedFinalBlockedTokensBalance = expectedFinalBlockedTokensBalance.minus(tokensAmount)
-        let expectedFeeAmount = Math.floor(tokensAmount.times(shareFee).div(100).toNumber())
-        if(shareFee == 0 || withdrawalAddress == "0x0") {
+        let expectedFeeAmount = Math.floor(
+          new BigNumber(tokensAmount).times(shareFee).div(100).toString()
+        )
+        if(shareFee == 0 || withdrawalAddress == ZERO_ADDRESS) {
           expectedFeeAmount = 0
         }
 
@@ -1568,21 +1587,21 @@ contract("DecoEscrow", async (accounts) => {
           withdrawalAddress,
           decoTestToken.address
         )
-        let emittedEvent = txn.logs[shareFee > 0 && withdrawalAddress != "0x0" ? 1 : 0]
+        let emittedEvent = txn.logs[shareFee > 0 && withdrawalAddress != ZERO_ADDRESS ? 1 : 0]
         if(targetAddress == accounts[1]) {
           expect(resultingTokensBalance.toString()).to.be.equal(
-            tokensBalance.plus(tokensAmount).minus(expectedFeeAmount).toString()
+            new BigNumber(tokensBalance).plus(tokensAmount).minus(expectedFeeAmount).toString()
           )
-          expect(emittedEvent.args.operationType.toNumber()).to.be.equal(3)
+          expect(emittedEvent.args.operationType.toString()).to.be.equal("3")
         } else {
-          let expectedAllowance = tokensBeforeAllowance.plus(tokensAmount).minus(expectedFeeAmount)
+          let expectedAllowance = new BigNumber(tokensBeforeAllowance).plus(tokensAmount).minus(expectedFeeAmount)
           expect(resultingTokensAllowanceForTargetAddress.toString()).to.be.equal(
             expectedAllowance.toString()
           )
-          expect(emittedEvent.args.operationType.toNumber()).to.be.equal(4)
+          expect(emittedEvent.args.operationType.toString()).to.be.equal("4")
         }
         expect(resultingBlockedTokensBalance.toString()).to.be.equal(
-          blockedTokensBalance.minus(tokensAmount).toString()
+          new BigNumber(blockedTokensBalance).minus(tokensAmount).toString()
         )
 
         expect(emittedEvent.event).to.be.equal("FundsOperation")
@@ -1593,22 +1612,22 @@ contract("DecoEscrow", async (accounts) => {
           expect(emittedEvent.args.target).to.be.equal(targetAddress)
         }
         expect(emittedEvent.args.amount.toString()).to.be.equal(
-          tokensAmount.minus(expectedFeeAmount).toString()
+          new BigNumber(tokensAmount).minus(expectedFeeAmount).toString()
         )
-        expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
+        expect(emittedEvent.args.paymentType.toString()).to.be.equal("1")
         expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
 
-        if(shareFee > 0 && withdrawalAddress != "0x0") {
+        if(shareFee > 0 && withdrawalAddress != ZERO_ADDRESS) {
           emittedEvent = txn.logs[0]
-          expect(emittedEvent.args.operationType.toNumber()).to.be.equal(4)
+          expect(emittedEvent.args.operationType.toString()).to.be.equal("4")
           expect(resultingFeeAddressAllowance.toString()).to.be.equal(
-            feeAddressAllowance.plus(expectedFeeAmount).toString()
+            new BigNumber(feeAddressAllowance).plus(expectedFeeAmount).toString()
           )
           expect(emittedEvent.event).to.be.equal("FundsOperation")
           expect(emittedEvent.args.sender).to.be.equal(sender)
           expect(emittedEvent.args.target).to.be.equal(withdrawalAddress)
           expect(emittedEvent.args.tokenAddress).to.be.equal(decoTestToken.address)
-          expect(emittedEvent.args.paymentType.toNumber()).to.be.equal(1)
+          expect(emittedEvent.args.paymentType.toString()).to.be.equal("1")
         }
       }
 
@@ -1712,7 +1731,7 @@ contract("DecoEscrow", async (accounts) => {
         sender,
         decoTestToken.address
       )
-      expect(resultingTokensWithdrawalAllowance.toNumber()).to.be.equal(amount)
+      expect(resultingTokensWithdrawalAllowance.toString()).to.be.equal(amount.toString())
     }
 
     await setAllowanceAndCheckState(accounts[10], 1)
@@ -1736,15 +1755,15 @@ contract("DecoEscrow", async (accounts) => {
     let transferAndCheck = async (sender, amount) => {
       await decoEscrow.transferAnyERC20Token(
         decoTestToken.address,
-        amount.toNumber(),
+        amount.toString(),
         {from: accounts[1], gasPrice: 1}
       ).catch(async (err) => {
         let actualBalance = await decoTestToken.balanceOf(decoEscrow.address)
-        expect(actualBalance.toNumber()).to.be.equal(initialTokensBalance.toNumber())
+        expect(actualBalance.toString()).to.be.equal(initialTokensBalance.toString())
       }).then(async (txn) => {
         if(txn) {
           let actualBalance = await decoTestToken.balanceOf(decoEscrow.address)
-          expect(actualBalance.toNumber()).to.be.equal(initialTokensBalance.toNumber())
+          expect(actualBalance.toString()).to.be.equal(initialTokensBalance.toString())
         }
       })
     }

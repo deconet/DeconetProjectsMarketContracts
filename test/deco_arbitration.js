@@ -5,6 +5,9 @@ var DecoArbitrationTargetStub = artifacts.require("./DecoArbitrationTargetStub.s
 var DecoRelay = artifacts.require("./DecoRelay.sol")
 var DecoArbitrationStub = artifacts.require("./DecoArbitrationStub.sol")
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+BigNumber.config({ EXPONENTIAL_AT: 1e+9 })
+
 class Eligibility {
   constructor(status, target) {
     this.status = status
@@ -77,7 +80,7 @@ contract("DecoArbitration", async (accounts) => {
   }
 
   const UpdateIdHash = () => {
-    idHash = web3.sha3(`${id++}`)
+    idHash = web3.utils.soliditySha3(`${id++}`)
   }
 
   before(async () => {
@@ -870,7 +873,7 @@ contract("DecoArbitration", async (accounts) => {
         }
       })
     }
-    await setAndCheckState("0x0", owner)
+    await setAndCheckState(ZERO_ADDRESS, owner)
     await setAndCheckState("", owner)
     await setAndCheckState(accounts[7], accounts[8])
     await setAndCheckState(accounts[9], accounts[10])
@@ -899,7 +902,7 @@ contract("DecoArbitration", async (accounts) => {
         }
       })
     }
-    await setAndCheckState("0x0", owner)
+    await setAndCheckState(ZERO_ADDRESS, owner)
     await setAndCheckState("", owner)
     await setAndCheckState(accounts[7], accounts[8])
     await setAndCheckState(accounts[9], accounts[10])
@@ -997,19 +1000,19 @@ contract("DecoArbitration", async (accounts) => {
       let txn = await arbitration.setFees(fixedFee, shareFee, {from: sender, gasPrice: 1})
       let fees = await arbitration.getFixedAndShareFees()
       expect(fees[0].toString()).to.be.equal(fixedFee)
-      expect(fees[1].toNumber()).to.be.equal(shareFee)
+      expect(fees[1].toString()).to.be.equal(shareFee)
 
       let blockInfo = await web3.eth.getBlock(txn.receipt.blockNumber)
       let emittedEvent = txn.logs[0]
       expect(emittedEvent.event).to.be.equal("LogFeesUpdated")
       expect(emittedEvent.args.fixedFee.toString()).to.be.equal(fixedFee)
-      expect(emittedEvent.args.shareFee.toNumber()).to.be.equal(shareFee)
+      expect(emittedEvent.args.shareFee.toString()).to.be.equal(shareFee)
       expect(emittedEvent.args.timestamp.toNumber()).to.be.equal(blockInfo.timestamp)
     }
 
-    await setFeeAndCheck(web3.toWei(1), 10, owner)
-    await setFeeAndCheck(web3.toWei(0.2), 99, owner)
-    await setFeeAndCheck(web3.toWei(0.002), 9, owner)
+    await setFeeAndCheck(web3.utils.toWei("1"), "10", owner)
+    await setFeeAndCheck(web3.utils.toWei("0.2"), "99", owner)
+    await setFeeAndCheck(web3.utils.toWei("0.002"), "9", owner)
   })
 
   it("should fail setting fees from not contract's owner address or if share fee is out of range", async () => {
@@ -1027,13 +1030,13 @@ contract("DecoArbitration", async (accounts) => {
       })
     }
 
-    await setFeeAndCheck(web3.toWei(9), 11, accounts[10])
-    await setFeeAndCheck(web3.toWei(0.3), 89, accounts[11])
-    await setFeeAndCheck(web3.toWei(0.004), 19, accounts[12])
-    await setFeeAndCheck(web3.toWei(1), 110, owner)
-    await setFeeAndCheck(web3.toWei(0.2), 255, owner)
-    await setFeeAndCheck(web3.toWei(0.002), 259, owner)
-    await setFeeAndCheck(web3.toWei(0.002), 1209, owner)
+    await setFeeAndCheck(web3.utils.toWei("9"), "11", accounts[10])
+    await setFeeAndCheck(web3.utils.toWei("0.3"), "89", accounts[11])
+    await setFeeAndCheck(web3.utils.toWei("0.004"), "19", accounts[12])
+    await setFeeAndCheck(web3.utils.toWei("1"), "110", owner)
+    await setFeeAndCheck(web3.utils.toWei("0.2"), "255", owner)
+    await setFeeAndCheck(web3.utils.toWei("0.002"), "259", owner)
+    await setFeeAndCheck(web3.utils.toWei("0.002"), "1209", owner)
   })
 })
 
