@@ -18,7 +18,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
     // Indicates if the current clone has been initialized.
     bool internal isInitialized;
 
-    // Stores share fee that should apply on any successfull distribution.
+    // Stores share fee that should apply on any successful distribution.
     uint8 public shareFee;
 
     // Authorized party for executing funds distribution operations.
