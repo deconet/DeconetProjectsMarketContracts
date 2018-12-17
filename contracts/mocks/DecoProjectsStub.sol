@@ -24,6 +24,8 @@ contract DecoProjectsStub is DecoProjects {
     uint public arbiterFixedFee;
     uint8 public arbiterShareFee;
 
+    constructor(uint256 _chainId) DecoProjects(_chainId) public { }
+
     function completeProject(bytes32) external {
         projectCompleted = true;
         projectEndDateConfig = now;

@@ -19,8 +19,8 @@ contract DecoProjectsMock is DecoProjects {
         address _arbiter
     )
         public
-        pure
-        returns(bool) 
+        view
+        returns(bool)
     {
         return isMakersSignatureValid(_maker, _signature, _agreementId, _arbiter);
     }
