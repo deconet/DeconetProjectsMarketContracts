@@ -10,7 +10,7 @@ module.exports = async function (deployer, network, accounts) {
 
   let chainId = ''
   console.log('Network is '+network)
-  if (network == 'development') {
+  if (network == 'development' || network == 'coverage') {
     chainId = 95
   } else if (network == 'ropsten' || network == 'ropsten-fork') {
     chainId = 3

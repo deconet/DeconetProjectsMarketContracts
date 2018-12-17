@@ -1749,4 +1749,31 @@ contract("DecoProjects", async (accounts) => {
       project.endDate.toNumber(),
       project.milestonesCount.toNumber())
   })
+
+  it(
+    "should fail contract deployment if chain id is missing or zero, otherwise should deploy successfully.",
+    async () => {
+      DecoProjects.new({from: accounts[0]}).catch(async (err) => {
+        assert.isOk(err, "Expected error.")
+      }).then((txn) => {
+        if(txn) {
+          assert.fail(txn, "should have failed above.")
+        }
+      })
+      DecoProjects.new(0, {from: accounts[0]}).catch(async (err) => {
+        assert.isOk(err, "Expected error.")
+        expect(err.reason).to.be.equal("You must specify a nonzero chainId")
+      }).then((txn) => {
+        if(txn) {
+          assert.fail(txn, "should have failed above.")
+        }
+      })
+
+      // should deploy just fine the contract with positive chain id integer value.
+      let expectedOwner = accounts[9]
+      let project = await DecoProjects.new(1001, {from: expectedOwner})
+      let owner = await project.owner()
+      expect(owner).to.be.equal(expectedOwner)
+    }
+  )
 })
