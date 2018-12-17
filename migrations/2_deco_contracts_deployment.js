@@ -8,6 +8,16 @@ var DecoArbitration = artifacts.require('./DecoArbitration.sol')
 module.exports = async function (deployer, network, accounts) {
   let decoRelay, decoEscrowFactory, decoEscrow, decoProjects, decoMilestones, decoArbitration
 
+  let chainId = ''
+  console.log('Network is '+network)
+  if (network == 'development' || network == 'coverage') {
+    chainId = 95
+  } else if (network == 'ropsten' || network == 'ropsten-fork') {
+    chainId = 3
+  } else if (network == 'mainnet' || network == 'mainnet-fork') {
+    chainId = 1
+  }
+
   console.log('Deploying DecoRelay contract.')
   await deployer.deploy(DecoRelay)
   decoRelay = await DecoRelay.at(DecoRelay.address)
@@ -23,8 +33,8 @@ module.exports = async function (deployer, network, accounts) {
   decoEscrowFactory = await DecoEscrowFactory.at(DecoEscrowFactory.address)
   deployer.link(DecoEscrowFactory, DecoProjects)
 
-  console.log('Deploying DecoProjects contract.')
-  await deployer.deploy(DecoProjects)
+  console.log('Deploying DecoProjects contract with chainId ' + chainId)
+  await deployer.deploy(DecoProjects, chainId)
   decoProjects = await DecoProjects.at(DecoProjects.address)
   deployer.link(DecoProjects, DecoMilestones)
 

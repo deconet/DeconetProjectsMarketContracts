@@ -83,7 +83,7 @@ contract("DecoMilestones", async (accounts) => {
   let deconetShareFee = 12
 
   const DeployProjectsStubContract = async (ownerAddress) => {
-    decoProjectsStub = await DecoProjectsStub.new({ from: ownerAddress, gasPrice: 1 })
+    decoProjectsStub = await DecoProjectsStub.new(95, { from: ownerAddress, gasPrice: 1 })
     if(decoRelay) {
       await decoRelay.setProjectsContractAddress(decoProjectsStub.address, {from: accounts[0], gasPrice: 1})
       await decoProjectsStub.setRelayContractAddress(decoRelay.address, {from: ownerAddress, gasPrice: 1})

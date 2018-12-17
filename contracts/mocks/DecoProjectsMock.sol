@@ -7,6 +7,8 @@ contract DecoProjectsMock is DecoProjects {
 
     event MockCloningTestEvent(address newCloneAddress);
 
+    constructor(uint256 _chainId) DecoProjects(_chainId) public { }
+
     function testDeployEscrowClone(address _newOwner) public {
         address cloneAddress = deployEscrowClone(_newOwner);
         emit MockCloningTestEvent(cloneAddress);
@@ -19,8 +21,8 @@ contract DecoProjectsMock is DecoProjects {
         address _arbiter
     )
         public
-        pure
-        returns(bool) 
+        view
+        returns(bool)
     {
         return isMakersSignatureValid(_maker, _signature, _agreementId, _arbiter);
     }
