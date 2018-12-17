@@ -3,8 +3,8 @@ pragma solidity 0.4.25;
 import "./DecoEscrow.sol";
 import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoRelay.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "@optionality.io/clone-factory/contracts/CloneFactory.sol";
+import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/@optionality.io/clone-factory/contracts/CloneFactory.sol";
 
 
 /**

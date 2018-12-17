@@ -4,8 +4,8 @@ import "./IDecoArbitration.sol";
 import "./IDecoArbitrationTarget.sol";
 import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoRelay.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 /// @title Contract for Arbitration role and hanlding its events and actions.
@@ -41,7 +41,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      * @dev Start dispute for the given project.
      * @param _idHash A `bytes32` hash of a project id.
      * @param _respondent An `address` of the second paty involved in the dispute.
-     * @param _respondentShareProposal An `int` value indicating percentage of disputed funds 
+     * @param _respondentShareProposal An `int` value indicating percentage of disputed funds
      *  proposed to the respondent. Valid values range is 0-100, different values are considered as 'No Proposal'.
      *  When provided percentage is 100 then this dispute is processed automatically,
      *  and all funds are distributed in favor of the respondent.
@@ -187,7 +187,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     function setFees(uint _fixedFee, uint _shareFee) external onlyOwner {
         fixedFee = _fixedFee;
         require(
-            _shareFee <= 100, 
+            _shareFee <= 100,
             "Share fee should be in 0-100% range."
         );
         shareFee = uint8(_shareFee);
@@ -280,12 +280,12 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Internal method to check if proposal is active 
+     * @dev Internal method to check if proposal is active
      *      and can be settled by respondent, aka from the contract address.
      * @param _idHash A `bytes32` hash of id.
      * @param _respondentShare An `uint` share proposal for a respondent.
      * @param _initiatorShare An `uint` share for an initiator.
-     * @return A `bool` status, `true` if respondent initialized this transaction 
+     * @return A `bool` status, `true` if respondent initialized this transaction
      *         and shares are valid.
      */
     function canBeSettledWithAcceptedProposal(
@@ -307,10 +307,10 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     }
 
     /**
-     * @dev Internal method to check if proposal doesn't exist 
+     * @dev Internal method to check if proposal doesn't exist
      *      or it is no longer active, and can be settled by arbiter.
      * @param _idHash A `bytes32` hash of id.
-     * @return A `bool` status, `true` if arbiter initialized this transaction 
+     * @return A `bool` status, `true` if arbiter initialized this transaction
      *         and can settle dispute.
      */
     function canBeSettledByArbiter(bytes32 _idHash) internal view returns(bool) {
