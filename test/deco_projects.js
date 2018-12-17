@@ -1,4 +1,5 @@
 var BigNumber = require("bignumber.js")
+var abi = require('ethereumjs-abi')
 var DecoProjects = artifacts.require("./DecoProjects.sol")
 var DecoMilestonesStub = artifacts.require("./DecoMilestonesStub.sol")
 var DecoEscrowFactory = artifacts.require("./DecoEscrowFactory.sol")
@@ -183,51 +184,40 @@ contract("DecoProjects", async (accounts) => {
   }
 
   const encodeData = (primaryType, data) => {
-      let encTypes = [];
-      let encValues = [];
+    let encTypes = [];
+    let encValues = [];
 
-      // Add typehash
-      encTypes.push('bytes32');
-      encValues.push(typeHash(primaryType));
+    // Add typehash
+    encTypes.push('bytes32');
+    encValues.push(typeHash(primaryType));
 
-      // Add field contents
-      for (let field of types[primaryType]) {
-          let value = data[field.name];
-          if (field.type == 'string' || field.type == 'bytes') {
-              encTypes.push('bytes32');
-              value = web3.utils.soliditySha3(value);
-              encValues.push(value);
-          } else if (types[field.type] !== undefined) {
-              encTypes.push('bytes32');
-              value = web3.utils.soliditySha3(encodeData(field.type, value));
-              encValues.push(value);
-          } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
-              throw 'TODO: Arrays currently unimplemented in encodeData';
-          } else {
-              encTypes.push(field.type);
-              encValues.push(value);
-          }
+    // Add field contents
+    for (let field of types[primaryType]) {
+      let value = data[field.name];
+      if (field.type == 'string' || field.type == 'bytes') {
+        encTypes.push('bytes32');
+        value = web3.utils.soliditySha3(value);
+        encValues.push(value);
+      } else if (types[field.type] !== undefined) {
+        encTypes.push('bytes32');
+        value = web3.utils.soliditySha3(encodeData(field.type, value));
+        encValues.push(value);
+      } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
+        throw 'TODO: Arrays currently unimplemented in encodeData';
+      } else {
+        encTypes.push(field.type);
+        encValues.push(value);
       }
-      // console.log('encoding types: ', encTypes)
-      // console.log('encoding values: ', encValues)
-      return web3.eth.abi.encodeParameters(encTypes, encValues);
+    }
+    // console.log('encoding types: ', encTypes)
+    // console.log('encoding values: ', encValues)
+    return abi.rawEncode(encTypes, encValues);
   }
 
   const structHash = (primaryType, data) => {
-      return web3.utils.soliditySha3(encodeData(primaryType, data));
-  }
-
-  const signProposal = async (agreementId, arbiter, maker, verifyingContract) => {
-    typedData.domain.verifyingContract = verifyingContract;
-      return await web3.eth.sign(
-          web3.utils.soliditySha3(
-            Buffer.concat([
-                Buffer.from('1901', 'hex'),
-                structHash('EIP712Domain', typedData.domain),
-                structHash(typedData.primaryType, { agreementId, arbiter }),
-            ]),
-        )
-      ,maker);
+    let hashedStruct = web3.utils.soliditySha3(encodeData(primaryType, data))
+    console.log('hashedStruct: '+hashedStruct.substring(2))
+    return Buffer.from(hashedStruct.substring(2), 'hex');
   }
 
   const DeployMilestonesContractStub = async (ownerAddress) => {
@@ -246,6 +236,7 @@ contract("DecoProjects", async (accounts) => {
   }
 
   const StartProject = async (sign, sender) => {
+    console.log('starting project with signature: ' + sign)
     return await decoProjects.startProject(
       mock.agreementId,
       mock.client,
@@ -262,8 +253,27 @@ contract("DecoProjects", async (accounts) => {
 
   const RefreshSignatureAndHashes = async (decoProjectsAddress) => {
     testAgreementHash = web3.utils.soliditySha3(mock.agreementId)
-    signatureHash = web3.utils.soliditySha3(mock.agreementId, mock.arbiter)
-    signature = await signProposal(mock.agreementId, mock.arbiter, mock.maker, decoProjectsAddress)
+
+    typedData.domain.verifyingContract = decoProjectsAddress;
+    // const bufferToSign = Buffer.concat([
+    //     Buffer.from('1901', 'hex'),
+    //     structHash('EIP712Domain', typedData.domain),
+    //     structHash(typedData.primaryType, { agreementId: mock.agreementId, arbiter: mock.arbiter }),
+    // ])
+    const toSign = abi.solidityPack(
+      [
+        'bytes', 'bytes32', 'bytes32'
+      ],
+      [
+        Buffer.from('1901', 'hex'),
+        structHash('EIP712Domain', typedData.domain),
+        structHash(typedData.primaryType, { agreementId: mock.agreementId, arbiter: mock.arbiter }),
+      ]
+    )
+    console.log('hashing this: '+'0x' + toSign.toString('hex'))
+    signatureHash = web3.utils.soliditySha3('0x' + toSign.toString('hex'))
+    console.log('signatureHash: '+signatureHash)
+    signature = await web3.eth.sign(signatureHash,mock.maker);
   }
 
   const GenerateNewAgreementId = async () => {

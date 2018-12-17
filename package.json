@@ -34,8 +34,9 @@
     "web3": "^1.0.0-beta.34"
   },
   "devDependencies": {
-    "solidity-coverage": "^0.5.11",
+    "ethereumjs-abi": "^0.6.5",
     "ganache-cli": "6.1.8",
+    "solidity-coverage": "^0.5.11",
     "truffle": "beta"
   }
 }
