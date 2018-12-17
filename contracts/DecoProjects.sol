@@ -79,10 +79,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint timestamp
     );
 
-    event DebugSigHash(bytes32 sigHash);
-
-    event DebugHashingThis(bytes thing);
-
     // maps the agreement`s unique hash to the project details.
     mapping (bytes32 => Project) public projects;
 
@@ -545,24 +541,16 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @return A `bool` indicating validity of the signature.
      */
     function isMakersSignatureValid(address _maker, bytes _signature, string _agreementId, address _arbiter) internal view returns (bool) {
-        emit DebugHashingThis(abi.encodePacked(
-            "\x19\x01",
-            DOMAIN_SEPARATOR,
-            hash(Proposal(_agreementId, _arbiter))
-        ));
-        // Note: we need to use `encodePacked` here instead of `encode`.
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
             hash(Proposal(_agreementId, _arbiter))
         ));
-        emit DebugSigHash(digest);
-        return true;
-        // address signatureAddress = digest.toEthSignedMessageHash().recover(_signature);
-        // return signatureAddress == _maker;
+        address signatureAddress = digest.toEthSignedMessageHash().recover(_signature);
+        return signatureAddress == _maker;
     }
 
-    function hash(EIP712Domain eip712Domain) internal pure returns (bytes32) {
+    function hash(EIP712Domain eip712Domain) internal view returns (bytes32) {
         return keccak256(abi.encode(
             EIP712DOMAIN_TYPEHASH,
             keccak256(bytes(eip712Domain.name)),
@@ -572,7 +560,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         ));
     }
 
-    function hash(Proposal proposal) internal pure returns (bytes32) {
+    function hash(Proposal proposal) internal view returns (bytes32) {
         return keccak256(abi.encode(
             PROPOSAL_TYPEHASH,
             keccak256(bytes(proposal.agreementId)),

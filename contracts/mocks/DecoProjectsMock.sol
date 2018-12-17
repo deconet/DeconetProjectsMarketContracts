@@ -7,6 +7,8 @@ contract DecoProjectsMock is DecoProjects {
 
     event MockCloningTestEvent(address newCloneAddress);
 
+    constructor(uint256 _chainId) DecoProjects(_chainId) public { }
+
     function testDeployEscrowClone(address _newOwner) public {
         address cloneAddress = deployEscrowClone(_newOwner);
         emit MockCloningTestEvent(cloneAddress);
