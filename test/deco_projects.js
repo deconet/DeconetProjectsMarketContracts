@@ -121,6 +121,115 @@ contract("DecoProjects", async (accounts) => {
 
   let notExistingAgreementId = "NOT EXISTING AGREEMENT ID"
 
+  const typedData = {
+      types: {
+          EIP712Domain: [
+              { name: 'name', type: 'string' },
+              { name: 'version', type: 'string' },
+              { name: 'chainId', type: 'uint256' },
+              { name: 'verifyingContract', type: 'address' },
+          ],
+          Proposal: [
+              { name: 'agreementId', type: 'string' },
+              { name: 'arbiter', type: 'address' }
+          ]
+      },
+      primaryType: 'Proposal',
+      domain: {
+          name: 'Deco.Network',
+          version: '1',
+          chainId: 95,
+          verifyingContract: '',
+      }
+  };
+
+  const types = typedData.types;
+
+  // Recursively finds all the dependencies of a type
+  const dependencies = (primaryType, found = []) => {
+      if (found.includes(primaryType)) {
+          return found;
+      }
+      if (types[primaryType] === undefined) {
+          return found;
+      }
+      found.push(primaryType);
+      for (let field of types[primaryType]) {
+          for (let dep of dependencies(field.type, found)) {
+              if (!found.includes(dep)) {
+                  found.push(dep);
+              }
+          }
+      }
+      return found;
+  }
+
+  const encodeType = (primaryType) => {
+      // Get dependencies primary first, then alphabetical
+      let deps = dependencies(primaryType);
+      deps = deps.filter(t => t != primaryType);
+      deps = [primaryType].concat(deps.sort());
+
+      // Format as a string with fields
+      let result = '';
+      for (let type of deps) {
+          result += `${type}(${types[type].map(({ name, type }) => `${type} ${name}`).join(',')})`;
+      }
+      return result;
+  }
+
+  const typeHash = (primaryType) => {
+      return web3.utils.soliditySha3(encodeType(primaryType));
+  }
+
+  const encodeData = (primaryType, data) => {
+      let encTypes = [];
+      let encValues = [];
+
+      // Add typehash
+      encTypes.push('bytes32');
+      encValues.push(typeHash(primaryType));
+
+      // Add field contents
+      for (let field of types[primaryType]) {
+          let value = data[field.name];
+          if (field.type == 'string' || field.type == 'bytes') {
+              encTypes.push('bytes32');
+              value = web3.utils.soliditySha3(value);
+              encValues.push(value);
+          } else if (types[field.type] !== undefined) {
+              encTypes.push('bytes32');
+              value = web3.utils.soliditySha3(encodeData(field.type, value));
+              encValues.push(value);
+          } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
+              throw 'TODO: Arrays currently unimplemented in encodeData';
+          } else {
+              encTypes.push(field.type);
+              encValues.push(value);
+          }
+      }
+      // console.log('encoding types: ', encTypes)
+      // console.log('encoding values: ', encValues)
+      return web3.eth.abi.encodeParameters(encTypes, encValues);
+  }
+
+  const structHash = (primaryType, data) => {
+      return web3.utils.soliditySha3(encodeData(primaryType, data));
+  }
+
+  const signProposal = async (agreementId, arbiter, maker, verifyingContract) => {
+    typedData.domain.verifyingContract = verifyingContract;
+      return await web3.eth.sign(
+          web3.utils.soliditySha3(
+            Buffer.concat([
+                Buffer.from('1901', 'hex'),
+                structHash('EIP712Domain', typedData.domain),
+                structHash(typedData.primaryType, { agreementId, arbiter }),
+            ]),
+        )
+      ,maker);
+  }
+
   const DeployMilestonesContractStub = async (ownerAddress) => {
     decoMilestonesStub = await DecoMilestonesStub.new({from: ownerAddress, gasPrice: 1})
     if(decoRelay) {
@@ -151,10 +260,10 @@ contract("DecoProjects", async (accounts) => {
     )
   }
 
-  const RefreshSignatureAndHashes = async () => {
+  const RefreshSignatureAndHashes = async (decoProjectsAddress) => {
     testAgreementHash = web3.utils.soliditySha3(mock.agreementId)
     signatureHash = web3.utils.soliditySha3(mock.agreementId, mock.arbiter)
-    signature = await web3.eth.sign(signatureHash, mock.maker)
+    signature = await signProposal(mock.agreementId, mock.arbiter, mock.maker, decoProjectsAddress)
   }
 
   const GenerateNewAgreementId = async () => {
@@ -180,7 +289,7 @@ contract("DecoProjects", async (accounts) => {
       decoArbitration.address
     )
     await DeployMilestonesContractStub(mock.client)
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes(decoProjects.address)
   })
 
   it("should start the project with maker address and matching signature.", async () => {
