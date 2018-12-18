@@ -565,9 +565,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             hash(Proposal(_agreementId, _arbiter))
         ));
         emit DebugThing("hash being signed", digest);
-        address signatureAddress = digest.toEthSignedMessageHash().recover(_signature);
-        emit DebugSignatureAddress(signatureAddress);
-        emit DebugMakerAddress(_maker);
+        address signatureAddress = digest.recover(_signature);
         return signatureAddress == _maker;
     }
 

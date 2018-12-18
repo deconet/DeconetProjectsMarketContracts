@@ -123,6 +123,33 @@ contract("DecoProjects", async (accounts) => {
 
   let notExistingAgreementId = "NOT EXISTING AGREEMENT ID"
 
+  // these match the seed "meow" for ganache-cli which is equivilant to the below mnemonic
+  // Mnemonic:      neck unique maid derive cry road sphere pencil rubber where segment drip
+  // Base HD Path:  m/44'/60'/0'/0/{account_index}
+  // This is necessary because we need to manually sign the proposal EIP712 hash.  using built in web3.eth.sign prepends "ETHERUEM SIGNED MESSAGE" which is not part of EIP712 and sig verification fails.
+  const privateKeys = [
+    '0x03b4cd8d97b067544a40a97f837b0c8fadf35ec07607447fd65f16190a5afe21',
+    '0x89f0b0c08a29c3636413c94f172574f3d225964b3f2f796ed4f37a9969893424',
+    '0xed5aaf569a3fba0d9de50bd252c1a622f7784185c29b3d7cba2092ba8905d6b2',
+    '0x47fee41f88b3564a1a79ae62de75e0e081b23d6c18407296c038e45553164c56',
+    '0xe591dcedc381f133cdafd160e527131f0a4a3d11f0f4c9c24171e3f3be0e6380',
+    '0x16562657d708a5f8cc9b5c5d68961c2143e91e9b54ca7e8ced4aea662b5a0854',
+    '0x5567f54297657c3c64a8e5e78ce97f4d9d4d3dd7fba940ea06805b80f486ce58',
+    '0xcb0f013922f60ee1f2d3d76f5318619ae783338f5e9367b8292eff99f7d942ff',
+    '0x7596141c16a45fce4ca1816d3b36a3c94c625ae722ed1e02333acd392032078d',
+    '0x075e8e62de05c2c09445c6c4d84f15f09d65fbc89f5af62d25c7e5b06fbc51d6',
+    '0xb28b9b1918797e58a6c7c77ae8a9193101deed0df85307eb7e9265f87b36c2c0',
+    '0x5ed62047cf9cf87f6458541ef2042ae88e9cec52cef440f7e30cdea6bec0e90f',
+    '0xc68fd99a6686f93dba620ae356b3a1b84ec9e9f1ca228e25ec72b7895292414d',
+    '0x1b2f251773eeeb9e62d81cf9b09f2899be98f7b3647ee0d25d9de4ecc8670ecf',
+    '0x8e9a401f07e2ebe3ac6962d60643de51d27840359edd9cd520566c2a2b8829ac',
+    '0xee7a2f7218e8ff41a15f58efc6f2d7b7c58f1a76e284693ac9cc5e5fd082128c',
+    '0x26891a4787c68cc5f269b8f0fe6e835fa7eb9043dbb02ea5575c176e418ba9ac',
+    '0xd14d183ecfef6fc776c62fc07aa8adc1eb3b91091898b617abbeaf444d20f1c1',
+    '0x967b0993f37035bc69bf3d4c223e22bff6f53a25808cea011da110f392cc8e2a',
+    '0xf7248620349995c738f912694f2c385f433436ca09972c7e3e26b27a43a0a265'
+  ]
+
   const typedData = {
       types: {
           EIP712Domain: [
@@ -222,6 +249,24 @@ contract("DecoProjects", async (accounts) => {
     return ethUtil.keccak256(encodeData(primaryType, data))
   }
 
+  const padWithZeroes = (number, length) => {
+    var myString = '' + number
+    while (myString.length < length) {
+      myString = '0' + myString
+    }
+    return myString
+  }
+
+  const concatSig = (v, r, s) => {
+    const rSig = ethUtil.fromSigned(r)
+    const sSig = ethUtil.fromSigned(s)
+    const vSig = ethUtil.bufferToInt(v)
+    const rStr = padWithZeroes(ethUtil.toUnsigned(rSig).toString('hex'), 64)
+    const sStr = padWithZeroes(ethUtil.toUnsigned(sSig).toString('hex'), 64)
+    const vStr = ethUtil.stripHexPrefix(ethUtil.intToHex(vSig))
+    return ethUtil.addHexPrefix(rStr.concat(sStr, vStr)).toString('hex')
+  }
+
   const DeployMilestonesContractStub = async (ownerAddress) => {
     decoMilestonesStub = await DecoMilestonesStub.new({from: ownerAddress, gasPrice: 1})
     if(decoRelay) {
@@ -252,7 +297,10 @@ contract("DecoProjects", async (accounts) => {
     )
   }
 
-  const RefreshSignatureAndHashes = async (verifyingContractAddress) => {
+  const RefreshSignatureAndHashes = async ({verifyingContractAddress, makerAccountIndex}) => {
+    if (makerAccountIndex === undefined) {
+      makerAccountIndex = 1 // default maker is accounts[1]
+    }
     testAgreementHash = web3.utils.soliditySha3(mock.agreementId)
 
     typedData.domain.verifyingContract = verifyingContractAddress ? verifyingContractAddress : decoProjects.address
@@ -264,9 +312,10 @@ contract("DecoProjects", async (accounts) => {
         structHash(typedData.primaryType, { agreementId: mock.agreementId, arbiter: mock.arbiter }),
     ])
     // console.log('hashing this: '+'0x' + toSign.toString('hex'))
-    signatureHash = '0x' + ethUtil.keccak256(toSign).toString('hex')
+    signatureHash = ethUtil.keccak256(toSign)
     // console.log('signatureHash: '+signatureHash)
-    signature = await web3.eth.sign(signatureHash,mock.maker);
+    let sigParts = ethUtil.ecsign(signatureHash, ethUtil.toBuffer(privateKeys[makerAccountIndex]))
+    signature = ethUtil.bufferToHex(concatSig(sigParts.v, sigParts.r, sigParts.s))
   }
 
   const GenerateNewAgreementId = async () => {
@@ -292,7 +341,7 @@ contract("DecoProjects", async (accounts) => {
       decoArbitration.address
     )
     await DeployMilestonesContractStub(mock.client)
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
   })
 
   it("should start the project with maker address and matching signature.", async () => {
@@ -323,7 +372,8 @@ contract("DecoProjects", async (accounts) => {
   })
 
   it("should fail project creation if makers signature isn't valid.", async () => {
-    signature = await web3.eth.sign(signatureHash, mock.client)
+    let sigParts = ethUtil.ecsign(signatureHash, ethUtil.toBuffer(privateKeys[0]))
+    signature = ethUtil.bufferToHex(concatSig(sigParts.v, sigParts.r, sigParts.s))
 
     await StartProject(signature, mock.client).catch(async (err) => {
       assert.isOk(err, "Exception should be thrown for the transaction.")
@@ -351,11 +401,11 @@ contract("DecoProjects", async (accounts) => {
       let client = mock.client
       let maker = mock.maker
       mock.maker = client
-      await RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes({})
       await StartProject(signature, mock.client).catch(async (err) => {
         assert.isOk(err, "Exception should be thrown for the transaction.")
         mock.maker = maker
-        await RefreshSignatureAndHashes()
+        await RefreshSignatureAndHashes({})
       }).then((txn) => {
         if(txn) {
           assert.fail("Should have failed above.")
@@ -391,7 +441,7 @@ contract("DecoProjects", async (accounts) => {
 
     mock.milestonesCount = new BigNumber("0")
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
@@ -402,7 +452,7 @@ contract("DecoProjects", async (accounts) => {
 
     mock.milestonesCount = new BigNumber("25")
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     await StartProject(signature, mock.client).catch((err) => {
       assert.isOk(err, "Exception should be thrown for that transaction.")
     }).then((txn) => {
@@ -447,19 +497,19 @@ contract("DecoProjects", async (accounts) => {
     let clientsProjectsBefore = await decoProjects.getClientProjects(mock.client)
 
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     let testAgreementHash1 = testAgreementHash
     let signature1 = signature
     await StartProject(signature1, mock.client)
 
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     let testAgreementHash2 = testAgreementHash
     let signature2 = signature
     await StartProject(signature2, mock.client)
 
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     let testAgreementHash3 = testAgreementHash
     let signature3 = signature
     await StartProject(signature3, mock.client)
@@ -629,7 +679,7 @@ contract("DecoProjects", async (accounts) => {
     expect(txn.logs[0].args.state.toNumber()).to.be.equal(2)
 
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     await StartProject(signature, mock.client)
 
     txn = await decoProjects.terminateProject(
@@ -646,7 +696,7 @@ contract("DecoProjects", async (accounts) => {
     expect(txn.logs[0].args.state.toNumber()).to.be.equal(2)
 
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     await StartProject(signature, mock.client)
     txn = await decoMilestonesStub.terminateProjectAsDisputeResult(
       testAgreementHash,
@@ -1258,7 +1308,7 @@ contract("DecoProjects", async (accounts) => {
 
     mock.maker = accounts[6]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 6})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1274,7 +1324,7 @@ contract("DecoProjects", async (accounts) => {
     // Third completed and rated project
     mock.maker = accounts[7]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 7})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1290,7 +1340,7 @@ contract("DecoProjects", async (accounts) => {
     // Fourth completed and rated project
     mock.maker = accounts[8]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 8})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1306,7 +1356,7 @@ contract("DecoProjects", async (accounts) => {
     // Fifth completed but not rated project
     mock.maker = accounts[9]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 9})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1317,7 +1367,7 @@ contract("DecoProjects", async (accounts) => {
     // Sixth active project
     mock.maker = accounts[10]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 10})
     await StartProject(signature, mock.client)
 
     await validateScoreCalculations((1 + 2 + 3 + 4) / 4)
@@ -1333,7 +1383,7 @@ contract("DecoProjects", async (accounts) => {
 
     // First completed and rated project
     mock.maker = accounts[5]
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 5})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1349,7 +1399,7 @@ contract("DecoProjects", async (accounts) => {
     // Second completed and rated project
     mock.client = accounts[6]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 5})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1365,7 +1415,7 @@ contract("DecoProjects", async (accounts) => {
     // Third completed and rated project
     mock.client = accounts[7]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 5})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1381,7 +1431,7 @@ contract("DecoProjects", async (accounts) => {
     // Fourth completed and rated project
     mock.client = accounts[8]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 5})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1397,7 +1447,7 @@ contract("DecoProjects", async (accounts) => {
     // Fifth completed but not rated project
     mock.client = accounts[9]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 5})
     await StartProject(signature, mock.client)
     await decoProjects.terminateProject(
       testAgreementHash,
@@ -1408,7 +1458,7 @@ contract("DecoProjects", async (accounts) => {
     // Sixth active project
     mock.client = accounts[10]
     GenerateNewAgreementId()
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({makerAccountIndex: 5})
     await StartProject(signature, mock.client)
     await validateScoreCalculations((1 + 2 + 3 + 4) / 4)
   })
@@ -1483,7 +1533,7 @@ contract("DecoProjects", async (accounts) => {
       let decoProjectsMock = await DecoProjectsMock.new(95, {from: decoProjectsMockOwner, gasPrice: 1})
 
       GenerateNewAgreementId()
-      await RefreshSignatureAndHashes(decoProjectsMock.address)
+      await RefreshSignatureAndHashes({verifyingContractAddress: decoProjectsMock.address})
       let result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker,
         signature,
@@ -1503,7 +1553,7 @@ contract("DecoProjects", async (accounts) => {
 
       expect(result).to.be.false
 
-      await RefreshSignatureAndHashes(decoProjectsMock.address)
+      await RefreshSignatureAndHashes({verifyingContractAddress: decoProjectsMock.address})
       mock.maker = accounts[10]
       result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker,
@@ -1514,15 +1564,16 @@ contract("DecoProjects", async (accounts) => {
 
       expect(result).to.be.false
 
-      await RefreshSignatureAndHashes(decoProjectsMock.address)
+      await RefreshSignatureAndHashes({verifyingContractAddress: decoProjectsMock.address, makerAccountIndex: 10})
       typedData.domain.verifyingContract = decoProjectsMock.address
       let toSign = Buffer.concat([
           Buffer.from('1901', 'hex'),
           structHash('EIP712Domain', typedData.domain),
           structHash(typedData.primaryType, { agreementId: mock.agreementId, arbiter: accounts[12] }),
       ])
-      signatureHash = '0x' + ethUtil.keccak256(toSign).toString('hex')
-      signature = await web3.eth.sign(signatureHash, mock.maker)
+      signatureHash = ethUtil.keccak256(toSign)
+      let sigParts = ethUtil.ecsign(signatureHash, ethUtil.toBuffer(privateKeys[10]))
+      signature = ethUtil.bufferToHex(concatSig(sigParts.v, sigParts.r, sigParts.s))
       result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker,
         signature,
@@ -1532,14 +1583,15 @@ contract("DecoProjects", async (accounts) => {
 
       expect(result).to.be.false
 
-      await RefreshSignatureAndHashes(decoProjectsMock.address)
+      await RefreshSignatureAndHashes({verifyingContractAddress: decoProjectsMock.address, makerAccountIndex: 10})
       toSign = Buffer.concat([
           Buffer.from('1901', 'hex'),
           structHash('EIP712Domain', typedData.domain),
           structHash(typedData.primaryType, { agreementId: mock.agreementId, arbiter: mock.arbiter }),
       ])
-      signatureHash = '0x' + ethUtil.keccak256(toSign).toString('hex')
-      signature = await web3.eth.sign(signatureHash, accounts[0])
+      signatureHash = ethUtil.keccak256(toSign)
+      sigParts = ethUtil.ecsign(signatureHash, ethUtil.toBuffer(privateKeys[0]))
+      signature = ethUtil.bufferToHex(concatSig(sigParts.v, sigParts.r, sigParts.s))
       result = await decoProjectsMock.testIsMakersSignatureValid(
         mock.maker,
         signature,
@@ -1554,7 +1606,7 @@ contract("DecoProjects", async (accounts) => {
     let arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
 
     mock.arbiter = arbitrationStub.address
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
 
     let startProjectAndCheckFees = async (fixedFeeEther, shareFee) => {
       let fixedFee = web3.utils.toWei(fixedFeeEther)
@@ -1569,7 +1621,7 @@ contract("DecoProjects", async (accounts) => {
       expect(actualShareFee.toNumber()).to.be.equal(shareFee)
 
       GenerateNewAgreementId()
-      await RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes({})
     }
 
     await startProjectAndCheckFees("1", 90)
@@ -1611,7 +1663,7 @@ contract("DecoProjects", async (accounts) => {
     let arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
 
     mock.arbiter = arbitrationStub.address
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
 
     let startProjectAndCheckFees = async (fixedFeeEther, shareFee) => {
       let fixedFee = web3.utils.toWei(fixedFeeEther)
@@ -1625,7 +1677,7 @@ contract("DecoProjects", async (accounts) => {
       expect(fees[1].toNumber()).to.be.equal(shareFee)
 
       GenerateNewAgreementId()
-      await RefreshSignatureAndHashes()
+      await RefreshSignatureAndHashes({})
     }
 
     await startProjectAndCheckFees("1", 90)
@@ -1645,7 +1697,7 @@ contract("DecoProjects", async (accounts) => {
     let decoTest = await DecoTest.new({from: accounts[0], gasPrice: 1})
 
     mock.arbiter = arbitrationStub.address
-    await RefreshSignatureAndHashes()
+    await RefreshSignatureAndHashes({})
     let fixedFee = web3.utils.toWei("1")
     let shareFee = 5 // %
     await arbitrationStub.setStubFees(fixedFee, shareFee)
