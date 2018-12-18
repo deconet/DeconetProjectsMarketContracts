@@ -130,6 +130,7 @@ contract("DecoProjects", async (accounts) => {
               { name: 'version', type: 'string' },
               { name: 'chainId', type: 'uint256' },
               { name: 'verifyingContract', type: 'address' },
+              { name: 'salt', type: 'bytes32' }
           ],
           Proposal: [
               { name: 'agreementId', type: 'string' },
@@ -142,6 +143,7 @@ contract("DecoProjects", async (accounts) => {
           version: '1',
           chainId: 95,
           verifyingContract: '',
+          salt: Buffer.from('d10cec1f6f60b2e11f7c2d00de1ce782b539f9ad42f93bd687065a3c86f31fa1', 'hex')
       }
   };
 
@@ -181,6 +183,7 @@ contract("DecoProjects", async (accounts) => {
   }
 
   const typeHash = (primaryType) => {
+      // console.log('typehash for '+primaryType+' is 0x'+ethUtil.keccak256(encodeType(primaryType)).toString('hex'))
       return ethUtil.keccak256(encodeType(primaryType));
   }
 
@@ -253,6 +256,8 @@ contract("DecoProjects", async (accounts) => {
     testAgreementHash = web3.utils.soliditySha3(mock.agreementId)
 
     typedData.domain.verifyingContract = verifyingContractAddress ? verifyingContractAddress : decoProjects.address
+    // console.log('EIP712Domain: 0x'+structHash('EIP712Domain', typedData.domain).toString('hex'))
+    // console.log('hashed proposal: 0x'+structHash(typedData.primaryType, { agreementId: mock.agreementId, arbiter: mock.arbiter }).toString('hex'))
     const toSign = Buffer.concat([
         Buffer.from('1901', 'hex'),
         structHash('EIP712Domain', typedData.domain),

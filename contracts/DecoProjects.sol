@@ -39,6 +39,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         string  version;
         uint256 chainId;
         address verifyingContract;
+        bytes32 salt;
     }
 
     struct Proposal {
@@ -47,7 +48,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     bytes32 constant private EIP712DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"
     );
 
     bytes32 constant private PROPOSAL_TYPEHASH = keccak256(
@@ -78,6 +79,13 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint8 rating,
         uint timestamp
     );
+
+    event DebugSignatureAddress(address sigAddress);
+
+    event DebugMakerAddress(address maker);
+
+    event DebugThingToBeHashed(bytes toHash);
+    event DebugThing(string thing, bytes32 itemLogged);
 
     // maps the agreement`s unique hash to the project details.
     mapping (bytes32 => Project) public projects;
@@ -135,7 +143,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             name: "Deco.Network",
             version: "1",
             chainId: _chainId,
-            verifyingContract: address(this)
+            verifyingContract: address(this),
+            salt: bytes32(0xd10cec1f6f60b2e11f7c2d00de1ce782b539f9ad42f93bd687065a3c86f31fa1)
         }));
     }
 
@@ -541,12 +550,24 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @return A `bool` indicating validity of the signature.
      */
     function isMakersSignatureValid(address _maker, bytes _signature, string _agreementId, address _arbiter) internal view returns (bool) {
+        // emit DebugThing("DOMAIN typehash: ", EIP712DOMAIN_TYPEHASH);
+        // emit DebugThing("proposal typehash: ", PROPOSAL_TYPEHASH);
+        emit DebugThing("DOMAIN_SEPARATOR", DOMAIN_SEPARATOR);
+        emit DebugThing("hash(Proposal(_agreementId, _arbiter))", hash(Proposal(_agreementId, _arbiter)));
+        DebugThingToBeHashed(abi.encodePacked(
+            "\x19\x01",
+            DOMAIN_SEPARATOR,
+            hash(Proposal(_agreementId, _arbiter))
+        ));
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
             hash(Proposal(_agreementId, _arbiter))
         ));
+        emit DebugThing("hash being signed", digest);
         address signatureAddress = digest.toEthSignedMessageHash().recover(_signature);
+        emit DebugSignatureAddress(signatureAddress);
+        emit DebugMakerAddress(_maker);
         return signatureAddress == _maker;
     }
 
@@ -556,7 +577,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             keccak256(bytes(eip712Domain.name)),
             keccak256(bytes(eip712Domain.version)),
             eip712Domain.chainId,
-            eip712Domain.verifyingContract
+            eip712Domain.verifyingContract,
+            eip712Domain.salt
         ));
     }
 
