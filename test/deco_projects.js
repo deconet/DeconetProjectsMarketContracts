@@ -156,8 +156,7 @@ contract("DecoProjects", async (accounts) => {
               { name: 'name', type: 'string' },
               { name: 'version', type: 'string' },
               { name: 'chainId', type: 'uint256' },
-              { name: 'verifyingContract', type: 'address' },
-              { name: 'salt', type: 'bytes32' }
+              { name: 'verifyingContract', type: 'address' }
           ],
           Proposal: [
               { name: 'agreementId', type: 'string' },
@@ -169,8 +168,7 @@ contract("DecoProjects", async (accounts) => {
           name: 'Deco.Network',
           version: '1',
           chainId: 95,
-          verifyingContract: '',
-          salt: Buffer.from('d10cec1f6f60b2e11f7c2d00de1ce782b539f9ad42f93bd687065a3c86f31fa1', 'hex')
+          verifyingContract: ''
       }
   };
 

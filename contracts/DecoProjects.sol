@@ -39,7 +39,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         string  version;
         uint256 chainId;
         address verifyingContract;
-        bytes32 salt;
     }
 
     struct Proposal {
@@ -48,7 +47,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     }
 
     bytes32 constant private EIP712DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
 
     bytes32 constant private PROPOSAL_TYPEHASH = keccak256(
@@ -136,8 +135,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             name: "Deco.Network",
             version: "1",
             chainId: _chainId,
-            verifyingContract: address(this),
-            salt: bytes32(0xd10cec1f6f60b2e11f7c2d00de1ce782b539f9ad42f93bd687065a3c86f31fa1)
+            verifyingContract: address(this)
         }));
     }
 
@@ -558,8 +556,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             keccak256(bytes(eip712Domain.name)),
             keccak256(bytes(eip712Domain.version)),
             eip712Domain.chainId,
-            eip712Domain.verifyingContract,
-            eip712Domain.salt
+            eip712Domain.verifyingContract
         ));
     }
 
