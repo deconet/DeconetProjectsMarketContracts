@@ -80,13 +80,6 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         uint timestamp
     );
 
-    event DebugSignatureAddress(address sigAddress);
-
-    event DebugMakerAddress(address maker);
-
-    event DebugThingToBeHashed(bytes toHash);
-    event DebugThing(string thing, bytes32 itemLogged);
-
     // maps the agreement`s unique hash to the project details.
     mapping (bytes32 => Project) public projects;
 
@@ -550,21 +543,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @return A `bool` indicating validity of the signature.
      */
     function isMakersSignatureValid(address _maker, bytes _signature, string _agreementId, address _arbiter) internal view returns (bool) {
-        // emit DebugThing("DOMAIN typehash: ", EIP712DOMAIN_TYPEHASH);
-        // emit DebugThing("proposal typehash: ", PROPOSAL_TYPEHASH);
-        emit DebugThing("DOMAIN_SEPARATOR", DOMAIN_SEPARATOR);
-        emit DebugThing("hash(Proposal(_agreementId, _arbiter))", hash(Proposal(_agreementId, _arbiter)));
-        DebugThingToBeHashed(abi.encodePacked(
-            "\x19\x01",
-            DOMAIN_SEPARATOR,
-            hash(Proposal(_agreementId, _arbiter))
-        ));
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
             hash(Proposal(_agreementId, _arbiter))
         ));
-        emit DebugThing("hash being signed", digest);
         address signatureAddress = digest.recover(_signature);
         return signatureAddress == _maker;
     }
