@@ -1,26 +1,25 @@
 pragma solidity 0.4.25;
 
-import "./DecoEscrow.sol";
+import "./DecoProxy.sol";
 import "./DecoBaseProjectsMarketplace.sol";
-import "./DecoRelay.sol";
 import "../node_modules/@optionality.io/clone-factory/contracts/CloneFactory.sol";
 
 
 /**
- * @title Utility contract that provides a way to execute cheap clone deployment of the DecoEscrow contract
+ * @title Utility contract that provides a way to execute cheap clone deployment of the DecoProxy contract
  *        on chain.
  */
-contract DecoEscrowFactory is DecoBaseProjectsMarketplace, CloneFactory {
+contract DecoProxyFactory is DecoBaseProjectsMarketplace, CloneFactory {
 
-    // Escrow master-contract address.
+    // Proxy master-contract address.
     address public libraryAddress;
 
     // Logged when a new Escrow clone is deployed to the chain.
-    event EscrowCreated(address newEscrowAddress);
+    event ProxyCreated(address newProxyAddress);
 
     /**
      * @dev Constructor for the contract.
-     * @param _libraryAddress Escrow master-contract address.
+     * @param _libraryAddress Proxy master-contract address.
      */
     constructor(address _libraryAddress) public {
         libraryAddress = _libraryAddress;
@@ -38,11 +37,11 @@ contract DecoEscrowFactory is DecoBaseProjectsMarketplace, CloneFactory {
     }
 
     /**
-     * @dev Create Escrow clone.
-     * @param _ownerAddress An address of the Escrow contract owner.
-     * @param _authorizedAddress An addresses that is going to be authorized in Escrow contract.
+     * @dev Create Proxy clone.
+     * @param _ownerAddress An address of the Proxy contract owner.
+     * @param _authorizedAddress An addresses that is going to be authorized in Proxy contract.
      */
-    function createEscrow(
+    function createProxy(
         address _ownerAddress,
         address _authorizedAddress
     )
@@ -50,14 +49,11 @@ contract DecoEscrowFactory is DecoBaseProjectsMarketplace, CloneFactory {
         returns(address)
     {
         address clone = createClone(libraryAddress);
-        DecoRelay relay = DecoRelay(relayContractAddress);
-        DecoEscrow(clone).initialize(
-            _ownerAddress,
+        DecoProxy(clone).initialize(
             _authorizedAddress,
-            relay.shareFee(),
-            relayContractAddress
+            _ownerAddress
         );
-        emit EscrowCreated(clone);
+        emit ProxyCreated(clone);
         return clone;
     }
 }
