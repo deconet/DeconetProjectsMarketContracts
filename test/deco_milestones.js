@@ -1670,6 +1670,49 @@ contract("DecoMilestones", async (accounts) => {
     await terminateAndCheckState(maker)
   })
 
+  it(
+    "should terminate milestone by maker if client is overdue start the next milestone window, an there is at least one completed milestone.",
+    async () => {
+      await decoMilestonesMock.setSkipCanTerminateLogic(false)
+
+      await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
+      let escrowEthBalance = await decoEscrowStub.balance.call()
+      escrowEthBalance = new BigNumber(escrowEthBalance)
+
+      let amount = Math.floor(escrowEthBalance.div(maxNumberOfMilestones).toNumber())
+      mock.depositAmount = new BigNumber(amount)
+      mock.tokenAddress = ZERO_ADDRESS
+
+      let terminateAndCheckState = async (sender) => {
+        await decoMilestonesMock.startMilestone(
+          testAgreementHash,
+          mock.depositAmount.toString(),
+          mock.tokenAddress,
+          mock.duration.toString(),
+          { from: client, gasPrice: 1 }
+        )
+        await decoMilestonesMock.deliverLastMilestone(
+          testAgreementHash, {from: maker, gasPrice: 1}
+        )
+        await decoMilestonesMock.acceptLastMilestone(
+          testAgreementHash,
+          {from: client, gasPrice: "1" }
+        )
+        await IncreaseTime(milestoneStartWindow * 60 * 60 * 24 + 1)
+
+        let txn = await decoProjectsStub.terminateProject(
+          testAgreementHash, {from: maker, gasPrice: 1}
+        )
+
+        console.log(txn)
+
+        BumpProjectId()
+      }
+
+      await terminateAndCheckState(maker)
+    }
+  )
+
   it("should fail terminating milestone if client/maker can not terminate at the moment.", async () => {
     await decoMilestonesMock.setMockMakerCanTerminate(false)
     await decoMilestonesMock.setMockClientCanTerminate(false)
