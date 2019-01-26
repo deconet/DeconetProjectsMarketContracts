@@ -1675,6 +1675,14 @@ contract("DecoMilestones", async (accounts) => {
     async () => {
       await decoMilestonesMock.setSkipCanTerminateLogic(false)
 
+      await DeployEscrowStubContract(accounts[0])
+      let amountToApprove = web3.utils.toWei("1000000")
+      await decoTestToken.approve(
+        decoEscrowStub.address,
+        amountToApprove.toString(),
+        {from: accounts[0], gasPrice: 1}
+      )
+
       await decoEscrowStub.sendTransaction({from: accounts[9], value: 1000000, gasPrice: 1})
       let escrowEthBalance = await decoEscrowStub.balance.call()
       escrowEthBalance = new BigNumber(escrowEthBalance)
@@ -1700,11 +1708,9 @@ contract("DecoMilestones", async (accounts) => {
         )
         await IncreaseTime(milestoneStartWindow * 60 * 60 * 24 + 1)
 
-        let txn = await decoProjectsStub.terminateProject(
+        await decoProjectsStub.terminateProject(
           testAgreementHash, {from: maker, gasPrice: 1}
         )
-
-        console.log(txn)
 
         BumpProjectId()
       }
