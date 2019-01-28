@@ -388,6 +388,7 @@ contract DecoMilestones is IDecoArbitrationTarget, DecoBaseProjectsMarketplace {
         uint milestonesCount = projectMilestones[_agreementHash].length;
         if (milestonesCount == 0) return;
         Milestone memory lastMilestone = projectMilestones[_agreementHash][milestonesCount - 1];
+        if (lastMilestone.acceptedTime > 0) return;
         address projectEscrowContractAddress = projectsContract.getProjectEscrowAddress(_agreementHash);
         if (_initiator == projectClient) {
             unblockFundsInEscrow(
