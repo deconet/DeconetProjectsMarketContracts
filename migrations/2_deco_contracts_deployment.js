@@ -14,6 +14,8 @@ module.exports = async function (deployer, network, accounts) {
     chainId = 95
   } else if (network == 'ropsten' || network == 'ropsten-fork') {
     chainId = 3
+  } else if (network == 'kovan' || network == 'kovan-fork') {
+    chainId = 42
   } else if (network == 'mainnet' || network == 'mainnet-fork') {
     chainId = 1
   }

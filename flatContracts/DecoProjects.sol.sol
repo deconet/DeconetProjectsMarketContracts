@@ -984,6 +984,11 @@ interface IDecoArbitration {
 
 
 
+pragma solidity 0.4.25;
+
+
+
+
 /// @title Contract for Project events and actions handling.
 contract DecoProjects is DecoBaseProjectsMarketplace {
     using SafeMath for uint256;
@@ -1520,7 +1525,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             DOMAIN_SEPARATOR,
             hash(Proposal(_agreementId, _arbiter))
         ));
-        address signatureAddress = digest.toEthSignedMessageHash().recover(_signature);
+        address signatureAddress = digest.recover(_signature);
         return signatureAddress == _maker;
     }
 
@@ -1542,6 +1547,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         ));
     }
 }
+
 
 
 /// @title Contract for Milesotone events and actions handling.

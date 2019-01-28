@@ -20,6 +20,14 @@ module.exports = {
       network_id: 3,
       gas: 7900000
     },
+    kovan: {
+      provider: function () {
+        return new HDWalletProvider(mnemonic, process.env.DECONET_KOVAN_NODE_URL)
+      },
+      network_id: 42,
+      gas: 7900000,
+      gasPrice: 2000000000 // 2 gwei
+    },
     rinkby: {
       provider: function () {
         return new HDWalletProvider(mnemonic, 'https://rinkeby.infura.io/JTdaA5dJvlwfCfdgT5Cm')
