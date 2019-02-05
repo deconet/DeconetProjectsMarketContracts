@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 
 /// @title Interface that an arbitration target contract is expected to conform.
@@ -28,7 +28,7 @@ contract IDecoArbitrationTarget {
         address _initiator,
         uint8 _initiatorShare,
         bool _isInternal,
-        address _arbiterWithdrawalAddress
+        address payable _arbiterWithdrawalAddress
     )
         public;
 

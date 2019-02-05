@@ -1,6 +1,7 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "../DecoEscrow.sol";
+import "../DecoRelay.sol";
 
 
 contract DecoEscrowStub is DecoEscrow {
@@ -11,13 +12,13 @@ contract DecoEscrowStub is DecoEscrow {
         address _newOwner,
         address _authorizedAddress,
         uint8 _shareFee,
-        address _relayContractAddress
+        DecoRelay _relayContract
     )
         external
     {
         newOwner = _newOwner;
         authorizedAddress = _authorizedAddress;
         shareFee = _shareFee;
-        relayContractAddress = _relayContractAddress;
+        relayContract = _relayContract;
     }
 }

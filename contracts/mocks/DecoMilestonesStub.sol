@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "../DecoMilestones.sol";
 import "../DecoProjects.sol";
@@ -27,9 +27,7 @@ contract DecoMilestonesStub is DecoMilestones {
     function acceptLastMilestone(bytes32 _agreementHash) external {
         require(msg.sender == projectOwnerAddress);
         if (projectMilestones[_agreementHash].length == 0) {
-            DecoProjects projectsContract = DecoProjects(
-                DecoRelay(relayContractAddress).projectsContractAddress()
-            );
+            DecoProjects projectsContract = relayContract.projectsContract();
             projectsContract.completeProject(_agreementHash);
         }
     }
@@ -37,14 +35,8 @@ contract DecoMilestonesStub is DecoMilestones {
     function rejectLastDeliverable(bytes32) external {
     }
 
-    function setRelayContractAddress(address _newAddress) external {
-        relayContractAddress = _newAddress;
-    }
-
     function terminateLastMilestone(bytes32 _agreementHash, address _initiator) public {
-        DecoProjects projectsContract = DecoProjects(
-            DecoRelay(relayContractAddress).projectsContractAddress()
-        );
+        DecoProjects projectsContract = relayContract.projectsContract();
         address client = projectsContract.getProjectClient(_agreementHash);
         address maker = projectsContract.getProjectMaker(_agreementHash);
         if (client == _initiator) {
@@ -93,9 +85,7 @@ contract DecoMilestonesStub is DecoMilestones {
     }
 
     function terminateProjectAsDisputeResult(bytes32 hash) public {
-        DecoProjects projectsContract = DecoProjects(
-            DecoRelay(relayContractAddress).projectsContractAddress()
-        );
+        DecoProjects projectsContract = relayContract.projectsContract();
         projectsContract.terminateProject(hash);
     }
 }

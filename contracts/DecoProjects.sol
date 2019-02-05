@@ -1,27 +1,28 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../node_modules/openzeppelin-solidity/contracts/cryptography/ECDSA.sol";
-import "./DecoBaseProjectsMarketplace.sol";
+import "./DecoRelayAccessProxy.sol";
 import "./DecoMilestones.sol";
 import "./DecoEscrowFactory.sol";
 import "./DecoRelay.sol";
+import "./DecoEscrow.sol";
 import "./IDecoArbitration.sol";
 
 
 /// @title Contract for Project events and actions handling.
-contract DecoProjects is DecoBaseProjectsMarketplace {
+contract DecoProjects is DecoRelayAccessProxy {
     using SafeMath for uint256;
     using ECDSA for bytes32;
 
     // struct for project details
     struct Project {
         string agreementId;
-        address client;
-        address maker;
-        address arbiter;
-        address escrowContractAddress;
+        address payable client;
+        address payable maker;
+        address payable arbiter;
+        DecoEscrow escrowContract;
         uint startDate;
         uint endDate;
         uint8 milestoneStartWindow;
@@ -107,11 +108,10 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     // Modifier to restrict method to be called either by project`s owner or maker
     modifier eitherClientOrMakerOrMilestoneContract(bytes32 _agreementHash) {
         Project memory project = projects[_agreementHash];
-        DecoRelay relay = DecoRelay(relayContractAddress);
         require(
             project.client == msg.sender ||
             project.maker == msg.sender ||
-            relay.milestonesContractAddress() == msg.sender,
+            address(relayContract.milestonesContract()) == msg.sender,
             "Only project owner or maker can perform this operation."
         );
         _;
@@ -119,9 +119,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
 
     // Modifier to restrict method to be called by the milestones contract.
     modifier onlyMilestonesContract(bytes32 _agreementHash) {
-        DecoRelay relay = DecoRelay(relayContractAddress);
         require(
-            msg.sender == relay.milestonesContractAddress(),
+            msg.sender == address(relayContract.milestonesContract()),
             "Only milestones contract can perform this operation."
         );
         Project memory project = projects[_agreementHash];
@@ -155,11 +154,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _agreementEncrypted A `bool` flag indicating whether or not the agreement is encrypted.
      */
     function startProject(
-        string _agreementId,
-        address _client,
-        address _arbiter,
-        address _maker,
-        bytes _makersSignature,
+        string calldata _agreementId,
+        address payable _client,
+        address payable _arbiter,
+        address payable _maker,
+        bytes calldata _makersSignature,
         uint8 _milestonesCount,
         uint8 _milestoneStartWindow,
         uint8 _feedbackWindow,
@@ -176,18 +175,18 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             "Maker should sign the hash of immutable agreement doc."
         );
         require(_milestonesCount >= 1 && _milestonesCount <= 24, "Milestones count is not in the allowed 1-24 range.");
-        bytes32 hash = keccak256(_agreementId);
+        bytes32 hash = keccak256(abi.encodePacked(_agreementId));
         require(projects[hash].client == address(0x0), "Project shouldn't exist yet.");
 
         saveCurrentArbitrationFees(_arbiter, hash);
 
-        address newEscrowCloneAddress = deployEscrowClone(msg.sender);
+        DecoEscrow newEscrowClone = deployEscrowClone(msg.sender);
         projects[hash] = Project(
             _agreementId,
             msg.sender,
             _maker,
             _arbiter,
-            newEscrowCloneAddress,
+            newEscrowClone,
             now,
             0, // end date is unknown yet
             _milestoneStartWindow,
@@ -213,9 +212,8 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         Project storage project = projects[_agreementHash];
         require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0, "Only allowed for active projects.");
-        address milestoneContractAddress = DecoRelay(relayContractAddress).milestonesContractAddress();
-        if (msg.sender != milestoneContractAddress) {
-            DecoMilestones milestonesContract = DecoMilestones(milestoneContractAddress);
+        DecoMilestones milestonesContract = relayContract.milestonesContract();
+        if (msg.sender != address(milestonesContract)) {
             milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
         }
 
@@ -237,9 +235,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         require(project.client != address(0x0), "Only allowed for existing projects.");
         require(project.endDate == 0, "Only allowed for active projects.");
         projects[_agreementHash].endDate = now;
-        DecoMilestones milestonesContract = DecoMilestones(
-            DecoRelay(relayContractAddress).milestonesContractAddress()
-        );
+        DecoMilestones milestonesContract = relayContract.milestonesContract();
         bool isLastMilestoneAccepted;
         uint8 milestoneNumber;
         (isLastMilestoneAccepted, milestoneNumber) = milestonesContract.isLastMilestoneAccepted(
@@ -285,10 +281,10 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     /**
      * @dev Query for getting the address of Escrow contract clone deployed for the given project.
      * @param _agreementHash A `bytes32` hash of the project`s agreement id.
-     * @return An `address` of a clone.
+     * @return A `DecoEscrow` contract clone instance.
      */
-    function getProjectEscrowAddress(bytes32 _agreementHash) public view returns(address) {
-        return projects[_agreementHash].escrowContractAddress;
+    function getProjectEscrow(bytes32 _agreementHash) public view returns(DecoEscrow) {
+        return projects[_agreementHash].escrowContract;
     }
 
     /**
@@ -368,7 +364,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _client An `address` to look up.
      * @return `bytes32[]` of projects hashes.
      */
-    function getClientProjects(address _client) public view returns(bytes32[]) {
+    function getClientProjects(address _client) public view returns(bytes32[] memory) {
         return clientProjects[_client];
     }
 
@@ -377,7 +373,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _maker An `address` to look up.
      * @return `bytes32[]` of projects hashes.
      */
-    function getMakerProjects(address _maker) public view returns(bytes32[]) {
+    function getMakerProjects(address _maker) public view returns(bytes32[] memory) {
         return makerProjects[_maker];
     }
 
@@ -428,7 +424,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     )
         public
         view
-        returns(uint, uint8, address)
+        returns(uint, uint8, DecoEscrow)
     {
         require(checkIfProjectExists(_agreementHash), "Project must exist.");
         Project memory project = projects[_agreementHash];
@@ -441,7 +437,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
             "Initiator and respondent must be different and equal to maker/client addresses."
         );
         (uint fixedFee, uint8 shareFee) = getProjectArbitrationFees(_agreementHash);
-        return (fixedFee, shareFee, project.escrowContractAddress);
+        return (fixedFee, shareFee, project.escrowContract);
     }
 
     /**
@@ -499,7 +495,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _scoreType A `ScoreType` to identify projects source.
      * @return `bytes32[]` of projects hashes either from `clientProjects` or `makerProjects` storage arrays.
      */
-    function getProjectsByScoreType(address _address, ScoreType _scoreType) internal view returns(bytes32[]) {
+    function getProjectsByScoreType(address _address, ScoreType _scoreType) internal view returns(bytes32[] memory) {
         if (_scoreType == ScoreType.CustomerSatisfaction) {
             return makerProjects[_address];
         } else {
@@ -524,12 +520,11 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
     /**
      * @dev Deploy DecoEscrow contract clone for the newly created project.
      * @param _newContractOwner An `address` of a new contract owner.
-     * @return An `address` of a new deployed escrow contract.
+     * @return A new deployed `DecoEscrow` contract instance.
      */
-    function deployEscrowClone(address _newContractOwner) internal returns(address) {
-        DecoRelay relay = DecoRelay(relayContractAddress);
-        DecoEscrowFactory factory = DecoEscrowFactory(relay.escrowFactoryContractAddress());
-        return factory.createEscrow(_newContractOwner, relay.milestonesContractAddress());
+    function deployEscrowClone(address _newContractOwner) internal returns(DecoEscrow) {
+        DecoEscrowFactory factory = relayContract.escrowFactoryContract();
+        return factory.createEscrow(_newContractOwner, address(relayContract.milestonesContract()));
     }
 
     /**
@@ -540,7 +535,16 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
      * @param _arbiter An `address` of a referee to settle all escalated disputes between parties.
      * @return A `bool` indicating validity of the signature.
      */
-    function isMakersSignatureValid(address _maker, bytes _signature, string _agreementId, address _arbiter) internal view returns (bool) {
+    function isMakersSignatureValid(
+        address _maker,
+        bytes memory _signature,
+        string memory _agreementId,
+        address _arbiter
+    )
+        internal
+        view
+        returns (bool)
+    {
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
@@ -550,7 +554,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         return signatureAddress == _maker;
     }
 
-    function hash(EIP712Domain eip712Domain) internal view returns (bytes32) {
+    function hash(EIP712Domain memory eip712Domain) internal view returns (bytes32) {
         return keccak256(abi.encode(
             EIP712DOMAIN_TYPEHASH,
             keccak256(bytes(eip712Domain.name)),
@@ -560,7 +564,7 @@ contract DecoProjects is DecoBaseProjectsMarketplace {
         ));
     }
 
-    function hash(Proposal proposal) internal view returns (bytes32) {
+    function hash(Proposal memory proposal) internal view returns (bytes32) {
         return keccak256(abi.encode(
             PROPOSAL_TYPEHASH,
             keccak256(bytes(proposal.agreementId)),

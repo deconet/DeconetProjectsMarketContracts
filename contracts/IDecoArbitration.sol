@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 
 /// @title Interface that an arbitration contract is expected to conform.
@@ -24,7 +24,7 @@ interface IDecoArbitration {
         uint8 rejectedProposal
     );
 
-    /** 
+    /**
      * @dev Should be logged upon dispute settlement.
      */
     event LogSettledDispute(
@@ -68,7 +68,7 @@ interface IDecoArbitration {
      *      eligibility must be confirmed by arbitation target `checkEligibility` method call.
      * @param _idHash A `bytes32` hash of a project id.
      * @param _respondent An `address` of the second paty involved in the dispute.
-     * @param _respondentShareProposal An `int` value indicating percentage of disputed funds 
+     * @param _respondentShareProposal An `int` value indicating percentage of disputed funds
      *  proposed to the respondent. Valid values range is 0-100, different values are considered as 'No Proposal'.
      *  When provided percentage is 100 then this dispute is processed automatically,
      *  and all funds are distributed in favor of the respondent.
@@ -107,13 +107,13 @@ interface IDecoArbitration {
      */
     function settleDispute(bytes32 _idHash, uint _respondentShare, uint _initiatorShare) external;
 
-    /** 
+    /**
      * @return Retuns this arbitration contract withdrawal `address`.
      */
-    function getWithdrawalAddress() external view returns(address);
+    function getWithdrawalAddress() external view returns(address payable);
 
-    /** 
-     * @return The arbitration contract fixed `uint` fee and `uint8` share of all disputed funds fee. 
+    /**
+     * @return The arbitration contract fixed `uint` fee and `uint8` share of all disputed funds fee.
      */
     function getFixedAndShareFees() external view returns(uint, uint8);
 

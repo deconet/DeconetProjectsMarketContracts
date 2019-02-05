@@ -87,15 +87,15 @@ contract("DecoArbitration", async (accounts) => {
     arbitration = await DecoArbitration.deployed()
     relay = await DecoRelay.deployed()
     arbitrationStub = await DecoArbitrationStub.new({from: accounts[0], gasPrice: 1})
-    arbitrationStub.setRelayContractAddress(relay.address, {from: accounts[0], gasPrice: 1})
+    arbitrationStub.setRelayContract(relay.address, {from: accounts[0], gasPrice: 1})
     await SetTimeLimitInStub(10000000000)
   })
 
   beforeEach(async () => {
     arbitrationTargetStub = await DecoArbitrationTargetStub.new({ from: accounts[1], gasPrice: 1 })
-    relay.setMilestonesContractAddress(arbitrationTargetStub.address, {from: accounts[0], gasPrice: 1})
+    relay.setMilestonesContract(arbitrationTargetStub.address, {from: accounts[0], gasPrice: 1})
     let owner = await arbitration.owner()
-    await arbitration.setRelayContractAddress(relay.address, {from: owner, gasPrice: 1})
+    await arbitration.setRelayContract(relay.address, {from: owner, gasPrice: 1})
     UpdateIdHash()
   })
 
@@ -882,19 +882,19 @@ contract("DecoArbitration", async (accounts) => {
 
   it("should set relay address from owner address", async () => {
     let owner = await arbitration.owner()
-    await arbitration.setRelayContractAddress(accounts[1], {from: owner, gasPrice: 1})
-    await arbitration.setRelayContractAddress(accounts[2], {from: owner, gasPrice: 1})
-    await arbitration.setRelayContractAddress(accounts[3], {from: owner, gasPrice: 1})
-    await arbitration.setRelayContractAddress(accounts[4], {from: owner, gasPrice: 1})
-    await arbitration.setRelayContractAddress(accounts[5], {from: owner, gasPrice: 1})
+    await arbitration.setRelayContract(accounts[1], {from: owner, gasPrice: 1})
+    await arbitration.setRelayContract(accounts[2], {from: owner, gasPrice: 1})
+    await arbitration.setRelayContract(accounts[3], {from: owner, gasPrice: 1})
+    await arbitration.setRelayContract(accounts[4], {from: owner, gasPrice: 1})
+    await arbitration.setRelayContract(accounts[5], {from: owner, gasPrice: 1})
   })
 
   it("should fail setting invalid relay address or from non-owner's address.", async () => {
     let owner = await arbitration.owner()
     let setAndCheckState = async (newAddress, sender) => {
-      await arbitration.setRelayContractAddress(newAddress, {from: sender, gasPrice: 1}).catch(async (err) => {
+      await arbitration.setRelayContract(newAddress, {from: sender, gasPrice: 1}).catch(async (err) => {
         assert.isOk(err, "Expected crash.")
-        let address = await arbitration.relayContractAddress.call()
+        let address = await arbitration.relayContract()
         expect(address).to.be.not.equal(newAddress)
       }).then(async (txn) => {
         if(txn) {
@@ -1039,4 +1039,3 @@ contract("DecoArbitration", async (accounts) => {
     await setFeeAndCheck(web3.utils.toWei("0.002"), "1209", owner)
   })
 })
-

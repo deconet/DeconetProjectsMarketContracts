@@ -1,4 +1,5 @@
-pragma solidity ^0.4.25;
+pragma solidity 0.5.3;
+
 
 contract Migrations {
   address public owner;

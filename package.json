@@ -26,9 +26,9 @@
   },
   "homepage": "https://github.com/deconet/DeconetProjectsMarketContracts#readme",
   "dependencies": {
-    "@optionality.io/clone-factory": "^0.1.6",
+    "@optionality.io/clone-factory": "https://github.com/deconet/clone-factory.git",
     "bignumber.js": "^7.2.1",
-    "openzeppelin-solidity": "2.0.0",
+    "openzeppelin-solidity": "2.1.2",
     "solc": "^0.4.25",
     "truffle-hdwallet-provider": "^1.0.0-web3one.1",
     "uuid": "^3.2.1",

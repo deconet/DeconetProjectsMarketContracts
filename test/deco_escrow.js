@@ -82,7 +82,7 @@ contract("DecoEscrow", async (accounts) => {
 
   const DeployEscrowAndInit = async (deployFrom, newOwner, authorizedAddress) => {
     let escrow = await DecoEscrow.new({from: deployFrom, gasPrice: 1})
-    let relayAddress = await escrow.relayContractAddress()
+    let relayAddress = await escrow.relayContract()
     await escrow.initialize(
       newOwner,
       authorizedAddress,
@@ -190,11 +190,11 @@ contract("DecoEscrow", async (accounts) => {
     "should initialize contract successfully with a new owner address and authorized addresses from the original owner address.",
     async () => {
       let decoEscrow = await DecoEscrow.new({from: accounts[0], gasPrice: 1})
-      let initialOwnerAddress = await decoEscrow.owner.call()
-      let isAddressAuthorizedInitially = await decoEscrow.authorizedAddress.call()
+      let initialOwnerAddress = await decoEscrow.owner()
+      let isAddressAuthorizedInitially = await decoEscrow.authorizedAddress()
       let authorizedAccount = accounts[2]
-      let shareFee = await relay.shareFee.call()
-      let feesWithdrawalAddress = await relay.feesWithdrawalAddress.call()
+      let shareFee = await relay.shareFee()
+      let feesWithdrawalAddress = await relay.feesWithdrawalAddress()
       let txn = await decoEscrow.initialize(
         accounts[1],
         authorizedAccount,
@@ -202,7 +202,7 @@ contract("DecoEscrow", async (accounts) => {
         relay.address,
         {from: accounts[0], gasPrice: 1}
       )
-      let newOwner = await decoEscrow.owner.call()
+      let newOwner = await decoEscrow.owner()
       expect(newOwner).to.not.be.equal(initialOwnerAddress)
       expect(newOwner).to.be.equal(accounts[1])
       let isAccountAuthoried = await decoEscrow.authorizedAddress.call()
@@ -1379,8 +1379,8 @@ contract("DecoEscrow", async (accounts) => {
       let authorizedAddress = accounts[4]
       shareFee = 3
       let withdrawalAddress = accounts[15]
-      relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
-      relay.setFeesWithdrawalAddress(withdrawalAddress, {from: accounts[0], gasPrice: 1})
+      await relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
+      await relay.setFeesWithdrawalAddress(withdrawalAddress, {from: accounts[0], gasPrice: 1})
       relay = {address: ZERO_ADDRESS }
       withdrawalAddress = ZERO_ADDRESS
       let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
@@ -1390,10 +1390,10 @@ contract("DecoEscrow", async (accounts) => {
 
       let expecteFinalBlockedBalance = startingBalance
       let distributeAndCheckState = async (sender, targetAddress, targetAddressAmount) => {
-        let blockedBalance = await decoEscrow.blockedBalance.call()
-        let balance = await decoEscrow.balance.call()
-        let allowancesForTargetAddress = await decoEscrow.withdrawalAllowanceForAddress.call(targetAddress)
-        let allowanceForFeeWithdrawalAddress = await decoEscrow.withdrawalAllowanceForAddress.call(
+        let blockedBalance = await decoEscrow.blockedBalance()
+        let balance = await decoEscrow.balance()
+        let allowancesForTargetAddress = await decoEscrow.withdrawalAllowanceForAddress(targetAddress)
+        let allowanceForFeeWithdrawalAddress = await decoEscrow.withdrawalAllowanceForAddress(
           withdrawalAddress
         )
 
@@ -1461,7 +1461,7 @@ contract("DecoEscrow", async (accounts) => {
 
       await distributeAndCheckState(authorizedAddress, accounts[7], new BigNumber(1))
       relay = await DecoRelay.deployed()
-      await decoEscrow.setRelayContractAddress(relay.address, {from: accounts[1], gasPrice: 1})
+      await decoEscrow.setRelayContract(relay.address, {from: accounts[1], gasPrice: 1})
       withdrawalAddress = accounts[15]
       await distributeAndCheckState(authorizedAddress, accounts[9], new BigNumber(1.2))
       await distributeAndCheckState(authorizedAddress, accounts[0], new BigNumber(0.1))
@@ -1531,8 +1531,8 @@ contract("DecoEscrow", async (accounts) => {
       let authorizedAddress = accounts[3]
       shareFee = 3
       let withdrawalAddress = accounts[16]
-      relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
-      relay.setFeesWithdrawalAddress(withdrawalAddress, {from: accounts[0], gasPrice: 1})
+      await relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
+      await relay.setFeesWithdrawalAddress(withdrawalAddress, {from: accounts[0], gasPrice: 1})
       relay = {address: ZERO_ADDRESS}
       withdrawalAddress = ZERO_ADDRESS
       let decoEscrow = await DeployEscrowAndInit(accounts[0], accounts[1], authorizedAddress)
@@ -1634,7 +1634,7 @@ contract("DecoEscrow", async (accounts) => {
       await distributeAndCheckState(authorizedAddress, accounts[7], new BigNumber(100))
       relay = await DecoRelay.deployed()
       withdrawalAddress = accounts[16]
-      await decoEscrow.setRelayContractAddress(relay.address, {from: accounts[1], gasPrice: 1})
+      await decoEscrow.setRelayContract(relay.address, {from: accounts[1], gasPrice: 1})
       await distributeAndCheckState(authorizedAddress, accounts[9], new BigNumber(1999.2))
       await distributeAndCheckState(authorizedAddress, accounts[0], new BigNumber(3340.1))
       await distributeAndCheckState(authorizedAddress, accounts[1], new BigNumber(1.1))

@@ -85,8 +85,8 @@ contract("DecoMilestones", async (accounts) => {
   const DeployProjectsStubContract = async (ownerAddress) => {
     decoProjectsStub = await DecoProjectsStub.new(95, { from: ownerAddress, gasPrice: 1 })
     if(decoRelay) {
-      await decoRelay.setProjectsContractAddress(decoProjectsStub.address, {from: accounts[0], gasPrice: 1})
-      await decoProjectsStub.setRelayContractAddress(decoRelay.address, {from: ownerAddress, gasPrice: 1})
+      await decoRelay.setProjectsContract(decoProjectsStub.address, {from: accounts[0], gasPrice: 1})
+      await decoProjectsStub.setRelayContract(decoRelay.address, {from: ownerAddress, gasPrice: 1})
     }
     return decoProjectsStub
   }
@@ -122,8 +122,8 @@ contract("DecoMilestones", async (accounts) => {
   before(async () => {
     decoMilestonesMock = await DecoMilestonesMock.new({from: accounts[0], gasPrice: 1})
     decoRelay = await DecoRelay.deployed()
-    await decoRelay.setMilestonesContractAddress(decoMilestonesMock.address, {from: accounts[0], gasPrice: 1})
-    decoMilestonesMock.setRelayContractAddress(decoRelay.address, {from: accounts[0], gasPrice: 1})
+    await decoRelay.setMilestonesContract(decoMilestonesMock.address, {from: accounts[0], gasPrice: 1})
+    decoMilestonesMock.setRelayContract(decoRelay.address, {from: accounts[0], gasPrice: 1})
     await DeployProjectsStubContract(accounts[0])
     decoTestToken = await DecoTestToken.new({from: accounts[0], gasPrice: 1})
     await DeployEscrowStubContract(accounts[0])

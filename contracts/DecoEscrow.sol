@@ -1,8 +1,8 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "./DecoMilestones.sol";
 import "./DecoRelay.sol";
-import "./DecoBaseProjectsMarketplace.sol";
+import "./DecoRelayAccessProxy.sol";
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -12,7 +12,7 @@ import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
  * @title Escrow contract, every project deploys a clone and transfer ownership to the project client, so all
  *        funds not reserved to pay for a milestone can be safely moved in/out.
  */
-contract DecoEscrow is DecoBaseProjectsMarketplace {
+contract DecoEscrow is DecoRelayAccessProxy {
     using SafeMath for uint256;
 
     // Indicates if the current clone has been initialized.
@@ -80,7 +80,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
     /**
      * @dev Default `payable` fallback to accept incoming ETH from any address.
      */
-    function () public payable {
+    function () external payable {
         deposit();
     }
 
@@ -88,12 +88,14 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
      * @dev Initialize the Escrow clone with default values.
      * @param _newOwner An address of a new escrow owner.
      * @param _authorizedAddress An address that will be stored as authorized.
+     * @param _shareFee Service share fee.
+     * @param _relayContract A relay contract instance.
      */
     function initialize(
         address _newOwner,
         address _authorizedAddress,
         uint8 _shareFee,
-        address _relayContractAddress
+        DecoRelay _relayContract
     )
         external
     {
@@ -103,7 +105,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
         emit FundsDistributionAuthorization(_authorizedAddress, true);
         _transferOwnership(_newOwner);
         shareFee = _shareFee;
-        relayContractAddress = _relayContractAddress;
+        relayContract = _relayContract;
     }
 
     /**
@@ -208,8 +210,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             "Amount to distribute should be less or equal than blocked balance."
         );
         uint amount = _amount;
-        if (shareFee > 0 && relayContractAddress != address(0x0)) {
-            DecoRelay relayContract = DecoRelay(relayContractAddress);
+        if (shareFee > 0 && address(relayContract) != address(0x0)) {
             address feeDestination = relayContract.feesWithdrawalAddress();
             uint fee = amount.mul(shareFee).div(100);
             amount = amount.sub(fee);
@@ -264,8 +265,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             "Amount to distribute should be less or equal than blocked balance."
         );
         uint amount = _amount;
-        if (shareFee > 0 && relayContractAddress != address(0x0)) {
-            DecoRelay relayContract = DecoRelay(relayContractAddress);
+        if (shareFee > 0 && address(relayContract) != address(0x0)) {
             address feeDestination = relayContract.feesWithdrawalAddress();
             uint fee = amount.mul(shareFee).div(100);
             amount = amount.sub(fee);
@@ -303,7 +303,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
      * @param _targetAddress An `address` for transfer ETH to.
      * @param _amount An `uint` amount to be transfered.
      */
-    function withdrawForAddress(address _targetAddress, uint _amount) public {
+    function withdrawForAddress(address payable _targetAddress, uint _amount) public {
         require(
             _amount <= address(this).balance,
             "Amount to withdraw should be less or equal than balance."
@@ -334,7 +334,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
     function withdrawErc20ForAddress(address _targetAddress, address _tokenAddress, uint _amount) public {
         IERC20 token = IERC20(_tokenAddress);
         require(
-            _amount <= token.balanceOf(this),
+            _amount <= token.balanceOf(address(this)),
             "Token amount to withdraw should be less or equal than balance."
         );
         if (_targetAddress == owner()) {
@@ -426,18 +426,9 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
 
     /**
      * @dev Override base contract logic to block this operation for Escrow contract.
-     * @param _tokenAddress An `address` of an ERC20 token.
-     * @param _tokens An `uint` tokens amount.
      * @return A `bool` operation result state.
      */
-    function transferAnyERC20Token(
-        address _tokenAddress,
-        uint _tokens
-    )
-        public
-        onlyOwner
-        returns (bool success)
-    {
+    function transferAnyERC20Token(address, uint) public onlyOwner returns (bool success) {
         return false;
     }
 }

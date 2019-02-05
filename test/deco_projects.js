@@ -268,11 +268,11 @@ contract("DecoProjects", async (accounts) => {
   const DeployMilestonesContractStub = async (ownerAddress) => {
     decoMilestonesStub = await DecoMilestonesStub.new({from: ownerAddress, gasPrice: 1})
     if(decoRelay) {
-      await decoRelay.setMilestonesContractAddress(
+      await decoRelay.setMilestonesContract(
         decoMilestonesStub.address,
         {from: accounts[0], gasPrice: 1}
       )
-      await decoMilestonesStub.setRelayContractAddress(
+      await decoMilestonesStub.setRelayContract(
         decoRelay.address,
         {from: mock.client, gasPrice: 1}
       )
@@ -325,11 +325,11 @@ contract("DecoProjects", async (accounts) => {
     decoRelay = await DecoRelay.deployed()
     decoEscrowFactory = await DecoEscrowFactory.deployed()
     decoArbitration = await DecoArbitration.deployed()
-    await decoRelay.setEscrowFactoryContractAddress(
+    await decoRelay.setEscrowFactoryContract(
       decoEscrowFactory.address,
       {from: accounts[0], gasPrice: 1}
     )
-    await decoProjects.setRelayContractAddress(
+    await decoProjects.setRelayContract(
       decoRelay.address,
       {from: accounts[0], gasPrice: 1}
     )
@@ -1486,7 +1486,7 @@ contract("DecoProjects", async (accounts) => {
   it("should correctly deploy escrow clone if there is valid factory contract.", async () => {
     let decoProjectsMockOwner = accounts[4]
     let decoProjectsMock = await DecoProjectsMock.new(95, {from: decoProjectsMockOwner, gasPrice: 1})
-    await decoProjectsMock.setRelayContractAddress(
+    await decoProjectsMock.setRelayContract(
       decoRelay.address,
       {from: decoProjectsMockOwner, gasPrice:1}
     )
@@ -1768,7 +1768,7 @@ contract("DecoProjects", async (accounts) => {
     ) => {
       let value = await decoProjects.checkIfProjectExists(testAgreementHash)
       expect(value).to.be.equal(projectExist)
-      value = await decoProjects.getProjectEscrowAddress(testAgreementHash)
+      value = await decoProjects.getProjectEscrow(testAgreementHash)
       expect(value).to.be.equal(escrow)
       value = await decoProjects.getProjectClient(testAgreementHash)
       expect(value).to.be.equal(client)

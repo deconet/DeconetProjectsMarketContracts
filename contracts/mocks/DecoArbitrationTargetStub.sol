@@ -1,11 +1,11 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "../IDecoArbitrationTarget.sol";
 
 
 contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
 
-    bool public canStartDispute;
+    bool public canStartDisputeConfig;
 
     bool public disputeStarted;
 
@@ -26,7 +26,7 @@ contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
         address,
         uint8,
         bool isInternal,
-        address
+        address payable
     )
         public
     {
@@ -39,7 +39,7 @@ contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
     }
 
     function canStartDispute(bytes32) public view returns(bool) {
-        return canStartDispute;
+        return canStartDisputeConfig;
     }
 
     function setEligibility(bool eligibility, address target) public {
@@ -47,7 +47,7 @@ contract DecoArbitrationTargetStub is IDecoArbitrationTarget {
     }
 
     function setIfCanStartDispute(bool canStart) public {
-        canStartDispute = canStart;
+        canStartDisputeConfig = canStart;
     }
 
     function resetState() public {

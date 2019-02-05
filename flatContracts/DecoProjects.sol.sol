@@ -226,7 +226,7 @@ contract DecoRelay is DecoBaseProjectsMarketplace {
         milestonesContractAddress = _newAddress;
     }
 
-    function setEscrowFactoryContractAddress(address _newAddress) external onlyOwner {
+    function setEscrowFactoryContract(address _newAddress) external onlyOwner {
         require(_newAddress != address(0x0), "Address should not be 0x0.");
         escrowFactoryContractAddress = _newAddress;
     }

@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -9,23 +9,11 @@ import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 contract DecoBaseProjectsMarketplace is Ownable {
     using SafeMath for uint256;
 
-    // `DecoRelay` contract address.
-    address public relayContractAddress;
-
     /**
      * @dev Payble fallback for reverting transactions of any incoming ETH.
      */
-    function () public payable {
+    function () external payable {
         require(msg.value == 0, "Blocking any incoming ETH.");
-    }
-
-    /**
-     * @dev Set the new address of the `DecoRelay` contract.
-     * @param _newAddress An address of the new contract.
-     */
-    function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Relay address must not be 0x0.");
-        relayContractAddress = _newAddress;
     }
 
     /**

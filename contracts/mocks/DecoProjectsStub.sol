@@ -1,7 +1,8 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "../DecoProjects.sol";
 import "../DecoRelay.sol";
+import "../DecoEscrow.sol";
 import "../DecoMilestones.sol";
 
 
@@ -13,7 +14,7 @@ contract DecoProjectsStub is DecoProjects {
 
     bool public projectCompleted = false;
 
-    address public escrowContractStub;
+    DecoEscrow public escrowContractStub;
     address public client;
     address public maker;
     address public arbiter;
@@ -32,9 +33,8 @@ contract DecoProjectsStub is DecoProjects {
     }
 
     function terminateProject(bytes32 _agreementHash) external {
-        DecoRelay relayContract = DecoRelay(relayContractAddress);
-        DecoMilestones milestonesContract = DecoMilestones(relayContract.milestonesContractAddress());
-        if (msg.sender != relayContract.milestonesContractAddress()) {
+        DecoMilestones milestonesContract = relayContract.milestonesContract();
+        if (msg.sender != address(relayContract.milestonesContract())) {
             milestonesContract.terminateLastMilestone(_agreementHash, msg.sender);
         } else {
             projectEndDateConfig = now;
@@ -61,8 +61,8 @@ contract DecoProjectsStub is DecoProjects {
         projectStartDateConfig = config;
     }
 
-    function setEscrowContractStubAddress(address newAddress) public {
-        escrowContractStub = newAddress;
+    function setEscrowContractStubAddress(address payable newAddress) public {
+        escrowContractStub = DecoEscrow(newAddress);
     }
 
     function setProjectClient(address newAddress) public {
@@ -106,7 +106,7 @@ contract DecoProjectsStub is DecoProjects {
         return projectMilestonesCountConfig;
     }
 
-    function getProjectEscrowAddress(bytes32) public view returns(address) {
+    function getProjectEscrow(bytes32) public view returns(DecoEscrow) {
         return escrowContractStub;
     }
 
@@ -145,7 +145,7 @@ contract DecoProjectsStub is DecoProjects {
     )
         public
         view
-        returns(uint, uint8, address)
+        returns(uint, uint8, DecoEscrow)
     {
         require(arbiter == _arbiter, "Arbiter should be same as saved in project.");
         require(

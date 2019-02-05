@@ -86,7 +86,7 @@ contract("DecoEscrowFactory", async (accounts) => {
     let decoMilestones = await DecoMilestones.deployed()
     let decoProjects = await DecoProjects.deployed()
     let decoRelay = await DecoRelay.deployed()
-    await decoEscrowFactory.setRelayContractAddress(decoRelay.address, {from: accounts[0], gasPrice: 1})
+    await decoEscrowFactory.setRelayContract(decoRelay.address, {from: accounts[0], gasPrice: 1})
     let address = decoMilestones.address
     let newEscrowCloneTxn = await decoEscrowFactory.createEscrow(
       accounts[1],
@@ -100,7 +100,7 @@ contract("DecoEscrowFactory", async (accounts) => {
     let authorizedAddress = await decoEscrowStub.authorizedAddress.call()
     let newFeesValue = await decoEscrowStub.shareFee.call()
     let relayFeesValue = await decoRelay.shareFee.call()
-    let newRelayAddress = await decoEscrowStub.relayContractAddress.call()
+    let newRelayAddress = await decoEscrowStub.relayContract.call()
     expect(newContractOwner).to.be.equal(accounts[1])
     expect(address).to.be.equal(authorizedAddress)
     expect(newFeesValue.toNumber()).to.be.equal(relayFeesValue.toNumber())

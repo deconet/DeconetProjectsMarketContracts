@@ -1,15 +1,15 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "./IDecoArbitration.sol";
 import "./IDecoArbitrationTarget.sol";
-import "./DecoBaseProjectsMarketplace.sol";
 import "./DecoRelay.sol";
+import "./DecoRelayAccessProxy.sol";
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 /// @title Contract for Arbitration role and hanlding its events and actions.
-contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
+contract DecoArbitration is IDecoArbitration, DecoRelayAccessProxy {
     using SafeMath for uint256;
 
     // Struct for dispute.
@@ -23,7 +23,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     }
 
     // Contract owner withdrawal address that might be different from contract owner address.
-    address public withdrawalAddress;
+    address payable public withdrawalAddress;
 
     // Fixed fee that is deducted from target in favor of arbiter when she settles an external dispute.
     uint public fixedFee;
@@ -157,18 +157,10 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     /**
      * @dev Update withdrawal address.
      */
-    function setWithdrawalAddress(address _newAddress) external onlyOwner {
+    function setWithdrawalAddress(address payable _newAddress) external onlyOwner {
         require(_newAddress != address(0x0), "Should be not 0 address.");
         withdrawalAddress = _newAddress;
         emit LogWithdrawalAddressChanged(now, _newAddress);
-    }
-
-    /**
-     * @dev Update relay contract address.
-     */
-    function setRelayContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Should be not 0 address.");
-        relayContractAddress = _newAddress;
     }
 
     /**
@@ -204,7 +196,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
     /**
      * @return Withdrawal address of the current arbitration contract.
      */
-    function getWithdrawalAddress() external view returns(address) {
+    function getWithdrawalAddress() external view returns(address payable) {
         return withdrawalAddress;
     }
 
@@ -276,7 +268,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      * @return Arbitration target address.
      */
     function getTargetContractAddress() internal view returns(address) {
-        return DecoRelay(relayContractAddress).milestonesContractAddress();
+        return address(relayContract.milestonesContract());
     }
 
     /**

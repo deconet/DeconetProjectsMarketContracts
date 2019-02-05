@@ -1,40 +1,44 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "./DecoBaseProjectsMarketplace.sol";
+import "./DecoProjects.sol";
+import "./DecoMilestones.sol";
+import "./DecoEscrowFactory.sol";
+import "./DecoArbitration.sol";
 
 
 /// @title Contract to store other contracts newest versions addresses and service information.
 contract DecoRelay is DecoBaseProjectsMarketplace {
-    address public projectsContractAddress;
-    address public milestonesContractAddress;
-    address public escrowFactoryContractAddress;
-    address public arbitrationContractAddress;
+    DecoProjects public projectsContract;
+    DecoMilestones public milestonesContract;
+    DecoEscrowFactory public escrowFactoryContract;
+    DecoArbitration public arbitrationContract;
 
-    address public feesWithdrawalAddress;
+    address payable public feesWithdrawalAddress;
 
     uint8 public shareFee;
 
-    function setProjectsContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Address should not be 0x0.");
-        projectsContractAddress = _newAddress;
+    function setProjectsContract(DecoProjects _newContract) external onlyOwner {
+        require(address(_newContract) != address(0x0), "Address should not be 0x0.");
+        projectsContract = _newContract;
     }
 
-    function setMilestonesContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Address should not be 0x0.");
-        milestonesContractAddress = _newAddress;
+    function setMilestonesContract(DecoMilestones _newContract) external onlyOwner {
+        require(address(_newContract) != address(0x0), "Address should not be 0x0.");
+        milestonesContract = _newContract;
     }
 
-    function setEscrowFactoryContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Address should not be 0x0.");
-        escrowFactoryContractAddress = _newAddress;
+    function setEscrowFactoryContract(DecoEscrowFactory _newContract) external onlyOwner {
+        require(address(_newContract) != address(0x0), "Address should not be 0x0.");
+        escrowFactoryContract = _newContract;
     }
 
-    function setArbitrationContractAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0x0), "Address should not be 0x0.");
-        arbitrationContractAddress = _newAddress;
+    function setArbitrationContract(DecoArbitration _newContract) external onlyOwner {
+        require(address(_newContract) != address(0x0), "Address should not be 0x0.");
+        arbitrationContract = _newContract;
     }
 
-    function setFeesWithdrawalAddress(address _newAddress) external onlyOwner {
+    function setFeesWithdrawalAddress(address payable _newAddress) external onlyOwner {
         require(_newAddress != address(0x0), "Address should not be 0x0.");
         feesWithdrawalAddress = _newAddress;
     }

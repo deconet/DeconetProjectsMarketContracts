@@ -47,28 +47,28 @@ module.exports = async function (deployer, network, accounts) {
   decoArbitration = await DecoArbitration.at(DecoArbitration.address)
 
   console.log('Setting DecoEscrowFactory contract address on DecoRelay to ' + decoEscrowFactory.address)
-  await decoRelay.setEscrowFactoryContractAddress(decoEscrowFactory.address)
+  await decoRelay.setEscrowFactoryContract(decoEscrowFactory.address)
 
   console.log('Setting DecoProjects contract address on DecoRelay to ' + decoProjects.address)
-  await decoRelay.setProjectsContractAddress(decoProjects.address)
+  await decoRelay.setProjectsContract(decoProjects.address)
 
   console.log('Setting DecoMilestones contract address on DecoRelay to ' + decoMilestones.address)
-  await decoRelay.setMilestonesContractAddress(decoMilestones.address)
+  await decoRelay.setMilestonesContract(decoMilestones.address)
 
   console.log('Setting DecoArbitration contract address on DecoRelay to ' + decoArbitration.address)
-  await decoRelay.setArbitrationContractAddress(decoArbitration.address)
+  await decoRelay.setArbitrationContract(decoArbitration.address)
 
   console.log('Setting DecoRelay contract address on DecoProjects to ' + decoRelay.address)
-  await decoProjects.setRelayContractAddress(decoRelay.address)
+  await decoProjects.setRelayContract(decoRelay.address)
 
   console.log('Setting DecoRelay contract address on DecoMilestones to ' + decoRelay.address)
-  await decoMilestones.setRelayContractAddress(decoRelay.address)
+  await decoMilestones.setRelayContract(decoRelay.address)
 
   console.log('Setting DecoRelay contract address on DecoArbitration to ' + decoRelay.address)
-  await decoArbitration.setRelayContractAddress(decoRelay.address)
+  await decoArbitration.setRelayContract(decoRelay.address)
 
   console.log('Setting DecoRelay contract address on DecoEscrowFactory to ' + decoRelay.address)
-  await decoEscrowFactory.setRelayContractAddress(decoRelay.address)
+  await decoEscrowFactory.setRelayContract(decoRelay.address)
 
   /// Setting fees and withdrawal address.
 

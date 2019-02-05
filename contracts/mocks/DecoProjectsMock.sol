@@ -1,6 +1,7 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.3;
 
 import "../DecoProjects.sol";
+import "../DecoEscrow.sol";
 
 
 contract DecoProjectsMock is DecoProjects {
@@ -10,14 +11,14 @@ contract DecoProjectsMock is DecoProjects {
     constructor(uint256 _chainId) DecoProjects(_chainId) public { }
 
     function testDeployEscrowClone(address _newOwner) public {
-        address cloneAddress = deployEscrowClone(_newOwner);
-        emit MockCloningTestEvent(cloneAddress);
+        DecoEscrow cloneAddress = deployEscrowClone(_newOwner);
+        emit MockCloningTestEvent(address(cloneAddress));
     }
 
     function testIsMakersSignatureValid(
         address _maker,
-        bytes _signature,
-        string _agreementId,
+        bytes memory _signature,
+        string memory _agreementId,
         address _arbiter
     )
         public
