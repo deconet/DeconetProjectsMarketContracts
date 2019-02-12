@@ -6,17 +6,14 @@ import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 contract DecoProxy {
     using ECDSA for bytes32;
 
-    /// Emitted when new address is whitelisted as an admin.
-    event UpdateWhitelist(address _account, bool _value);
-
     /// Emitted when incoming ETH funds land into account.
     event Received (address indexed sender, uint value);
 
     /// Emitted when transaction forwarded to the next destination.
     event Forwarded (
         bytes signature,
-        address signer,
-        address destination,
+        address indexed signer,
+        address indexed destination,
         uint value,
         bytes data,
         bytes32 _hash
@@ -24,7 +21,7 @@ contract DecoProxy {
 
     /// Emitted when owner is changed
     event OwnerChanged (
-        address newOwner
+        address indexed newOwner
     );
 
     bool internal isInitialized;
@@ -32,34 +29,18 @@ contract DecoProxy {
     // Keep track to avoid replay attack.
     uint public nonce;
 
-    /// A whitelist of relay accounts that are supposed to forward owners transactions.
-    mapping(address => bool) public adminsWhitelist;
-
     /// Proxy owner.
     address public owner;
 
 
     /**
      * @dev Initialize the Proxy clone with default values.
-     * @param _admin An address of the initial relay admin.
      * @param _owner An address that orders forwarding of transactions.
      */
-    function initialize(address _admin, address _owner) public {
+    function initialize(address _owner) public {
         require(!isInitialized, "Clone must be initialized only once.");
         isInitialized = true;
-        adminsWhitelist[_admin] = true;
         owner = _owner;
-    }
-
-    /**
-     * @dev Modify admins whitelist status.
-     * @param _account An `address` to modify for whitelist status.
-     * @param _value A `bool` of a new whitelist status.
-     */
-    function updateAdminsWhitelist(address _account, bool _value) public {
-        require(adminsWhitelist[msg.sender] || msg.sender == owner, "Sending account is not whitelisted administrator.");
-        adminsWhitelist[_account] = _value;
-        emit UpdateWhitelist(_account,_value);
     }
 
     /**
@@ -121,7 +102,6 @@ contract DecoProxy {
      * @param _data A `bytes` data array of the given transaction.
      */
     function forward(bytes memory _signature, address _signer, address _destination, uint _value, bytes memory _data) public {
-        require(adminsWhitelist[msg.sender], "Sender must be whitelisted admin address.");
         bytes32 hash = getHash(_signer, _destination, _value, _data);
         nonce++;
         require(owner == hash.toEthSignedMessageHash().recover(_signature), "Signer must be owner.");

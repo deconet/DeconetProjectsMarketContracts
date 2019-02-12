@@ -39,18 +39,15 @@ contract DecoProxyFactory is DecoBaseProjectsMarketplace, CloneFactory {
     /**
      * @dev Create Proxy clone.
      * @param _ownerAddress An address of the Proxy contract owner.
-     * @param _authorizedAddress An addresses that is going to be authorized in Proxy contract.
      */
     function createProxy(
-        address _ownerAddress,
-        address _authorizedAddress
+        address _ownerAddress
     )
         external
         returns(address)
     {
         address clone = createClone(libraryAddress);
         DecoProxy(clone).initialize(
-            _authorizedAddress,
             _ownerAddress
         );
         emit ProxyCreated(clone);
