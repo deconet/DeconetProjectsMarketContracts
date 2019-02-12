@@ -1772,4 +1772,195 @@ contract("DecoEscrow", async (accounts) => {
     await transferAndCheck(accounts[0], initialTokensBalance.div(10))
     await transferAndCheck(accounts[5], initialTokensBalance.div(2))
   })
+
+  it("should sync real ERC20 token balance to the storage correctly.", async () => {
+    let escrowOwner = accounts[3]
+    let tokenHolder = accounts[1]
+    let authorizedAddress = accounts[2]
+    shareFee = 5 // %
+    await relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
+    let escrow = await DeployEscrowAndInit(
+      accounts[0],
+      escrowOwner, // new owner of escrow
+      authorizedAddress
+    )
+    let token = await DeployTestTokenAndApproveAllowance(
+      accounts[0], // owner of a token and all initial funds
+      tokenHolder, // allowance increased for this address
+      escrow.address,
+      10000
+    )
+
+    const GetBalanceInfo = async () => {
+      return {
+        real: new BigNumber(await token.balanceOf(escrow.address)),
+        stored: new BigNumber(await escrow.contractTokensBalance(token.address))
+      }
+    }
+
+    let amountToDeposit = "10"
+    let fullAmountToDeposit = token.tokensValueAsBigNumber(amountToDeposit)
+    let beforeBalance = await GetBalanceInfo()
+    await token.transfer(
+      tokenHolder,
+      escrow.address,
+      amountToDeposit
+    )
+    let afterBalance = await GetBalanceInfo()
+    expect(afterBalance.real.toString()).to.be.equal(
+      fullAmountToDeposit.plus(beforeBalance.real).toString()
+    )
+    expect(afterBalance.stored.toString()).to.be.equal(beforeBalance.stored.toString())
+
+    beforeBalance = await GetBalanceInfo()
+
+    await escrow.syncTokenBalance(token.address)
+
+    afterBalance = await GetBalanceInfo()
+
+    expect(afterBalance.real.toString()).to.be.equal(beforeBalance.real.toString())
+    expect(afterBalance.stored.toString()).to.be.equal(
+      fullAmountToDeposit.plus(beforeBalance.stored).toString()
+    )
+
+    amountToDeposit = "93"
+    fullAmountToDeposit = token.tokensValueAsBigNumber(amountToDeposit)
+    beforeBalance = await GetBalanceInfo()
+    await escrow.depositErc20(
+      token.address,
+      fullAmountToDeposit.toString(),
+      {from: tokenHolder, gasPrice: 1}
+    )
+    afterBalance = await GetBalanceInfo()
+
+    expect(afterBalance.real.toString()).to.be.equal(
+      fullAmountToDeposit.plus(beforeBalance.real).toString()
+    )
+    expect(afterBalance.stored.toString()).to.be.equal(
+      fullAmountToDeposit.plus(beforeBalance.stored).toString()
+    )
+
+    let amountToDistribute = "33"
+    let fullAmountToDistribute = token.tokensValueAsBigNumber(amountToDistribute)
+    let testTargetAccount = accounts[10]
+    beforeBalance = await GetBalanceInfo()
+    await escrow.blockTokenFunds(
+      token.address,
+      fullAmountToDistribute.toString(),
+      {from: authorizedAddress, gasPrice: 1}
+    )
+    await escrow.distributeTokenFunds(
+      testTargetAccount,
+      token.address,
+      fullAmountToDistribute.toString(),
+      {from: authorizedAddress, gasPrice: 1}
+    )
+    afterBalance = await GetBalanceInfo()
+
+    expect(afterBalance.real.toString()).to.be.equal(beforeBalance.real.toString())
+    expect(afterBalance.stored.toString()).to.be.equal(beforeBalance.stored.toString())
+
+    let expectedUserAllowance = fullAmountToDistribute.div(100).times(100 - shareFee)
+
+    await escrow.withdrawErc20ForAddress(
+      testTargetAccount,
+      token.address,
+      expectedUserAllowance.toString(),
+      {from: tokenHolder, gasPrice: 1}
+    )
+    afterBalance = await GetBalanceInfo()
+    expect(afterBalance.real.toString()).to.be.equal(
+      beforeBalance.real.minus(expectedUserAllowance).toString()
+    )
+    expect(afterBalance.stored.toString()).to.be.equal(
+      beforeBalance.stored.minus(expectedUserAllowance).toString()
+    )
+
+    beforeBalance = await GetBalanceInfo()
+
+    await token.transfer(tokenHolder, escrow.address, amountToDeposit)
+    await token.transfer(tokenHolder, escrow.address, amountToDeposit)
+    await token.transfer(tokenHolder, escrow.address, amountToDeposit)
+
+    afterBalance = await GetBalanceInfo()
+
+    expect(afterBalance.real.toString()).to.be.equal(
+      beforeBalance.real.plus(fullAmountToDeposit.times(3)).toString()
+    )
+    expect(afterBalance.stored.toString()).to.be.equal(beforeBalance.stored.toString())
+    await escrow.syncTokenBalance(token.address)
+    afterBalance = await GetBalanceInfo()
+
+    expect(afterBalance.real.toString()).to.be.equal(
+      beforeBalance.real.plus(fullAmountToDeposit.times(3)).toString()
+    )
+    expect(afterBalance.stored.toString()).to.be.equal(
+      beforeBalance.stored.plus(fullAmountToDeposit.times(3)).toString()
+    )
+  })
+
+  it("should fail syncing token balance if it is not needed.", async () => {
+    let escrowOwner = accounts[4]
+    let tokenHolder = accounts[2]
+    let authorizedAddress = accounts[3]
+    shareFee = 10 // %
+    await relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
+    let escrow = await DeployEscrowAndInit(
+      accounts[0],
+      escrowOwner, // new owner of escrow
+      authorizedAddress
+    )
+    let token = await DeployTestTokenAndApproveAllowance(
+      accounts[0], // owner of a token and all initial funds
+      tokenHolder, // allowance increased for this address
+      escrow.address,
+      10000
+    )
+    await escrow.syncTokenBalance(
+      token.address
+    ).catch(async (err) => {
+      assert.isOk(err, "Expected error.")
+    }).then(async (txn) => {
+      if (txn) {
+        assert.fail("Should have failed above.")
+      }
+    })
+  })
+
+  it("should indicate correctly when sync is needed.", async () => {
+    let escrowOwner = accounts[4]
+    let tokenHolder = accounts[2]
+    let authorizedAddress = accounts[3]
+    shareFee = 10 // %
+    await relay.setShareFee(shareFee, {from: accounts[0], gasPrice: 1})
+    let escrow = await DeployEscrowAndInit(
+      accounts[0],
+      escrowOwner, // new owner of escrow
+      authorizedAddress
+    )
+    let token = await DeployTestTokenAndApproveAllowance(
+      accounts[0], // owner of a token and all initial funds
+      tokenHolder, // allowance increased for this address
+      escrow.address,
+      10000
+    )
+
+    let isSyncNeeded = await escrow.isSyncNeededForToken(token.address)
+    expect(isSyncNeeded).to.be.false
+
+    await token.transfer(tokenHolder, escrow.address, "100")
+
+    isSyncNeeded = await escrow.isSyncNeededForToken(token.address)
+    expect(isSyncNeeded).to.be.true
+
+    await escrow.syncTokenBalance(token.address)
+
+    isSyncNeeded = await escrow.isSyncNeededForToken(token.address)
+    expect(isSyncNeeded).to.be.false
+
+    await token.transfer(tokenHolder, escrow.address, "1000")
+
+    isSyncNeeded = await escrow.isSyncNeededForToken(token.address)
+    expect(isSyncNeeded).to.be.true
+  })
 })

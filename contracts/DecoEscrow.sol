@@ -32,8 +32,13 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
     // Accounted amounts are excluded from the `balance`.
     mapping (address => uint) public withdrawalAllowanceForAddress;
 
-    // Maps information about the amount of deposited ERC20 token to the token address.
+    // Maps information about the amount of deposited and not blocked ERC20 token to the token address.
     mapping(address => uint) public tokensBalance;
+
+    // Map information about the amount of tokens that is deposited into the contract address.
+    // This mapping may have less amount stored than actual contract tokens balance, to sync and update values
+    // use the function `syncTokenBalance(address _tokenAddress)` below.
+    mapping(address => uint) public contractTokensBalance;
 
     /**
      * Mapping of ERC20 tokens amounts to token addresses that are available for withdrawal for a given address.
@@ -119,6 +124,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             "Transfer operation should be successful."
         );
         tokensBalance[_tokenAddress] = tokensBalance[_tokenAddress].add(_amount);
+        contractTokensBalance[_tokenAddress] = contractTokensBalance[_tokenAddress].add(_amount);
         emit FundsOperation (
             msg.sender,
             address(this),
@@ -345,6 +351,7 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
                 _amount
             );
         }
+        contractTokensBalance[_tokenAddress] = contractTokensBalance[_tokenAddress].sub(_amount);
         token.transfer(_targetAddress, _amount);
         emit FundsOperation (
             address(this),
@@ -422,6 +429,33 @@ contract DecoEscrow is DecoBaseProjectsMarketplace {
             PaymentType.Erc20,
             OperationType.Unblock
         );
+    }
+
+    /**
+     * @dev Sync actual token balance, save to the storage, and reflect changes in `tokensBalance` mapping.
+     *      ERC20 tokens may be deployed directly to this contract address from anywhere and to make funds
+     *      available for distibution/blocking/withdrawing this method should be called to align stored
+     *      contact balance with the actual one.
+     * @param _token An `IERC20` token.
+     */
+    function syncTokenBalance(IERC20 _token) public {
+        uint contractTokenBalance = _token.balanceOf(address(this));
+        require(
+            isSyncNeededForToken(_token),
+            "Stored contract token balance should be less or equal than the actual one."
+        );
+        tokensBalance[_token] =
+            contractTokenBalance.sub(contractTokensBalance[_token]).add(tokensBalance[_token]);
+        contractTokensBalance[_token] = contractTokenBalance;
+    }
+
+    /**
+     * @dev Helper to determine if sync of the balance for token is required.
+     * @param _token An `IERC20` token.
+     * @return `true` if the real token balance is greater than stored one, otherwise – `false`.
+     */
+    function isSyncNeededForToken(IERC20 _token) public view returns(bool) {
+        return _token.balanceOf(address(this)) > contractTokensBalance[_token];
     }
 
     /**
