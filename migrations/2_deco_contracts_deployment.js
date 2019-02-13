@@ -4,9 +4,11 @@ var DecoProjects = artifacts.require('./DecoProjects.sol')
 var DecoMilestones = artifacts.require('./DecoMilestones.sol')
 var DecoRelay = artifacts.require('./DecoRelay.sol')
 var DecoArbitration = artifacts.require('./DecoArbitration.sol')
+var DecoProxy = artifacts.require('./DecoProxy.sol')
+var DecoProxyFactory = artifacts.require('./DecoProxyFactory.sol')
 
 module.exports = async function (deployer, network, accounts) {
-  let decoRelay, decoEscrowFactory, decoEscrow, decoProjects, decoMilestones, decoArbitration
+  let decoRelay, decoEscrowFactory, decoEscrow, decoProjects, decoMilestones, decoArbitration, decoProxy, decoProxyFactory
 
   let chainId = ''
   console.log('Network is '+network)
@@ -44,9 +46,18 @@ module.exports = async function (deployer, network, accounts) {
   await deployer.deploy(DecoMilestones)
   decoMilestones = await DecoMilestones.at(DecoMilestones.address)
   deployer.link(DecoMilestones, DecoArbitration)
+
   console.log('Deploying DecoArbitration contract.')
   await deployer.deploy(DecoArbitration)
   decoArbitration = await DecoArbitration.at(DecoArbitration.address)
+
+  console.log('Deploying DecoProxy contract.')
+  await deployer.deploy(DecoProxy)
+  decoProxy = await DecoProxy.at(DecoProxy.address)
+
+  console.log('Deploying DecoProxyFactory contract.')
+  await deployer.deploy(DecoProxyFactory, decoProxy.address)
+  decoProxyFactory = await DecoProxyFactory.at(DecoProxyFactory.address)
 
   console.log('Setting DecoEscrowFactory contract address on DecoRelay to ' + decoEscrowFactory.address)
   await decoRelay.setEscrowFactoryContractAddress(decoEscrowFactory.address)
@@ -60,6 +71,9 @@ module.exports = async function (deployer, network, accounts) {
   console.log('Setting DecoArbitration contract address on DecoRelay to ' + decoArbitration.address)
   await decoRelay.setArbitrationContractAddress(decoArbitration.address)
 
+  console.log('Setting DecoProxyFactory contract address on DecoRelay to ' + decoProxyFactory.address)
+  await decoRelay.setProxyFactoryContractAddress(decoProxyFactory.address)
+
   console.log('Setting DecoRelay contract address on DecoProjects to ' + decoRelay.address)
   await decoProjects.setRelayContractAddress(decoRelay.address)
 
@@ -71,6 +85,9 @@ module.exports = async function (deployer, network, accounts) {
 
   console.log('Setting DecoRelay contract address on DecoEscrowFactory to ' + decoRelay.address)
   await decoEscrowFactory.setRelayContractAddress(decoRelay.address)
+
+  console.log('Setting DecoRelay contract address on DecoProxyFactory to ' + decoRelay.address)
+  await decoProxyFactory.setRelayContractAddress(decoRelay.address)
 
   /// Setting fees and withdrawal address.
 
