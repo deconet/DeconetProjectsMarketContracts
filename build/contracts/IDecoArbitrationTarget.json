@@ -1,0 +1,1153 @@
+{
+  "contractName": "IDecoArbitrationTarget",
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "disputeStartedFreeze",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        },
+        {
+          "name": "_respondent",
+          "type": "address"
+        },
+        {
+          "name": "_respondentShare",
+          "type": "uint8"
+        },
+        {
+          "name": "_initiator",
+          "type": "address"
+        },
+        {
+          "name": "_initiatorShare",
+          "type": "uint8"
+        },
+        {
+          "name": "_isInternal",
+          "type": "bool"
+        },
+        {
+          "name": "_arbiterWithdrawalAddress",
+          "type": "address"
+        }
+      ],
+      "name": "disputeSettledTerminate",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        },
+        {
+          "name": "_addressToCheck",
+          "type": "address"
+        }
+      ],
+      "name": "checkEligibility",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "canStartDispute",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "sourceMap": "",
+  "deployedSourceMap": "",
+  "source": "pragma solidity 0.4.25;\n\n\n/// @title Interface that an arbitration target contract is expected to conform.\n/// @notice `DecoMilestones` contract implements `IDecoArbitrationTarget` interface.\ncontract IDecoArbitrationTarget {\n\n    /**\n     * @dev Prepare arbitration target for a started dispute.\n     * @param _idHash A `bytes32` hash of id.\n     */\n    function disputeStartedFreeze(bytes32 _idHash) public;\n\n    /**\n     * @dev React to an active dispute settlement with given parameters.\n     * @param _idHash A `bytes32` hash of id.\n     * @param _respondent An `address` of a respondent.\n     * @param _respondentShare An `uint8` share for the respondent.\n     * @param _initiator An `address` of a dispute initiator.\n     * @param _initiatorShare An `uint8` share for the initiator.\n     * @param _isInternal A `bool` indicating if dispute was settled by participants without an arbiter.\n     * @param _arbiterWithdrawalAddress An `address` for sending out arbiter compensation.\n     */\n    function disputeSettledTerminate(\n        bytes32 _idHash,\n        address _respondent,\n        uint8 _respondentShare,\n        address _initiator,\n        uint8 _initiatorShare,\n        bool _isInternal,\n        address _arbiterWithdrawalAddress\n    )\n        public;\n\n    /**\n     * @dev Check eligibility of a given address to perform operations.\n     * @param _idHash A `bytes32` hash of id.\n     * @param _addressToCheck An `address` to check.\n     * @return A `bool` check status.\n     */\n    function checkEligibility(bytes32 _idHash, address _addressToCheck) public view returns(bool);\n\n    /**\n     * @dev Check if target is ready for a dispute.\n     * @param _idHash A `bytes32` hash of id.\n     * @return A `bool` check status.\n     */\n    function canStartDispute(bytes32 _idHash) public view returns(bool);\n}\n",
+  "sourcePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitrationTarget.sol",
+  "ast": {
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitrationTarget.sol",
+    "exportedSymbols": {
+      "IDecoArbitrationTarget": [
+        4821
+      ]
+    },
+    "id": 4822,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 4782,
+        "literals": [
+          "solidity",
+          "0.4",
+          ".25"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:8"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": "@title Interface that an arbitration target contract is expected to conform.\n @notice `DecoMilestones` contract implements `IDecoArbitrationTarget` interface.",
+        "fullyImplemented": false,
+        "id": 4821,
+        "linearizedBaseContracts": [
+          4821
+        ],
+        "name": "IDecoArbitrationTarget",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "body": null,
+            "documentation": "@dev Prepare arbitration target for a started dispute.\n@param _idHash A `bytes32` hash of id.",
+            "id": 4787,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "disputeStartedFreeze",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4785,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4784,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4787,
+                  "src": "385:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4783,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "385:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "384:17:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4786,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "408:0:8"
+            },
+            "scope": 4821,
+            "src": "355:54:8",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "body": null,
+            "documentation": "@dev React to an active dispute settlement with given parameters.\n@param _idHash A `bytes32` hash of id.\n@param _respondent An `address` of a respondent.\n@param _respondentShare An `uint8` share for the respondent.\n@param _initiator An `address` of a dispute initiator.\n@param _initiatorShare An `uint8` share for the initiator.\n@param _isInternal A `bool` indicating if dispute was settled by participants without an arbiter.\n@param _arbiterWithdrawalAddress An `address` for sending out arbiter compensation.",
+            "id": 4804,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "disputeSettledTerminate",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4802,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4789,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1040:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4788,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1040:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4791,
+                  "name": "_respondent",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1065:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4790,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1065:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4793,
+                  "name": "_respondentShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1094:22:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4792,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1094:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4795,
+                  "name": "_initiator",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1126:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4794,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1126:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4797,
+                  "name": "_initiatorShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1154:21:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4796,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1154:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4799,
+                  "name": "_isInternal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1185:16:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4798,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1185:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4801,
+                  "name": "_arbiterWithdrawalAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1211:33:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4800,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1211:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1030:220:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4803,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1265:0:8"
+            },
+            "scope": 4821,
+            "src": "998:268:8",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "body": null,
+            "documentation": "@dev Check eligibility of a given address to perform operations.\n@param _idHash A `bytes32` hash of id.\n@param _addressToCheck An `address` to check.\n@return A `bool` check status.",
+            "id": 4813,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "checkEligibility",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4809,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4806,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4813,
+                  "src": "1523:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4805,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1523:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4808,
+                  "name": "_addressToCheck",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4813,
+                  "src": "1540:23:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4807,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1540:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1522:42:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4812,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4811,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4813,
+                  "src": "1585:4:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4810,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1585:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1584:6:8"
+            },
+            "scope": 4821,
+            "src": "1497:94:8",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "body": null,
+            "documentation": "@dev Check if target is ready for a dispute.\n@param _idHash A `bytes32` hash of id.\n@return A `bool` check status.",
+            "id": 4820,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "canStartDispute",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4816,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4815,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4820,
+                  "src": "1774:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4814,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1774:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1773:17:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4819,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4818,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4820,
+                  "src": "1811:4:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4817,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1811:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1810:6:8"
+            },
+            "scope": 4821,
+            "src": "1749:68:8",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          }
+        ],
+        "scope": 4822,
+        "src": "192:1627:8"
+      }
+    ],
+    "src": "0:1820:8"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitrationTarget.sol",
+    "exportedSymbols": {
+      "IDecoArbitrationTarget": [
+        4821
+      ]
+    },
+    "id": 4822,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 4782,
+        "literals": [
+          "solidity",
+          "0.4",
+          ".25"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:8"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": "@title Interface that an arbitration target contract is expected to conform.\n @notice `DecoMilestones` contract implements `IDecoArbitrationTarget` interface.",
+        "fullyImplemented": false,
+        "id": 4821,
+        "linearizedBaseContracts": [
+          4821
+        ],
+        "name": "IDecoArbitrationTarget",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "body": null,
+            "documentation": "@dev Prepare arbitration target for a started dispute.\n@param _idHash A `bytes32` hash of id.",
+            "id": 4787,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "disputeStartedFreeze",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4785,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4784,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4787,
+                  "src": "385:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4783,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "385:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "384:17:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4786,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "408:0:8"
+            },
+            "scope": 4821,
+            "src": "355:54:8",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "body": null,
+            "documentation": "@dev React to an active dispute settlement with given parameters.\n@param _idHash A `bytes32` hash of id.\n@param _respondent An `address` of a respondent.\n@param _respondentShare An `uint8` share for the respondent.\n@param _initiator An `address` of a dispute initiator.\n@param _initiatorShare An `uint8` share for the initiator.\n@param _isInternal A `bool` indicating if dispute was settled by participants without an arbiter.\n@param _arbiterWithdrawalAddress An `address` for sending out arbiter compensation.",
+            "id": 4804,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "disputeSettledTerminate",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4802,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4789,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1040:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4788,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1040:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4791,
+                  "name": "_respondent",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1065:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4790,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1065:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4793,
+                  "name": "_respondentShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1094:22:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4792,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1094:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4795,
+                  "name": "_initiator",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1126:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4794,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1126:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4797,
+                  "name": "_initiatorShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1154:21:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4796,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1154:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4799,
+                  "name": "_isInternal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1185:16:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4798,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1185:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4801,
+                  "name": "_arbiterWithdrawalAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4804,
+                  "src": "1211:33:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4800,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1211:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1030:220:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4803,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1265:0:8"
+            },
+            "scope": 4821,
+            "src": "998:268:8",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "body": null,
+            "documentation": "@dev Check eligibility of a given address to perform operations.\n@param _idHash A `bytes32` hash of id.\n@param _addressToCheck An `address` to check.\n@return A `bool` check status.",
+            "id": 4813,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "checkEligibility",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4809,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4806,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4813,
+                  "src": "1523:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4805,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1523:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4808,
+                  "name": "_addressToCheck",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4813,
+                  "src": "1540:23:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4807,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1540:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1522:42:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4812,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4811,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4813,
+                  "src": "1585:4:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4810,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1585:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1584:6:8"
+            },
+            "scope": 4821,
+            "src": "1497:94:8",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "body": null,
+            "documentation": "@dev Check if target is ready for a dispute.\n@param _idHash A `bytes32` hash of id.\n@return A `bool` check status.",
+            "id": 4820,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "canStartDispute",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4816,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4815,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4820,
+                  "src": "1774:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4814,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1774:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1773:17:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4819,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4818,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4820,
+                  "src": "1811:4:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4817,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1811:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1810:6:8"
+            },
+            "scope": 4821,
+            "src": "1749:68:8",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          }
+        ],
+        "scope": 4822,
+        "src": "192:1627:8"
+      }
+    ],
+    "src": "0:1820:8"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.4.25+commit.59dbf8f1.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.0-beta.2",
+  "updatedAt": "2018-12-03T23:27:06.190Z",
+  "devdoc": {
+    "methods": {
+      "canStartDispute(bytes32)": {
+        "details": "Check if target is ready for a dispute.",
+        "params": {
+          "_idHash": "A `bytes32` hash of id."
+        },
+        "return": "A `bool` check status."
+      },
+      "checkEligibility(bytes32,address)": {
+        "details": "Check eligibility of a given address to perform operations.",
+        "params": {
+          "_addressToCheck": "An `address` to check.",
+          "_idHash": "A `bytes32` hash of id."
+        },
+        "return": "A `bool` check status."
+      },
+      "disputeSettledTerminate(bytes32,address,uint8,address,uint8,bool,address)": {
+        "details": "React to an active dispute settlement with given parameters.",
+        "params": {
+          "_arbiterWithdrawalAddress": "An `address` for sending out arbiter compensation.",
+          "_idHash": "A `bytes32` hash of id.",
+          "_initiator": "An `address` of a dispute initiator.",
+          "_initiatorShare": "An `uint8` share for the initiator.",
+          "_isInternal": "A `bool` indicating if dispute was settled by participants without an arbiter.",
+          "_respondent": "An `address` of a respondent.",
+          "_respondentShare": "An `uint8` share for the respondent."
+        }
+      },
+      "disputeStartedFreeze(bytes32)": {
+        "details": "Prepare arbitration target for a started dispute.",
+        "params": {
+          "_idHash": "A `bytes32` hash of id."
+        }
+      }
+    },
+    "title": "Interface that an arbitration target contract is expected to conform."
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}
