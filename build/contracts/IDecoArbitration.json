@@ -1,0 +1,2720 @@
+{
+  "contractName": "IDecoArbitration",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "name": "idHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "respondentShareProposal",
+          "type": "int256"
+        }
+      ],
+      "name": "LogStartedDispute",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "name": "idHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "rejectedProposal",
+          "type": "uint8"
+        }
+      ],
+      "name": "LogRejectedProposal",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "name": "idHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "respondentShare",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "name": "initiatorShare",
+          "type": "uint8"
+        }
+      ],
+      "name": "LogSettledDispute",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "fixedFee",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "shareFee",
+          "type": "uint8"
+        }
+      ],
+      "name": "LogFeesUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "proposalActionTimeLimit",
+          "type": "uint256"
+        }
+      ],
+      "name": "LogProposalTimeLimitUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "newWithdrawalAddress",
+          "type": "address"
+        }
+      ],
+      "name": "LogWithdrawalAddressChanged",
+      "type": "event"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        },
+        {
+          "name": "_respondent",
+          "type": "address"
+        },
+        {
+          "name": "_respondentShareProposal",
+          "type": "int256"
+        }
+      ],
+      "name": "startDispute",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "acceptProposal",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "rejectProposal",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_idHash",
+          "type": "bytes32"
+        },
+        {
+          "name": "_respondentShare",
+          "type": "uint256"
+        },
+        {
+          "name": "_initiatorShare",
+          "type": "uint256"
+        }
+      ],
+      "name": "settleDispute",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getWithdrawalAddress",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getFixedAndShareFees",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getTimeLimitForReplyOnProposal",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "sourceMap": "",
+  "deployedSourceMap": "",
+  "source": "pragma solidity 0.4.25;\n\n\n/// @title Interface that an arbitration contract is expected to conform.\ninterface IDecoArbitration {\n\n    /**\n     * @dev Should be logged upon dispute start.\n     */\n    event LogStartedDispute(\n        address indexed sender,\n        bytes32 indexed idHash,\n        uint timestamp,\n        int respondentShareProposal\n    );\n\n    /**\n     * @dev Should be logged upon proposal rejection.\n     */\n    event LogRejectedProposal(\n        address indexed sender,\n        bytes32 indexed idHash,\n        uint timestamp,\n        uint8 rejectedProposal\n    );\n\n    /** \n     * @dev Should be logged upon dispute settlement.\n     */\n    event LogSettledDispute(\n        address indexed sender,\n        bytes32 indexed idHash,\n        uint timestamp,\n        uint8 respondentShare,\n        uint8 initiatorShare\n    );\n\n    /**\n     * @dev Should be logged when contract owner updates fees.\n     */\n    event LogFeesUpdated(\n        uint timestamp,\n        uint fixedFee,\n        uint8 shareFee\n    );\n\n    /**\n     * @dev Should be logged when time limit to accept/reject proposal for respondent is updated.\n     */\n    event LogProposalTimeLimitUpdated(\n        uint timestamp,\n        uint proposalActionTimeLimit\n    );\n\n    /**\n     * @dev Should be logged when the withdrawal address for the contract owner changed.\n     */\n    event LogWithdrawalAddressChanged(\n        uint timestamp,\n        address newWithdrawalAddress\n    );\n\n    /**\n     * @notice Start dispute for the given project.\n     * @dev This call should log event and save dispute information and notify `IDecoArbitrationTarget` object\n     *      about started dispute. Dipsute can be started only if target instance call of\n     *      `canStartDispute` method confirms that state is valid. Also, txn sender and respondent addresses\n     *      eligibility must be confirmed by arbitation target `checkEligibility` method call.\n     * @param _idHash A `bytes32` hash of a project id.\n     * @param _respondent An `address` of the second paty involved in the dispute.\n     * @param _respondentShareProposal An `int` value indicating percentage of disputed funds \n     *  proposed to the respondent. Valid values range is 0-100, different values are considered as 'No Proposal'.\n     *  When provided percentage is 100 then this dispute is processed automatically,\n     *  and all funds are distributed in favor of the respondent.\n     */\n    function startDispute(bytes32 _idHash, address _respondent, int _respondentShareProposal) external;\n\n    /**\n     * @notice Accept active dispute proposal, sender should be the respondent.\n     * @dev Respondent of a dispute can accept existing proposal and if proposal exists then `settleDispute`\n     *      method should be called with proposal value. Time limit for respondent to accept/reject proposal\n     *      must not be exceeded.\n     * @param _idHash A `bytes32` hash of a project id.\n     */\n    function acceptProposal(bytes32 _idHash) external;\n\n    /**\n     * @notice Reject active dispute proposal and escalate dispute.\n     * @dev Txn sender should be dispute's respondent. Dispute automatically gets escalated to this contract\n     *      owner aka arbiter. Proposal must exist, otherwise this method should do nothing. When respondent\n     *      rejects proposal then it should get removed and corresponding event should be logged.\n     *      There should be a time limit for a respondent to reject a given proposal, and if it is overdue\n     *      then arbiter should take on a dispute to settle it.\n     * @param _idHash A `bytes32` hash of a project id.\n     */\n    function rejectProposal(bytes32 _idHash) external;\n\n    /**\n     * @notice Settle active dispute.\n     * @dev Sender should be the current contract or its owner(arbiter). Action is possible only when there is no active\n     *      proposal or time to accept the proposal is over. Sum of shares should be 100%. Should notify target\n     *      instance about a dispute settlement via `disputeSettledTerminate` method call. Also corresponding\n     *      event must be emitted.\n     * @param _idHash A `bytes32` hash of a project id.\n     * @param _respondentShare An `uint` percents of respondent share.\n     * @param _initiatorShare An `uint` percents of initiator share.\n     */\n    function settleDispute(bytes32 _idHash, uint _respondentShare, uint _initiatorShare) external;\n\n    /** \n     * @return Retuns this arbitration contract withdrawal `address`.\n     */\n    function getWithdrawalAddress() external view returns(address);\n\n    /** \n     * @return The arbitration contract fixed `uint` fee and `uint8` share of all disputed funds fee. \n     */\n    function getFixedAndShareFees() external view returns(uint, uint8);\n\n    /**\n     * @return An `uint` time limit for accepting/rejecting a proposal by respondent.\n     */\n    function getTimeLimitForReplyOnProposal() external view returns(uint);\n\n}\n",
+  "sourcePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitration.sol",
+  "ast": {
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitration.sol",
+    "exportedSymbols": {
+      "IDecoArbitration": [
+        4780
+      ]
+    },
+    "id": 4781,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 4682,
+        "literals": [
+          "solidity",
+          "0.4",
+          ".25"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:7"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@title Interface that an arbitration contract is expected to conform.",
+        "fullyImplemented": false,
+        "id": 4780,
+        "linearizedBaseContracts": [
+          4780
+        ],
+        "name": "IDecoArbitration",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged upon dispute start.",
+            "id": 4692,
+            "name": "LogStartedDispute",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4691,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4684,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "232:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4683,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "232:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4686,
+                  "indexed": true,
+                  "name": "idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "264:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4685,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "264:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4688,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "296:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4687,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "296:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4690,
+                  "indexed": false,
+                  "name": "respondentShareProposal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "320:27:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_int256",
+                    "typeString": "int256"
+                  },
+                  "typeName": {
+                    "id": 4689,
+                    "name": "int",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "320:3:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_int256",
+                      "typeString": "int256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "222:131:7"
+            },
+            "src": "199:155:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged upon proposal rejection.",
+            "id": 4702,
+            "name": "LogRejectedProposal",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4701,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4694,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "465:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4693,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "465:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4696,
+                  "indexed": true,
+                  "name": "idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "497:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4695,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "497:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4698,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "529:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4697,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "529:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4700,
+                  "indexed": false,
+                  "name": "rejectedProposal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "553:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4699,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "553:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "455:126:7"
+            },
+            "src": "430:152:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged upon dispute settlement.",
+            "id": 4714,
+            "name": "LogSettledDispute",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4713,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4704,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "692:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4703,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "692:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4706,
+                  "indexed": true,
+                  "name": "idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "724:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4705,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "724:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4708,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "756:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4707,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "756:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4710,
+                  "indexed": false,
+                  "name": "respondentShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "780:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4709,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "780:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4712,
+                  "indexed": false,
+                  "name": "initiatorShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "811:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4711,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "811:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "682:155:7"
+            },
+            "src": "659:179:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged when contract owner updates fees.",
+            "id": 4722,
+            "name": "LogFeesUpdated",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4721,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4716,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4722,
+                  "src": "953:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4715,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "953:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4718,
+                  "indexed": false,
+                  "name": "fixedFee",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4722,
+                  "src": "977:13:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4717,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "977:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4720,
+                  "indexed": false,
+                  "name": "shareFee",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4722,
+                  "src": "1000:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4719,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1000:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "943:77:7"
+            },
+            "src": "923:98:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged when time limit to accept/reject proposal for respondent is updated.",
+            "id": 4728,
+            "name": "LogProposalTimeLimitUpdated",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4727,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4724,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4728,
+                  "src": "1184:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4723,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1184:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4726,
+                  "indexed": false,
+                  "name": "proposalActionTimeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4728,
+                  "src": "1208:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4725,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1208:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1174:68:7"
+            },
+            "src": "1141:102:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged when the withdrawal address for the contract owner changed.",
+            "id": 4734,
+            "name": "LogWithdrawalAddressChanged",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4733,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4730,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4734,
+                  "src": "1397:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4729,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1397:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4732,
+                  "indexed": false,
+                  "name": "newWithdrawalAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4734,
+                  "src": "1421:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4731,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1421:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1387:68:7"
+            },
+            "src": "1354:102:7"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Start dispute for the given project.\n@dev This call should log event and save dispute information and notify `IDecoArbitrationTarget` object\n     about started dispute. Dipsute can be started only if target instance call of\n     `canStartDispute` method confirms that state is valid. Also, txn sender and respondent addresses\n     eligibility must be confirmed by arbitation target `checkEligibility` method call.\n@param _idHash A `bytes32` hash of a project id.\n@param _respondent An `address` of the second paty involved in the dispute.\n@param _respondentShareProposal An `int` value indicating percentage of disputed funds \n proposed to the respondent. Valid values range is 0-100, different values are considered as 'No Proposal'.\n When provided percentage is 100 then this dispute is processed automatically,\n and all funds are distributed in favor of the respondent.",
+            "id": 4743,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "startDispute",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4741,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4736,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4743,
+                  "src": "2458:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4735,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2458:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4738,
+                  "name": "_respondent",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4743,
+                  "src": "2475:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4737,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2475:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4740,
+                  "name": "_respondentShareProposal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4743,
+                  "src": "2496:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_int256",
+                    "typeString": "int256"
+                  },
+                  "typeName": {
+                    "id": 4739,
+                    "name": "int",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2496:3:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_int256",
+                      "typeString": "int256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2457:68:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4742,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2534:0:7"
+            },
+            "scope": 4780,
+            "src": "2436:99:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Accept active dispute proposal, sender should be the respondent.\n@dev Respondent of a dispute can accept existing proposal and if proposal exists then `settleDispute`\n     method should be called with proposal value. Time limit for respondent to accept/reject proposal\n     must not be exceeded.\n@param _idHash A `bytes32` hash of a project id.",
+            "id": 4748,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "acceptProposal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4746,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4745,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4748,
+                  "src": "2969:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4744,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2969:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2968:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4747,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2994:0:7"
+            },
+            "scope": 4780,
+            "src": "2945:50:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Reject active dispute proposal and escalate dispute.\n@dev Txn sender should be dispute's respondent. Dispute automatically gets escalated to this contract\n     owner aka arbiter. Proposal must exist, otherwise this method should do nothing. When respondent\n     rejects proposal then it should get removed and corresponding event should be logged.\n     There should be a time limit for a respondent to reject a given proposal, and if it is overdue\n     then arbiter should take on a dispute to settle it.\n@param _idHash A `bytes32` hash of a project id.",
+            "id": 4753,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "rejectProposal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4751,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4750,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4753,
+                  "src": "3652:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4749,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3652:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3651:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4752,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3677:0:7"
+            },
+            "scope": 4780,
+            "src": "3628:50:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Settle active dispute.\n@dev Sender should be the current contract or its owner(arbiter). Action is possible only when there is no active\n     proposal or time to accept the proposal is over. Sum of shares should be 100%. Should notify target\n     instance about a dispute settlement via `disputeSettledTerminate` method call. Also corresponding\n     event must be emitted.\n@param _idHash A `bytes32` hash of a project id.\n@param _respondentShare An `uint` percents of respondent share.\n@param _initiatorShare An `uint` percents of initiator share.",
+            "id": 4762,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "settleDispute",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4760,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4755,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4762,
+                  "src": "4335:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4754,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4335:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4757,
+                  "name": "_respondentShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4762,
+                  "src": "4352:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4756,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4352:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4759,
+                  "name": "_initiatorShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4762,
+                  "src": "4375:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4758,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4375:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4334:62:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4761,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4405:0:7"
+            },
+            "scope": 4780,
+            "src": "4312:94:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@return Retuns this arbitration contract withdrawal `address`.",
+            "id": 4767,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getWithdrawalAddress",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4763,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4528:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4766,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4765,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4767,
+                  "src": "4553:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4764,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4553:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4552:9:7"
+            },
+            "scope": 4780,
+            "src": "4499:63:7",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@return The arbitration contract fixed `uint` fee and `uint8` share of all disputed funds fee. ",
+            "id": 4774,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getFixedAndShareFees",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4768,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4717:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4773,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4770,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4774,
+                  "src": "4742:4:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4769,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4742:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4772,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4774,
+                  "src": "4748:5:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4771,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4748:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4741:13:7"
+            },
+            "scope": 4780,
+            "src": "4688:67:7",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@return An `uint` time limit for accepting/rejecting a proposal by respondent.",
+            "id": 4779,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getTimeLimitForReplyOnProposal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4775,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4902:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4778,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4777,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4779,
+                  "src": "4927:4:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4776,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4927:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4926:6:7"
+            },
+            "scope": 4780,
+            "src": "4863:70:7",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "scope": 4781,
+        "src": "100:4836:7"
+      }
+    ],
+    "src": "0:4937:7"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitration.sol",
+    "exportedSymbols": {
+      "IDecoArbitration": [
+        4780
+      ]
+    },
+    "id": 4781,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 4682,
+        "literals": [
+          "solidity",
+          "0.4",
+          ".25"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:7"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@title Interface that an arbitration contract is expected to conform.",
+        "fullyImplemented": false,
+        "id": 4780,
+        "linearizedBaseContracts": [
+          4780
+        ],
+        "name": "IDecoArbitration",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged upon dispute start.",
+            "id": 4692,
+            "name": "LogStartedDispute",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4691,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4684,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "232:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4683,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "232:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4686,
+                  "indexed": true,
+                  "name": "idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "264:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4685,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "264:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4688,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "296:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4687,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "296:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4690,
+                  "indexed": false,
+                  "name": "respondentShareProposal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4692,
+                  "src": "320:27:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_int256",
+                    "typeString": "int256"
+                  },
+                  "typeName": {
+                    "id": 4689,
+                    "name": "int",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "320:3:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_int256",
+                      "typeString": "int256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "222:131:7"
+            },
+            "src": "199:155:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged upon proposal rejection.",
+            "id": 4702,
+            "name": "LogRejectedProposal",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4701,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4694,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "465:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4693,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "465:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4696,
+                  "indexed": true,
+                  "name": "idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "497:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4695,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "497:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4698,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "529:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4697,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "529:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4700,
+                  "indexed": false,
+                  "name": "rejectedProposal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4702,
+                  "src": "553:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4699,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "553:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "455:126:7"
+            },
+            "src": "430:152:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged upon dispute settlement.",
+            "id": 4714,
+            "name": "LogSettledDispute",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4713,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4704,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "692:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4703,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "692:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4706,
+                  "indexed": true,
+                  "name": "idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "724:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4705,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "724:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4708,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "756:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4707,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "756:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4710,
+                  "indexed": false,
+                  "name": "respondentShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "780:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4709,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "780:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4712,
+                  "indexed": false,
+                  "name": "initiatorShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4714,
+                  "src": "811:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4711,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "811:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "682:155:7"
+            },
+            "src": "659:179:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged when contract owner updates fees.",
+            "id": 4722,
+            "name": "LogFeesUpdated",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4721,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4716,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4722,
+                  "src": "953:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4715,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "953:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4718,
+                  "indexed": false,
+                  "name": "fixedFee",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4722,
+                  "src": "977:13:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4717,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "977:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4720,
+                  "indexed": false,
+                  "name": "shareFee",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4722,
+                  "src": "1000:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4719,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1000:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "943:77:7"
+            },
+            "src": "923:98:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged when time limit to accept/reject proposal for respondent is updated.",
+            "id": 4728,
+            "name": "LogProposalTimeLimitUpdated",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4727,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4724,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4728,
+                  "src": "1184:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4723,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1184:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4726,
+                  "indexed": false,
+                  "name": "proposalActionTimeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4728,
+                  "src": "1208:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4725,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1208:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1174:68:7"
+            },
+            "src": "1141:102:7"
+          },
+          {
+            "anonymous": false,
+            "documentation": "@dev Should be logged when the withdrawal address for the contract owner changed.",
+            "id": 4734,
+            "name": "LogWithdrawalAddressChanged",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 4733,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4730,
+                  "indexed": false,
+                  "name": "timestamp",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4734,
+                  "src": "1397:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4729,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1397:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4732,
+                  "indexed": false,
+                  "name": "newWithdrawalAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4734,
+                  "src": "1421:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4731,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1421:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1387:68:7"
+            },
+            "src": "1354:102:7"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Start dispute for the given project.\n@dev This call should log event and save dispute information and notify `IDecoArbitrationTarget` object\n     about started dispute. Dipsute can be started only if target instance call of\n     `canStartDispute` method confirms that state is valid. Also, txn sender and respondent addresses\n     eligibility must be confirmed by arbitation target `checkEligibility` method call.\n@param _idHash A `bytes32` hash of a project id.\n@param _respondent An `address` of the second paty involved in the dispute.\n@param _respondentShareProposal An `int` value indicating percentage of disputed funds \n proposed to the respondent. Valid values range is 0-100, different values are considered as 'No Proposal'.\n When provided percentage is 100 then this dispute is processed automatically,\n and all funds are distributed in favor of the respondent.",
+            "id": 4743,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "startDispute",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4741,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4736,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4743,
+                  "src": "2458:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4735,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2458:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4738,
+                  "name": "_respondent",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4743,
+                  "src": "2475:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4737,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2475:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4740,
+                  "name": "_respondentShareProposal",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4743,
+                  "src": "2496:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_int256",
+                    "typeString": "int256"
+                  },
+                  "typeName": {
+                    "id": 4739,
+                    "name": "int",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2496:3:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_int256",
+                      "typeString": "int256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2457:68:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4742,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2534:0:7"
+            },
+            "scope": 4780,
+            "src": "2436:99:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Accept active dispute proposal, sender should be the respondent.\n@dev Respondent of a dispute can accept existing proposal and if proposal exists then `settleDispute`\n     method should be called with proposal value. Time limit for respondent to accept/reject proposal\n     must not be exceeded.\n@param _idHash A `bytes32` hash of a project id.",
+            "id": 4748,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "acceptProposal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4746,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4745,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4748,
+                  "src": "2969:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4744,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2969:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2968:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4747,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2994:0:7"
+            },
+            "scope": 4780,
+            "src": "2945:50:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Reject active dispute proposal and escalate dispute.\n@dev Txn sender should be dispute's respondent. Dispute automatically gets escalated to this contract\n     owner aka arbiter. Proposal must exist, otherwise this method should do nothing. When respondent\n     rejects proposal then it should get removed and corresponding event should be logged.\n     There should be a time limit for a respondent to reject a given proposal, and if it is overdue\n     then arbiter should take on a dispute to settle it.\n@param _idHash A `bytes32` hash of a project id.",
+            "id": 4753,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "rejectProposal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4751,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4750,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4753,
+                  "src": "3652:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4749,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3652:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3651:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4752,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3677:0:7"
+            },
+            "scope": 4780,
+            "src": "3628:50:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@notice Settle active dispute.\n@dev Sender should be the current contract or its owner(arbiter). Action is possible only when there is no active\n     proposal or time to accept the proposal is over. Sum of shares should be 100%. Should notify target\n     instance about a dispute settlement via `disputeSettledTerminate` method call. Also corresponding\n     event must be emitted.\n@param _idHash A `bytes32` hash of a project id.\n@param _respondentShare An `uint` percents of respondent share.\n@param _initiatorShare An `uint` percents of initiator share.",
+            "id": 4762,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "settleDispute",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4760,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4755,
+                  "name": "_idHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4762,
+                  "src": "4335:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 4754,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4335:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4757,
+                  "name": "_respondentShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4762,
+                  "src": "4352:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4756,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4352:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4759,
+                  "name": "_initiatorShare",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4762,
+                  "src": "4375:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4758,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4375:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4334:62:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4761,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4405:0:7"
+            },
+            "scope": 4780,
+            "src": "4312:94:7",
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@return Retuns this arbitration contract withdrawal `address`.",
+            "id": 4767,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getWithdrawalAddress",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4763,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4528:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4766,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4765,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4767,
+                  "src": "4553:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4764,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4553:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4552:9:7"
+            },
+            "scope": 4780,
+            "src": "4499:63:7",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@return The arbitration contract fixed `uint` fee and `uint8` share of all disputed funds fee. ",
+            "id": 4774,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getFixedAndShareFees",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4768,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4717:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4773,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4770,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4774,
+                  "src": "4742:4:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4769,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4742:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4772,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4774,
+                  "src": "4748:5:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4771,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4748:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4741:13:7"
+            },
+            "scope": 4780,
+            "src": "4688:67:7",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "body": null,
+            "documentation": "@return An `uint` time limit for accepting/rejecting a proposal by respondent.",
+            "id": 4779,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getTimeLimitForReplyOnProposal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 4775,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4902:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 4778,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4777,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4779,
+                  "src": "4927:4:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4776,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4927:4:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4926:6:7"
+            },
+            "scope": 4780,
+            "src": "4863:70:7",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "scope": 4781,
+        "src": "100:4836:7"
+      }
+    ],
+    "src": "0:4937:7"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.4.25+commit.59dbf8f1.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.0-beta.2",
+  "updatedAt": "2018-12-03T23:27:06.190Z",
+  "devdoc": {
+    "methods": {
+      "acceptProposal(bytes32)": {
+        "details": "Respondent of a dispute can accept existing proposal and if proposal exists then `settleDispute`     method should be called with proposal value. Time limit for respondent to accept/reject proposal     must not be exceeded.",
+        "params": {
+          "_idHash": "A `bytes32` hash of a project id."
+        }
+      },
+      "getFixedAndShareFees()": {
+        "return": "The arbitration contract fixed `uint` fee and `uint8` share of all disputed funds fee. "
+      },
+      "getTimeLimitForReplyOnProposal()": {
+        "return": "An `uint` time limit for accepting/rejecting a proposal by respondent."
+      },
+      "getWithdrawalAddress()": {
+        "return": "Retuns this arbitration contract withdrawal `address`."
+      },
+      "rejectProposal(bytes32)": {
+        "details": "Txn sender should be dispute's respondent. Dispute automatically gets escalated to this contract     owner aka arbiter. Proposal must exist, otherwise this method should do nothing. When respondent     rejects proposal then it should get removed and corresponding event should be logged.     There should be a time limit for a respondent to reject a given proposal, and if it is overdue     then arbiter should take on a dispute to settle it.",
+        "params": {
+          "_idHash": "A `bytes32` hash of a project id."
+        }
+      },
+      "settleDispute(bytes32,uint256,uint256)": {
+        "details": "Sender should be the current contract or its owner(arbiter). Action is possible only when there is no active     proposal or time to accept the proposal is over. Sum of shares should be 100%. Should notify target     instance about a dispute settlement via `disputeSettledTerminate` method call. Also corresponding     event must be emitted.",
+        "params": {
+          "_idHash": "A `bytes32` hash of a project id.",
+          "_initiatorShare": "An `uint` percents of initiator share.",
+          "_respondentShare": "An `uint` percents of respondent share."
+        }
+      },
+      "startDispute(bytes32,address,int256)": {
+        "details": "This call should log event and save dispute information and notify `IDecoArbitrationTarget` object     about started dispute. Dipsute can be started only if target instance call of     `canStartDispute` method confirms that state is valid. Also, txn sender and respondent addresses     eligibility must be confirmed by arbitation target `checkEligibility` method call.",
+        "params": {
+          "_idHash": "A `bytes32` hash of a project id.",
+          "_respondent": "An `address` of the second paty involved in the dispute.",
+          "_respondentShareProposal": "An `int` value indicating percentage of disputed funds  proposed to the respondent. Valid values range is 0-100, different values are considered as 'No Proposal'. When provided percentage is 100 then this dispute is processed automatically, and all funds are distributed in favor of the respondent."
+        }
+      }
+    },
+    "title": "Interface that an arbitration contract is expected to conform."
+  },
+  "userdoc": {
+    "methods": {
+      "acceptProposal(bytes32)": {
+        "notice": "Accept active dispute proposal, sender should be the respondent."
+      },
+      "rejectProposal(bytes32)": {
+        "notice": "Reject active dispute proposal and escalate dispute."
+      },
+      "settleDispute(bytes32,uint256,uint256)": {
+        "notice": "Settle active dispute."
+      },
+      "startDispute(bytes32,address,int256)": {
+        "notice": "Start dispute for the given project."
+      }
+    }
+  }
+}
