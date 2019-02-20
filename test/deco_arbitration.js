@@ -182,6 +182,40 @@ contract("DecoArbitration", async (accounts) => {
     await startAndCheckState(101, accounts[9], false, accounts[8], false)
   })
 
+  it("should fail starting dispute if initiator is a respondent.", async () => {
+    let startAndCheckState = async (
+      shareProposal, respondent, isRespondentEgligible, sender, isSenderEligible
+    ) => {
+      let hash = idHash
+      await ConfigureTargetStub(
+        true,
+        [
+          new Eligibility(isRespondentEgligible, respondent),
+          new Eligibility(isSenderEligible, sender)
+        ]
+      )
+      await StartDispute(hash, respondent, shareProposal, sender).catch(async (err) => {
+        assert.isOk(err, "Expected exception")
+
+        let isStarted = await arbitration.getDisputeStartedStatus(hash)
+        expect(isStarted).to.be.false
+        let isStartedInStub = await arbitrationTargetStub.disputeStarted.call()
+        expect(isStartedInStub).to.be.false
+      }).then(async (txn) => {
+        if (txn) {
+          assert.fail("Should have failed above.")
+        }
+      })
+
+      UpdateIdHash()
+    }
+
+    await startAndCheckState(67, accounts[2], true, accounts[2], true)
+    await startAndCheckState(0, accounts[2], true, accounts[2], true)
+    await startAndCheckState(3, accounts[3], false, accounts[3], true)
+    await startAndCheckState(1, accounts[4], false,  accounts[4], true)
+  })
+
   it("should fail starting dispute if there is already one active.", async () => {
     let startAndCheckState = async (shareProposal, respondent, sender) => {
       let hash = idHash
