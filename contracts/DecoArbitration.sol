@@ -48,6 +48,7 @@ contract DecoArbitration is IDecoArbitration, DecoBaseProjectsMarketplace {
      */
     function startDispute(bytes32 _idHash, address _respondent, int _respondentShareProposal) external {
         require(disputes[_idHash].startedTime == 0, "Dispute shouldn't be started yet.");
+        require(msg.sender != _respondent, "Dispute initiator must not be a respondent.");
         IDecoArbitrationTarget target = IDecoArbitrationTarget(getTargetContractAddress());
         require(target.canStartDispute(_idHash), "Target should confirm its state to be ready for dispute.");
         require(target.checkEligibility(_idHash, msg.sender), "Check if sender is eligible to perform actions.");
