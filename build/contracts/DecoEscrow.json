@@ -29239,8 +29239,8 @@
         }
       },
       "links": {},
-      "address": "0xE57f8C85dbFB5c0441e458B787100e570163f56A",
-      "transactionHash": "0x0c390b55bb3797bf3d2632f9cc116d4633641bb5f077bd9efa6dad5b732f4ee4"
+      "address": "0x78Fc97934180b1d4381ee03e621a0b773522beE5",
+      "transactionHash": "0x9d67dc15682ad45becee3c97decb0e98494e6b4a0312417ffb0e1f5468b24efc"
     },
     "95": {
       "events": {
@@ -29325,7 +29325,7 @@
     }
   },
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T02:07:45.806Z",
+  "updatedAt": "2019-02-25T20:25:45.196Z",
   "devdoc": {
     "methods": {
       "blockFunds(uint256)": {

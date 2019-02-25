@@ -2779,8 +2779,8 @@
         }
       },
       "links": {},
-      "address": "0xf58198E6B97f0Be267Ed220c5e6a21145d8322c2",
-      "transactionHash": "0x102f7e99a61edd6b6e49d5af7a0001b7a65b41d867afdcc0ee7781e0f1c0b14d"
+      "address": "0xDE0E91aef29C060d1D39aD60A28EF373249D81E5",
+      "transactionHash": "0xf08132f7f1fa1ac33eee9544fe81e20d1f5d892e2ad1e27a9a41acb4d536b92c"
     },
     "95": {
       "events": {
@@ -2840,7 +2840,7 @@
     }
   },
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T02:07:45.741Z",
+  "updatedAt": "2019-02-25T20:25:45.128Z",
   "devdoc": {
     "methods": {
       "createEscrow(address,address)": {

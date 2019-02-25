@@ -34359,8 +34359,8 @@
         }
       },
       "links": {},
-      "address": "0xC5C0d37bdEA31951f79588b49b9763DefAA4B3e8",
-      "transactionHash": "0xd99bb800125a8507cb565f9e5e37b3f98cadb5d7d1daaddff13b7d5f07d8de1d"
+      "address": "0x949003F4B6a8f33fdd39A44B64778a8bbA48c68f",
+      "transactionHash": "0x055e99b987fa5c2702bc7a38ec583374d1581c6786455402016d7515513595ee"
     },
     "95": {
       "events": {
@@ -34507,7 +34507,7 @@
     }
   },
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T02:07:45.834Z",
+  "updatedAt": "2019-02-25T20:25:45.268Z",
   "devdoc": {
     "methods": {
       "checkIfProjectExists(bytes32)": {

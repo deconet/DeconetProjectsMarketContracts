@@ -8682,12 +8682,12 @@
     "42": {
       "events": {},
       "links": {},
-      "address": "0xF28FCd3E2d7Fc13F405890a46265D26CeC7C2961",
-      "transactionHash": "0xde61776614ca69c536da48fb502d184c0c28580aafffd689262fad364f2b7bd2"
+      "address": "0x3a23a07deA49D49682526acfFfC94E61D94770b4",
+      "transactionHash": "0xeb966bbd09a15272388537e11c9303af9626e027a01d7d194e581b859a25ecb4"
     }
   },
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T02:07:45.753Z",
+  "updatedAt": "2019-02-25T20:25:45.141Z",
   "devdoc": {
     "methods": {
       "changeOwner(address)": {

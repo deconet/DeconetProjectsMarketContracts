@@ -2281,12 +2281,12 @@
         }
       },
       "links": {},
-      "address": "0x74313F08e361e890DB246e489789A81C13AE477b",
-      "transactionHash": "0xa780664c8a739b709409c4d6ff135b3c8a39ba30c129aa829776c2e83d3c9c51"
+      "address": "0x99A1b69CBe6d672863607Af38E80c4021386aC44",
+      "transactionHash": "0x33786561e86b070f42e3d5bc29d0a3a7e413b63c33dcdc00b7db4882b7bbca0d"
     }
   },
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T02:07:45.739Z",
+  "updatedAt": "2019-02-25T20:25:45.124Z",
   "devdoc": {
     "methods": {
       "createProxy(address)": {
