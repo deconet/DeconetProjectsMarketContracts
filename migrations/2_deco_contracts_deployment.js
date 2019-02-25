@@ -99,4 +99,7 @@ module.exports = async function (deployer, network, accounts) {
   console.log('Setting Deconet fee withdrawal address on DecoRelay to ' + withdrawalAddress)
   await decoRelay.setFeesWithdrawalAddress(withdrawalAddress)
 
+  let disputeDaysLimitToReply = 7 * 24 * 60 // 7 days to review proposal and either accept or reject it.
+  console.log('Setting Deconet Arbitration contract limit for respondent to reply on dispute proposal.')
+  await decoArbitration.setTimeLimitForReplyOnProposal(disputeDaysLimitToReply)
 }
