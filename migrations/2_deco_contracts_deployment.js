@@ -91,15 +91,23 @@ module.exports = async function (deployer, network, accounts) {
 
   /// Setting fees and withdrawal address.
 
-  let fee = 0
-  console.log('Setting Deconet fee on DecoRelay to ' + fee)
-  await decoRelay.setShareFee(fee)
+  let fee = '0'
+  console.log(`Setting Deconet fee on DecoRelay to ${fee}`)
+  await decoRelay.setShareFee(`${fee}`)
 
   let withdrawalAddress = accounts[0]
   console.log('Setting Deconet fee withdrawal address on DecoRelay to ' + withdrawalAddress)
   await decoRelay.setFeesWithdrawalAddress(withdrawalAddress)
 
+  console.log('Setting Deconet fee withdrawal address as withdrawal address in Deco Arbitration contract.')
+  await decoArbitration.setWithdrawalAddress(withdrawalAddress)
+
   let disputeDaysLimitToReply = 7 * 24 * 60 // 7 days to review proposal and either accept or reject it.
   console.log('Setting Deconet Arbitration contract limit for respondent to reply on dispute proposal.')
-  await decoArbitration.setTimeLimitForReplyOnProposal(disputeDaysLimitToReply)
+  await decoArbitration.setTimeLimitForReplyOnProposal(`${disputeDaysLimitToReply}`)
+
+  let arbitrationShareFee = '0' // %
+  let arbitrationFixedFee = '0' // 0 ETH
+  console.log(`Setting Deconet Arbitration contract share fee to ${arbitrationShareFee}, and fixed fee to ${arbitrationFixedFee}.`)
+  await decoArbitration.setFees(arbitrationFixedFee, arbitrationShareFee)
 }
