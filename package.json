@@ -11,6 +11,7 @@
     "migrate-dev": "./node_modules/.bin/truffle migrate --reset --network development",
     "migrate-ropsten": "./node_modules/.bin/truffle migrate --reset --network ropsten",
     "migrate-kovan": "./node_modules/.bin/truffle migrate --reset --network kovan",
+    "migrate-mainnet": "./node_modules/.bin/truffle migrate --reset --network mainnet --dry-run",
     "test": "./node_modules/.bin/truffle compile && ./node_modules/.bin/truffle test",
     "coverage": "./node_modules/.bin/solidity-coverage",
     "ganache-cli": "./node_modules/.bin/ganache-cli -a 99 -i 95 -e 1000 -l 8000000 --noVMErrorsOnRPCResponse -s meow",
@@ -27,6 +28,7 @@
   },
   "homepage": "https://github.com/deconet/DeconetProjectsMarketContracts#readme",
   "dependencies": {
+    "@deconet/truffle-ledger-provider": "^0.0.5",
     "@optionality.io/clone-factory": "^0.1.6",
     "bignumber.js": "^7.2.1",
     "openzeppelin-solidity": "2.0.0",

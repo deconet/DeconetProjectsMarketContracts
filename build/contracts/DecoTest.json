@@ -44,14 +44,14 @@
       "type": "function"
     }
   ],
-  "bytecode": "0x608060405234801561001057600080fd5b50610335806100206000396000f300608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063ee16811c14610046575b600080fd5b34801561005257600080fd5b5061012c6004803603810190808035600019169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919080359060200190929190803560ff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061012e565b005b6000806000808493508373ffffffffffffffffffffffffffffffffffffffff166334aa982a8d8d8d8d6040518563ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018085600019166000191681526020018473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001945050505050606060405180830381600087803b15801561024a57600080fd5b505af115801561025e573d6000803e3d6000fd5b505050506040513d606081101561027457600080fd5b8101908080519060200190929190805190602001909291908051906020019092919050505092509250925082881415156102ad57600080fd5b8160ff168760ff161415156102c157600080fd5b8073ffffffffffffffffffffffffffffffffffffffff168673ffffffffffffffffffffffffffffffffffffffff161415156102fb57600080fd5b5050505050505050505050505600a165627a7a72305820def3cdfd2447255f3b78e8c75ea71edbff00c2c5fda3c26b30aa3735462e40940029",
-  "deployedBytecode": "0x608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063ee16811c14610046575b600080fd5b34801561005257600080fd5b5061012c6004803603810190808035600019169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919080359060200190929190803560ff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061012e565b005b6000806000808493508373ffffffffffffffffffffffffffffffffffffffff166334aa982a8d8d8d8d6040518563ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018085600019166000191681526020018473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001945050505050606060405180830381600087803b15801561024a57600080fd5b505af115801561025e573d6000803e3d6000fd5b505050506040513d606081101561027457600080fd5b8101908080519060200190929190805190602001909291908051906020019092919050505092509250925082881415156102ad57600080fd5b8160ff168760ff161415156102c157600080fd5b8073ffffffffffffffffffffffffffffffffffffffff168673ffffffffffffffffffffffffffffffffffffffff161415156102fb57600080fd5b5050505050505050505050505600a165627a7a72305820def3cdfd2447255f3b78e8c75ea71edbff00c2c5fda3c26b30aa3735462e40940029",
+  "bytecode": "0x608060405234801561001057600080fd5b50610335806100206000396000f300608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063ee16811c14610046575b600080fd5b34801561005257600080fd5b5061012c6004803603810190808035600019169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919080359060200190929190803560ff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061012e565b005b6000806000808493508373ffffffffffffffffffffffffffffffffffffffff166334aa982a8d8d8d8d6040518563ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018085600019166000191681526020018473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001945050505050606060405180830381600087803b15801561024a57600080fd5b505af115801561025e573d6000803e3d6000fd5b505050506040513d606081101561027457600080fd5b8101908080519060200190929190805190602001909291908051906020019092919050505092509250925082881415156102ad57600080fd5b8160ff168760ff161415156102c157600080fd5b8073ffffffffffffffffffffffffffffffffffffffff168673ffffffffffffffffffffffffffffffffffffffff161415156102fb57600080fd5b5050505050505050505050505600a165627a7a72305820342b8c708892d020130e06c021c9558e99ff8dc24b3a75bca5da10db41c81b810029",
+  "deployedBytecode": "0x608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063ee16811c14610046575b600080fd5b34801561005257600080fd5b5061012c6004803603810190808035600019169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919080359060200190929190803560ff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061012e565b005b6000806000808493508373ffffffffffffffffffffffffffffffffffffffff166334aa982a8d8d8d8d6040518563ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018085600019166000191681526020018473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001945050505050606060405180830381600087803b15801561024a57600080fd5b505af115801561025e573d6000803e3d6000fd5b505050506040513d606081101561027457600080fd5b8101908080519060200190929190805190602001909291908051906020019092919050505092509250925082881415156102ad57600080fd5b8160ff168760ff161415156102c157600080fd5b8073ffffffffffffffffffffffffffffffffffffffff168673ffffffffffffffffffffffffffffffffffffffff161415156102fb57600080fd5b5050505050505050505050505600a165627a7a72305820342b8c708892d020130e06c021c9558e99ff8dc24b3a75bca5da10db41c81b810029",
   "sourceMap": "58:744:20:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;58:744:20;;;;;;;",
   "deployedSourceMap": "58:744:20:-;;;;;;;;;;;;;;;;;;;;;;;;82:718;;8:9:-1;5:2;;;30:1;27;20:12;5:2;82:718:20;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;388:25;455:13;470:14;486;429;388:56;;504:12;:41;;;563:14;595:11;624:10;652:8;504:166;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;504:166:20;;;;8:9:-1;5:2;;;45:16;42:1;39;24:38;77:16;74:1;67:27;5:2;504:166:20;;;;;;;13:2:-1;8:3;5:11;2:2;;;29:1;26;19:12;2:2;504:166:20;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;454:216;;;;;;701:8;688:9;:21;680:30;;;;;;;;741:8;728:21;;:9;:21;;;720:30;;;;;;;;786:6;768:24;;:14;:24;;;760:33;;;;;;;;82:718;;;;;;;;;;;;:::o",
   "source": "pragma solidity ^0.4.25;\n\nimport \"../DecoProjects.sol\";\n\n\ncontract DecoTest {\n    function testGetInfoAndValidateForDispute(\n        bytes32 _agreementHash,\n        address _respondent, \n        address _initiator,\n        address _arbiter,\n        uint _fixedFee,\n        uint8 _shareFee,\n        address _escrowAddress,\n        address targetContract\n    )\n        public\n    {\n        DecoProjects decoProjects = DecoProjects(targetContract);\n        (uint fixedFee, uint8 shareFee, address escrow) = decoProjects.getInfoForDisputeAndValidate(\n                _agreementHash,\n                _respondent,\n                _initiator,\n                _arbiter\n        );\n        require(_fixedFee == fixedFee);\n        require(_shareFee == shareFee);\n        require(_escrowAddress == escrow);\n    }\n}\n",
-  "sourcePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/mocks/DecoTest.sol",
+  "sourcePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/mocks/DecoTest.sol",
   "ast": {
-    "absolutePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/mocks/DecoTest.sol",
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/mocks/DecoTest.sol",
     "exportedSymbols": {
       "DecoTest": [
         6805
@@ -72,7 +72,7 @@
         "src": "0:24:20"
       },
       {
-        "absolutePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/DecoProjects.sol",
+        "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/DecoProjects.sol",
         "file": "../DecoProjects.sol",
         "id": 6746,
         "nodeType": "ImportDirective",
@@ -907,7 +907,7 @@
     "src": "0:803:20"
   },
   "legacyAST": {
-    "absolutePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/mocks/DecoTest.sol",
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/mocks/DecoTest.sol",
     "exportedSymbols": {
       "DecoTest": [
         6805
@@ -928,7 +928,7 @@
         "src": "0:24:20"
       },
       {
-        "absolutePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/DecoProjects.sol",
+        "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/DecoProjects.sol",
         "file": "../DecoProjects.sol",
         "id": 6746,
         "nodeType": "ImportDirective",
@@ -1768,7 +1768,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T01:59:27.056Z",
+  "updatedAt": "2019-02-27T21:10:54.538Z",
   "devdoc": {
     "methods": {}
   },

@@ -101,9 +101,9 @@
   "sourceMap": "",
   "deployedSourceMap": "",
   "source": "pragma solidity 0.4.25;\n\n\n/// @title Interface that an arbitration target contract is expected to conform.\n/// @notice `DecoMilestones` contract implements `IDecoArbitrationTarget` interface.\ncontract IDecoArbitrationTarget {\n\n    /**\n     * @dev Prepare arbitration target for a started dispute.\n     * @param _idHash A `bytes32` hash of id.\n     */\n    function disputeStartedFreeze(bytes32 _idHash) public;\n\n    /**\n     * @dev React to an active dispute settlement with given parameters.\n     * @param _idHash A `bytes32` hash of id.\n     * @param _respondent An `address` of a respondent.\n     * @param _respondentShare An `uint8` share for the respondent.\n     * @param _initiator An `address` of a dispute initiator.\n     * @param _initiatorShare An `uint8` share for the initiator.\n     * @param _isInternal A `bool` indicating if dispute was settled by participants without an arbiter.\n     * @param _arbiterWithdrawalAddress An `address` for sending out arbiter compensation.\n     */\n    function disputeSettledTerminate(\n        bytes32 _idHash,\n        address _respondent,\n        uint8 _respondentShare,\n        address _initiator,\n        uint8 _initiatorShare,\n        bool _isInternal,\n        address _arbiterWithdrawalAddress\n    )\n        public;\n\n    /**\n     * @dev Check eligibility of a given address to perform operations.\n     * @param _idHash A `bytes32` hash of id.\n     * @param _addressToCheck An `address` to check.\n     * @return A `bool` check status.\n     */\n    function checkEligibility(bytes32 _idHash, address _addressToCheck) public view returns(bool);\n\n    /**\n     * @dev Check if target is ready for a dispute.\n     * @param _idHash A `bytes32` hash of id.\n     * @return A `bool` check status.\n     */\n    function canStartDispute(bytes32 _idHash) public view returns(bool);\n}\n",
-  "sourcePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/IDecoArbitrationTarget.sol",
+  "sourcePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitrationTarget.sol",
   "ast": {
-    "absolutePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/IDecoArbitrationTarget.sol",
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitrationTarget.sol",
     "exportedSymbols": {
       "IDecoArbitrationTarget": [
         5439
@@ -603,7 +603,7 @@
     "src": "0:1820:10"
   },
   "legacyAST": {
-    "absolutePath": "/Users/pavel/Developer/Deco/marketplace_smart_contracts/contracts/IDecoArbitrationTarget.sol",
+    "absolutePath": "/Users/chris/Documents/WorkStuff/Deconet/Blockchain/DeconetProjectsMarketContracts/contracts/IDecoArbitrationTarget.sol",
     "exportedSymbols": {
       "IDecoArbitrationTarget": [
         5439
@@ -1108,7 +1108,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.0",
-  "updatedAt": "2019-02-20T01:59:27.051Z",
+  "updatedAt": "2019-02-27T21:10:54.532Z",
   "devdoc": {
     "methods": {
       "canStartDispute(bytes32)": {
