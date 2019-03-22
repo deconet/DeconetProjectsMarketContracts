@@ -47,11 +47,12 @@ module.exports = {
     },
     mainnet: {
       provider: function() {
-        return new LedgerWalletProvider(ledgerOptions, "https://mainnet.infura.io/JTdaA5dJvlwfCfdgT5Cm")
+        // return new LedgerWalletProvider(ledgerOptions, "https://mainnet.infura.io/JTdaA5dJvlwfCfdgT5Cm")
+        return new LedgerWalletProvider(ledgerOptions, "http://35.243.180.66:8545")
       },
       network_id: 1,
       gas: 7000000,
-      gasPrice: 5000000000 // 5 gwei
+      gasPrice: 10000000000 // 10 gwei
     },
     coverage: {
       host: "127.0.0.1",
